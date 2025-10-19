@@ -5,14 +5,46 @@
 
 
 export interface paths {
+  "/institutions": {
+    /** Create an institution */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateInstitutionInput"];
+        };
+      };
+      responses: {
+        /** @description Created institution */
+        201: {
+          content: {
+            "application/json": components["schemas"]["Institution"];
+          };
+        };
+      };
+    };
+  };
   "/users": {
     /** List users */
     get: {
+      parameters: {
+        query?: {
+          /** @description Filter by user role */
+          role?: "admin" | "coordinator" | "tutor" | "parent";
+          /** @description Filter by institution id */
+          institutionId?: number;
+          /** @description Case-insensitive search in name or email */
+          nameOrEmail?: string;
+          /** @description Page number (1-based) */
+          page?: number;
+          /** @description Items per page */
+          pageSize?: number;
+        };
+      };
       responses: {
         /** @description List of users */
         200: {
           content: {
-            "application/json": components["schemas"]["User"][];
+            "application/json": components["schemas"]["UserWithInstitution"][];
           };
         };
       };
@@ -21,7 +53,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateUserInput"];
+          "application/json": components["schemas"]["CreateUserWithBankAccountInput"];
         };
       };
       responses: {
@@ -57,18 +89,43 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
-    CreateUserInput: {
-      /** @enum {string} */
-      role: "admin" | "coordinator" | "tutor" | "parent";
+    UserInput: {
       name: string;
       /** Format: email */
       email: string;
-      rut: string;
-      phone?: string;
-      address?: string;
-      chargeEmail?: string;
+      /** @enum {string} */
+      role: "admin" | "coordinator" | "tutor" | "parent";
+      rut?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      chargeEmail?: string | null;
       institutionId?: number | null;
     };
+    Institution: {
+      id: number;
+      name: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    CreateInstitutionInput: {
+      name: string;
+    };
+    UserWithInstitution: components["schemas"]["User"] & {
+      Institution?: components["schemas"]["Institution"];
+    };
+    UserBankAccountInput: {
+      bankName: string;
+      accountType: string;
+      accountNumber: string;
+      rutHolder: string;
+      /** Format: email */
+      accountEmail: string;
+    };
+    CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
+      BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
+    });
   };
   responses: never;
   parameters: never;

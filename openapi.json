@@ -71,9 +71,16 @@
           "updatedAt"
         ]
       },
-      "CreateUserInput": {
+      "UserInput": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -83,24 +90,21 @@
               "parent"
             ]
           },
-          "name": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
           "rut": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "phone": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "address": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "chargeEmail": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "institutionId": {
             "type": "integer",
@@ -108,20 +112,202 @@
           }
         },
         "required": [
-          "role",
           "name",
           "email",
-          "rut"
+          "role"
+        ]
+      },
+      "Institution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateInstitutionInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UserWithInstitution": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "Institution": {
+                "$ref": "#/components/schemas/Institution"
+              }
+            }
+          }
+        ]
+      },
+      "UserBankAccountInput": {
+        "type": "object",
+        "properties": {
+          "bankName": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "rutHolder": {
+            "type": "string"
+          },
+          "accountEmail": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "userId",
+          "bankName",
+          "accountType",
+          "accountNumber",
+          "rutHolder",
+          "accountEmail"
+        ]
+      },
+      "CreateUserWithBankAccountInput": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserInput"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "BankAccount": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UserBankAccountInput"
+                  }
+                ],
+                "nullable": true
+              }
+            }
+          }
         ]
       }
     }
   },
   "paths": {
+    "/institutions": {
+      "post": {
+        "summary": "Create an institution",
+        "tags": [
+          "Institutions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstitutionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created institution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Institution"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "summary": "List users",
         "tags": [
           "Users"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "coordinator",
+                "tutor",
+                "parent"
+              ]
+            },
+            "description": "Filter by user role"
+          },
+          {
+            "in": "query",
+            "name": "institutionId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by institution id"
+          },
+          {
+            "in": "query",
+            "name": "nameOrEmail",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive search in name or email"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (1-based)"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Items per page"
+          }
         ],
         "responses": {
           "200": {
@@ -131,7 +317,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/User"
+                    "$ref": "#/components/schemas/UserWithInstitution"
                   }
                 }
               }
@@ -149,7 +335,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateUserInput"
+                "$ref": "#/components/schemas/CreateUserWithBankAccountInput"
               }
             }
           }

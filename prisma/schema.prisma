@@ -180,6 +180,7 @@ model UserBankAccount {
   bankName       String
   accountType    AccountType
   accountNumber  String
+  accountEmail   String
   rutHolder      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

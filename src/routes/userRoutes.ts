@@ -1,6 +1,6 @@
 // routes/userRoutes.ts
 import { Router } from 'express';
-import { createUser, getUsers } from '../controllers/userController';
+import { createUser, getUsers, deleteUser } from '../controllers/userController';
 
 const router = Router();
 
@@ -10,6 +10,38 @@ const router = Router();
  *   get:
  *     summary: List users
  *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, coordinator, tutor, parent]
+ *         description: Filter by user role
+ *       - in: query
+ *         name: institutionId
+ *         schema:
+ *           type: integer
+ *         description: Filter by institution id
+ *       - in: query
+ *         name: nameOrEmail
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive search in name or email
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number (1-based)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Items per page
  *     responses:
  *       200:
  *         description: List of users
@@ -18,10 +50,9 @@ const router = Router();
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/User'
+ *                 $ref: '#/components/schemas/UserWithInstitution'
  */
 router.get('/', getUsers);
-
 /**
  * @openapi
  * /users:
@@ -33,7 +64,7 @@ router.get('/', getUsers);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/CreateUserInput'
+ *             $ref: '#/components/schemas/CreateUserWithBankAccountInput'
  *     responses:
  *       201:
  *         description: Created user
@@ -43,4 +74,22 @@ router.get('/', getUsers);
  *               $ref: '#/components/schemas/User'
  */
 router.post('/', createUser);
+/**
+ * @openapi
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       204:
+ *         description: User deleted successfully
+ */
+router.delete('/:id', deleteUser);
 export default router;

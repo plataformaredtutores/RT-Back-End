@@ -29,19 +29,72 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
         },
-        CreateUserInput: {
+        UserInput: {
           type: 'object',
           properties: {
-            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'parent'] },
             name: { type: 'string' },
             email: { type: 'string', format: 'email' },
-            rut: { type: 'string' },
-            phone: { type: 'string' },
-            address: { type: 'string' },
-            chargeEmail: { type: 'string' },
+            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'parent'] },
+            rut: { type: 'string', nullable: true },
+            phone: { type: 'string', nullable: true },
+            address: { type: 'string', nullable: true },
+            chargeEmail: { type: 'string', nullable: true },
             institutionId: { type: 'integer', nullable: true },
           },
-          required: ['role', 'name', 'email', 'rut']
+          required: ['name', 'email', 'role']
+        },
+        Institution: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+          required: ['id', 'name', 'createdAt', 'updatedAt']
+        },
+        CreateInstitutionInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+          },
+          required: ['name']
+        },
+        UserWithInstitution: {
+          allOf: [
+            { $ref: '#/components/schemas/User' },
+            {
+              type: 'object',
+              properties: {
+                Institution: { $ref: '#/components/schemas/Institution' }
+              }
+            }
+          ]
+        },
+        UserBankAccountInput: {
+          type: 'object',
+          properties: {
+            bankName: { type: 'string' },
+            accountType: { type: 'string' },
+            accountNumber: { type: 'string' },
+            rutHolder: { type: 'string' },
+            accountEmail: { type: 'string', format: 'email' },
+          },
+          required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rutHolder', 'accountEmail']
+        },
+        CreateUserWithBankAccountInput: {
+          allOf: [
+            { $ref: '#/components/schemas/UserInput' },
+            {
+              type: 'object',
+              properties: {
+                BankAccount: {
+                  allOf: [{ $ref: '#/components/schemas/UserBankAccountInput' }],
+                  nullable: true
+                }
+              }
+            }
+          ]
         }
       }
     }
