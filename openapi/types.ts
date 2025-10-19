@@ -66,6 +66,23 @@ export interface paths {
       };
     };
   };
+  "/users/{id}": {
+    /** Delete a user by ID */
+    delete: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User deleted successfully */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
