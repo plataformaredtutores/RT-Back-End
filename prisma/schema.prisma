@@ -37,6 +37,11 @@ enum PaymentStatus {
   pending
 }
 
+enum PaymentType {
+  card
+  bankTransfer
+}
+
 model Class {
   id            Int        @id @default(autoincrement())
   date          DateTime
@@ -66,14 +71,16 @@ model Class {
 }
 
 model ClassPayment {
-  id            Int      @id @default(autoincrement())
-  classId       Int
-  feeId         Int
-  paymentStatus String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  Class         Class    @relation(fields: [classId], references: [id])
-  Fee           Fee      @relation(fields: [feeId], references: [id])
+  id                Int           @id @default(autoincrement())
+  classId           Int
+  feeId             Int
+  paymentFromParent PaymentStatus @default(pending)
+  paymentToTutor    PaymentStatus @default(pending)
+  paymentType       PaymentType   @default(bankTransfer)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  Class             Class         @relation(fields: [classId], references: [id])
+  Fee               Fee           @relation(fields: [feeId], references: [id])
 }
 
 model CoordinatorPayment {
@@ -81,12 +88,23 @@ model CoordinatorPayment {
   institutionId Int
   periodYear    Int
   periodMonth   Int
+  amount        Int
   Institution   Institution @relation(fields: [institutionId], references: [id])
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([institutionId, periodYear, periodMonth])
+}
+
+model AdminPayment {
+  id            Int      @id @default(autoincrement())
+  periodYear    Int
+  periodMonth   Int
+  amount        Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Fee {

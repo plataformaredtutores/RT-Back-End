@@ -34,6 +34,27 @@ export interface paths {
       };
     };
   };
+  "/mail": {
+    /** Send email */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["MailRequest"];
+        };
+      };
+      responses: {
+        /** @description Mail accepted for delivery */
+        202: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              id?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/users": {
     /** List users */
     get: {
@@ -100,6 +121,16 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    MailRequest: {
+      to: string | string[];
+      cc?: string | string[];
+      bcc?: string | string[];
+      subject: string;
+      text?: string;
+      html?: string;
+      /** Format: email */
+      replyTo?: string;
+    };
     User: {
       id: number;
       name: string;

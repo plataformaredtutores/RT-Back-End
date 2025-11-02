@@ -12,6 +12,34 @@ const options: swaggerJSDoc.Options = {
     ],
     components: {
       schemas: {
+        MailRequest: {
+          type: 'object',
+          properties: {
+            to: {
+              oneOf: [
+                { type: 'string', format: 'email' },
+                { type: 'array', items: { type: 'string', format: 'email' }, minItems: 1 }
+              ]
+            },
+            cc: {
+              oneOf: [
+                { type: 'string', format: 'email' },
+                { type: 'array', items: { type: 'string', format: 'email' } }
+              ]
+            },
+            bcc: {
+              oneOf: [
+                { type: 'string', format: 'email' },
+                { type: 'array', items: { type: 'string', format: 'email' } }
+              ]
+            },
+            subject: { type: 'string' },
+            text: { type: 'string' },
+            html: { type: 'string' },
+            replyTo: { type: 'string', format: 'email' }
+          },
+          required: ['to', 'subject']
+        },
         User: {
           type: 'object',
           properties: {
