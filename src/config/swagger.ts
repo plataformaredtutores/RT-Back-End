@@ -12,6 +12,31 @@ const options: swaggerJSDoc.Options = {
     ],
     components: {
       schemas: {
+        UserLoginRequest: {
+          type: 'object',
+          properties: {
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string' }
+          },
+          required: ['email', 'password']
+        },
+        UserLoginResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                role: { type: 'string' },
+                name: { type: 'string' },
+                institutionId: { type: 'integer', nullable: true }
+              }
+            }
+          },
+          required: ['ok', 'user']
+        },
         MailRequest: {
           type: 'object',
           properties: {
