@@ -183,12 +183,13 @@ model User {
   updatedAt         DateTime @updatedAt
 
   BankAccount       UserBankAccount?
-  Institution       Institution? @relation(fields: [institutionId], references: [id])
+  Institution       Institution?  @relation(fields: [institutionId], references: [id])
 
-  ParentLinks      ParentTutor[] @relation("ParentTutorParent")
-  TutorLinks       ParentTutor[] @relation("ParentTutorTutor")
-  Students         Student[]     @relation("ParentStudents")
-  ClassesAsTutor   Class[]       @relation("TutorClasses")
+  ParentLinks       ParentTutor[]  @relation("ParentTutorParent")
+  TutorLinks        ParentTutor[]  @relation("ParentTutorTutor")
+  Students          Student[]      @relation("ParentStudents")
+  ClassesAsTutor    Class[]        @relation("TutorClasses")
+  RefreshTokens     RefreshToken[] @relation("RefreshTokens")
   @@index([role])
 }
 
@@ -207,4 +208,17 @@ model UserBankAccount {
 
   @@unique([userId, accountNumber])
 }
-  
+
+
+model RefreshToken {
+  id           String   @id @default(cuid())
+  userId       Int
+  tokenHash    String
+  revoked      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  User         User     @relation("RefreshTokens", fields: [userId], references: [id])
+  @@index([userId])
+  @@index([expiresAt])
+}

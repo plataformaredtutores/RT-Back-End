@@ -5,6 +5,71 @@
 
 
 export interface paths {
+  "/auth/login": {
+    /** User login */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: email */
+            email: string;
+            /** Format: password */
+            password: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Successful login */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              token?: string;
+              expiresIn?: string;
+              user?: {
+                id?: number;
+                email?: string;
+                role?: string;
+                name?: string;
+                institutionId?: number;
+              };
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": {
+              message?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/auth/logout": {
+    /** User logout */
+    post: {
+      responses: {
+        /** @description Successful logout */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": {
+              message?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/institutions": {
     /** Get all institutions */
     get: {
@@ -121,6 +186,21 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    UserLoginRequest: {
+      /** Format: email */
+      email: string;
+      password: string;
+    };
+    UserLoginResponse: {
+      ok: boolean;
+      user: {
+        id?: number;
+        email?: string;
+        role?: string;
+        name?: string;
+        institutionId?: number | null;
+      };
+    };
     MailRequest: {
       to: string | string[];
       cc?: string | string[];
