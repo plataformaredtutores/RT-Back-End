@@ -20,7 +20,7 @@ const transporter = createTransport({
   },
 })
 
-const DEFAULT_FROM = 'plataforma.redtutores@gmail.com'
+const DEFAULT_FROM = 'no-reply@redtutores.com'
 
 export async function sendEmail(params: SendEmailParams) {
   if (!params.text && !params.html) {

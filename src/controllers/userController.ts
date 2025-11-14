@@ -48,7 +48,16 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       BankAccount
     } = req.body
 
-    const password = "RedTutores" + rut?.toString()
+    const password = rut != null
+      ? String(rut).split('-')[0].replace(/\D/g, '')
+      : undefined;
+
+    if (!password) {
+      return res.status(400).json({
+        ok: false,
+        message: 'RUT not provided or invalid, cannot generate password.'
+      });
+    }
 
     const hashedPassword = await argon2.hash(password, {
       secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
