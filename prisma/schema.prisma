@@ -11,14 +11,28 @@ datasource db {
 enum UserRole {
   admin
   coordinator
-  tutor
   guardian
+  tutor
 }
 
 enum AccountType {
   ahorro
   corriente
   vista
+}
+
+enum ClassSubject {
+  biology
+  chemistry
+  physics
+  mathematics
+  spanish
+  french
+  english
+  pet
+  socialStudies
+  studySkills
+  other
 }
 
 enum ClassModality {
@@ -28,8 +42,8 @@ enum ClassModality {
 }
 
 enum ClassType {
-  schoolar
-  universitary
+  school
+  university
 }
 
 enum PaymentStatus {
@@ -50,67 +64,23 @@ model AdminPayment {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
   @@unique([periodYear, periodMonth])
   @@index([periodYear, periodMonth])
 }
 
-
-model Class {
-  id            Int        @id @default(autoincrement())
-  date          DateTime
-  subject       String
-  modality      ClassModality
-  studentNumber Int
-  type          ClassType
-  duration      Int
-
-  studentId     Int
-  Student       Student     @relation(fields: [studentId], references: [id])
-
-  tutorId       Int
-  Tutor         User        @relation("TutorClasses", fields: [tutorId], references: [id])
-
-  institutionId Int
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-
-  ClassPayments ClassPayment[]
-
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@index([institutionId])
-  @@index([tutorId])
-  @@index([studentId])
-}
-
-model ClassPayment {
-  id                      Int           @id @default(autoincrement())
-  classId                 Int
-  guardianPaymentStatus   PaymentStatus @default(pending)
-  tutorPaymentStatus      PaymentStatus @default(pending)
-  totalGuardianAmount     Int
-  totalTutorAmount        Int
-  paymentType             PaymentType   @default(bankTransfer)
-  
-  Class                   Class         @relation(fields: [classId], references: [id])
-  
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  
-  @@unique([classId])
-  @@index([createdAt])
-}
-
 model CoordinatorPayment {
   id            Int      @id @default(autoincrement())
+  coordinatorId Int
   institutionId Int
   periodYear    Int
   periodMonth   Int
   amount        Int
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  Coordinator   User     @relation(fields: [coordinatorId], references: [id])
+  Institution   Institution @relation(fields: [institutionId], references: [id])
 
   @@unique([institutionId, periodYear, periodMonth])
   @@index([periodYear, periodMonth])
@@ -126,10 +96,53 @@ model CoordinatorProfitShare {
 
   Coordinator   User     @relation(fields: [coordinatorId], references: [id])
   Institution   Institution @relation(fields: [institutionId], references: [id])
+  
   @@unique([coordinatorId, institutionId])
   @@index([institutionId])
   @@index([coordinatorId])
 }
+
+model Class {
+  id            Int        @id @default(autoincrement())
+  date          DateTime
+  subject       ClassSubject
+  modality      ClassModality
+  numberOfStudents Int
+  type          ClassType
+  duration      Int
+  institutionId Int
+  studentId     Int
+  tutorId       Int
+  ClassPayment ClassPayment
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  Institution   Institution @relation(fields: [institutionId], references: [id])
+  Student       Student     @relation(fields: [studentId], references: [id])
+  Tutor         User        @relation("TutorClasses", fields: [tutorId], references: [id])
+  
+  @@index([institutionId])
+  @@index([tutorId])
+  @@index([studentId])
+}
+
+model ClassPayment {
+  id                      Int           @id @default(autoincrement())
+  classId                 Int
+  guardianAmount     Int
+  guardianPaymentStatus   PaymentStatus @default(pending)
+  guardianPaymentType             PaymentType   @default(bankTransfer)
+  tutorAmount        Int
+  tutorPaymentStatus      PaymentStatus @default(pending)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  
+  Class                   Class         @relation(fields: [classId], references: [id])
+
+  @@unique([classId])
+  @@index([createdAt])
+}
+
 
 model Fee {
   id                Int      @id @default(autoincrement())
@@ -144,6 +157,7 @@ model Fee {
   updatedAt         DateTime @updatedAt
 
   Institution       Institution @relation(fields: [institutionId], references: [id])
+ 
   @@index([institutionId])
   @@unique([type, classModality, numberOfStudents, institutionId])
 }
@@ -189,6 +203,7 @@ model Student {
   Guardian      User        @relation("GuardianStudents", fields: [guardianId], references: [id])
   Institution   Institution @relation(fields: [institutionId], references: [id])
   Classes       Class[]
+  
   @@index([guardianId])
   @@index([institutionId])
 }
@@ -199,7 +214,7 @@ model User {
   name              String
   role              UserRole
   email             String   @unique
-  rut               String?  @unique
+  rut               String  
   phone             String?  
   address           String?
   chargeEmail       String?
@@ -227,7 +242,7 @@ model UserBankAccount {
   accountType    AccountType
   accountNumber  String
   accountEmail   String
-  rutHolder      String
+  rut      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -247,3 +262,5 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
 }
+
+
