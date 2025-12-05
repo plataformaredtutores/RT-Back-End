@@ -38,12 +38,12 @@ enum ClassSubject {
 enum ClassModality {
   inPerson
   online
-  cancelled
 }
 
 enum ClassType {
   school
   university
+  cancelled
 }
 
 enum PaymentStatus {
@@ -262,5 +262,3 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
 }
-
-
