@@ -1,8 +1,15 @@
 // routes/userRoutes.ts
-import { Router } from 'express';
-import { createUser, getUsers, deleteUser } from '../controllers/userController';
+import { Router } from 'express'
+import { 
+  createUser,
+  getUsers,
+  deleteUser,
+  getUserById,
+  editUserBankAccount,
+  editUserPersonalInformation
+} from '../controllers/userController'
 
-const router = Router();
+const router = Router()
 
 /**
  * @openapi
@@ -52,7 +59,7 @@ const router = Router();
  *               items:
  *                 $ref: '#/components/schemas/UserWithInstitution'
  */
-router.get('/', getUsers);
+router.get('/', getUsers)
 /**
  * @openapi
  * /users:
@@ -73,7 +80,7 @@ router.get('/', getUsers);
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.post('/', createUser);
+router.post('/', createUser)
 /**
  * @openapi
  * /users/{id}:
@@ -91,5 +98,89 @@ router.post('/', createUser);
  *       204:
  *         description: User deleted successfully
  */
-router.delete('/:id', deleteUser);
+router.delete('/:id', deleteUser)
+/**
+ * @openapi
+ * /users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserDetail'
+ *       404:
+ *         description: User not found
+ */
+router.get('/:id', getUserById)
+/**
+ * @openapi
+ * /users/{id}/bank-account:
+ *   patch:
+ *     summary: Edit a user's bank account information
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserBankAccountInput'
+ *     responses:
+ *       200:
+ *         description: Updated bank account information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserBankAccount'
+ *       404:
+ *         description: User not found
+ */
+router.patch('/:id/bank-account', editUserBankAccount)
+/**
+ * @openapi
+ * /users/{id}/personal-information:
+ *   patch:
+ *     summary: Edit a user's personal information
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/EditUserPersonalInformationInput'
+ *     responses:
+ *       201:
+ *         description: Updated user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+router.patch('/:id/personal-information', editUserPersonalInformation)
 export default router;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, logout, refreshToken } from "../controllers/authController";
+import { login, logout, refreshToken, requestPasswordReset, resetPassword } from "../controllers/authController";
 
 const router = Router()
 /**
@@ -89,6 +89,88 @@ router.post('/login', login)
  *                   type: string
  */
 router.post('/logout', logout)
+
+/**
+ * @openapi
+ * /auth/request-password-reset:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Recovery email sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+router.post('/request-password-reset', requestPasswordReset)
+
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password using token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid token or missing fields
+ */
+router.post('/reset-password', resetPassword)
 
 router.post('/refresh', refreshToken) // Placeholder for refresh token endpoint
 export default router

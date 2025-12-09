@@ -12,6 +12,6 @@ export function setRoutes(app: Express) {
   app.use('/mail', mailRoutes)
   app.use('/auth', authRoutes)
   app.use(requireAuth)
-  app.use('/users', authorize(['admin']), userRoutes)
+  app.use('/users', userRoutes)
   app.use('/institutions', authorize(['admin', "coordinator"]), institutionRoutes)
 }

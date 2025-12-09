@@ -124,6 +124,84 @@ const options: swaggerJSDoc.Options = {
             }
           ]
         },
+        UserBankAccount: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            userId: { type: 'integer' },
+            bankName: { type: 'string' },
+            accountType: { type: 'string', enum: ['ahorro', 'corriente', 'vista'] },
+            accountNumber: { type: 'string' },
+            accountEmail: { type: 'string', format: 'email' },
+            rutHolder: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Student: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            parentId: { type: 'integer' },
+            institutionId: { type: 'integer' }
+          }
+        },
+        ParentTutor: {
+          type: 'object',
+          properties: {
+            parentId: { type: 'integer' },
+            tutorId: { type: 'integer' },
+            institutionId: { type: 'integer' },
+            active: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        UserDetail: {
+          allOf: [
+            { $ref: '#/components/schemas/User' },
+            {
+              type: 'object',
+              properties: {
+                Institution: { $ref: '#/components/schemas/Institution', nullable: true },
+                BankAccount: { $ref: '#/components/schemas/UserBankAccount', nullable: true },
+                Students: { 
+                  type: 'array', 
+                  items: { $ref: '#/components/schemas/Student' } 
+                },
+                TutorLinks: { 
+                  type: 'array', 
+                  items: { 
+                    allOf: [
+                      { $ref: '#/components/schemas/ParentTutor' },
+                      {
+                        type: 'object',
+                        properties: {
+                          Parent: { $ref: '#/components/schemas/User' }
+                        }
+                      }
+                    ]
+                  } 
+                },
+                ParentLinks: { 
+                  type: 'array', 
+                  items: { 
+                    allOf: [
+                      { $ref: '#/components/schemas/ParentTutor' },
+                      {
+                        type: 'object',
+                        properties: {
+                          Tutor: { $ref: '#/components/schemas/User' }
+                        }
+                      }
+                    ]
+                  } 
+                }
+              }
+            }
+          ]
+        },
         UserBankAccountInput: {
           type: 'object',
           properties: {
@@ -148,6 +226,24 @@ const options: swaggerJSDoc.Options = {
               }
             }
           ]
+        },
+        UserByIdResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            user: { $ref: '#/components/schemas/UserWithInstitution' }
+          }
+        },
+        EditUserPersonalInformationInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            rut: { type: 'string', nullable: true },
+            phone: { type: 'string', nullable: true },
+            chargeEmail: { type: 'string', nullable: true },
+            address: { type: 'string', nullable: true }
+          },
+          required: ['name', 'phone', 'rut']
         }
       }
     }

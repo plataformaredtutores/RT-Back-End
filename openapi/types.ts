@@ -70,6 +70,68 @@ export interface paths {
       };
     };
   };
+  "/auth/request-password-reset": {
+    /** Request password reset */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: email */
+            email: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Recovery email sent */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description User not found */
+        404: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/auth/reset-password": {
+    /** Reset password using token */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            token: string;
+            /** Format: password */
+            newPassword: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Password updated */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid token or missing fields */
+        400: {
+          content: never;
+        };
+      };
+    };
+  };
   "/institutions": {
     /** Get all institutions */
     get: {
@@ -164,6 +226,27 @@ export interface paths {
     };
   };
   "/users/{id}": {
+    /** Get a user by ID */
+    get: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User found */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserDetail"];
+          };
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
     /** Delete a user by ID */
     delete: {
       parameters: {
@@ -175,6 +258,62 @@ export interface paths {
       responses: {
         /** @description User deleted successfully */
         204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}/bank-account": {
+    /** Edit a user's bank account information */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UserBankAccountInput"];
+        };
+      };
+      responses: {
+        /** @description Updated bank account information */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserBankAccount"];
+          };
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}/personal-information": {
+    /** Edit a user's personal information */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditUserPersonalInformationInput"];
+        };
+      };
+      responses: {
+        /** @description Updated user information */
+        201: {
+          content: {
+            "application/json": components["schemas"]["User"];
+          };
+        };
+        /** @description User not found */
+        404: {
           content: never;
         };
       };
@@ -254,6 +393,48 @@ export interface components {
     UserWithInstitution: components["schemas"]["User"] & {
       Institution?: components["schemas"]["Institution"];
     };
+    UserBankAccount: {
+      id?: number;
+      userId?: number;
+      bankName?: string;
+      /** @enum {string} */
+      accountType?: "ahorro" | "corriente" | "vista";
+      accountNumber?: string;
+      /** Format: email */
+      accountEmail?: string;
+      rutHolder?: string;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    Student: {
+      id?: number;
+      name?: string;
+      parentId?: number;
+      institutionId?: number;
+    };
+    ParentTutor: {
+      parentId?: number;
+      tutorId?: number;
+      institutionId?: number;
+      active?: boolean;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
+    UserDetail: components["schemas"]["User"] & ({
+      Institution?: components["schemas"]["Institution"];
+      BankAccount?: components["schemas"]["UserBankAccount"];
+      Students?: components["schemas"]["Student"][];
+      TutorLinks?: (components["schemas"]["ParentTutor"] & {
+          Parent?: components["schemas"]["User"];
+        })[];
+      ParentLinks?: (components["schemas"]["ParentTutor"] & {
+          Tutor?: components["schemas"]["User"];
+        })[];
+    });
     UserBankAccountInput: {
       bankName: string;
       accountType: string;
@@ -265,6 +446,17 @@ export interface components {
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
     });
+    UserByIdResponse: {
+      ok?: boolean;
+      user?: components["schemas"]["UserWithInstitution"];
+    };
+    EditUserPersonalInformationInput: {
+      name: string;
+      rut: string | null;
+      phone: string | null;
+      chargeEmail?: string | null;
+      address?: string | null;
+    };
   };
   responses: never;
   parameters: never;
