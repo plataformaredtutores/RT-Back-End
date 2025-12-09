@@ -105,7 +105,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
           bankName,
           accountType,
           accountNumber,
-          rutHolder: rutHolder || rut,
+          rut: rutHolder || rut,
           accountEmail: accountEmail || email
         }
       });
@@ -154,10 +154,10 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
         Students: true,
         TutorLinks: {
           include: {
-            Parent: true
+            Guardian: true
           }
         },
-        ParentLinks: {
+        GuardianLinks: {
           include: {
             Tutor: true
           }
@@ -183,7 +183,7 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
       bankName,
       accountType,
       accountNumber,
-      rutHolder,
+      rut,
       accountEmail
     } = req.body
 
@@ -202,14 +202,14 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         bankName,
         accountType: accountType as AccountType,
         accountNumber,
-        rutHolder,
+        rut,
         accountEmail
       },
       update: {
         bankName,
         accountType: accountType as AccountType,
         accountNumber,
-        rutHolder,
+        rut,
         accountEmail
       }
     })

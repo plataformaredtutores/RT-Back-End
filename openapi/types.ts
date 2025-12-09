@@ -356,7 +356,7 @@ export interface components {
       /** Format: email */
       email: string;
       /** @enum {string} */
-      role: "admin" | "coordinator" | "tutor" | "parent";
+      role: "admin" | "coordinator" | "tutor" | "guardian";
       rut?: string | null;
       phone?: string | null;
       address?: string | null;
@@ -372,7 +372,7 @@ export interface components {
       /** Format: email */
       email: string;
       /** @enum {string} */
-      role: "admin" | "coordinator" | "tutor" | "parent";
+      role: "admin" | "coordinator" | "tutor" | "guardian";
       rut?: string | null;
       phone?: string | null;
       address?: string | null;
@@ -402,7 +402,7 @@ export interface components {
       accountNumber?: string;
       /** Format: email */
       accountEmail?: string;
-      rutHolder?: string;
+      rut?: string;
       /** Format: date-time */
       createdAt?: string;
       /** Format: date-time */
@@ -411,11 +411,11 @@ export interface components {
     Student: {
       id?: number;
       name?: string;
-      parentId?: number;
+      guardianId?: number;
       institutionId?: number;
     };
-    ParentTutor: {
-      parentId?: number;
+    GuardianTutor: {
+      guardianId?: number;
       tutorId?: number;
       institutionId?: number;
       active?: boolean;
@@ -428,10 +428,10 @@ export interface components {
       Institution?: components["schemas"]["Institution"];
       BankAccount?: components["schemas"]["UserBankAccount"];
       Students?: components["schemas"]["Student"][];
-      TutorLinks?: (components["schemas"]["ParentTutor"] & {
-          Parent?: components["schemas"]["User"];
+      TutorLinks?: (components["schemas"]["GuardianTutor"] & {
+          Guardian?: components["schemas"]["User"];
         })[];
-      ParentLinks?: (components["schemas"]["ParentTutor"] & {
+      GuardianLinks?: (components["schemas"]["GuardianTutor"] & {
           Tutor?: components["schemas"]["User"];
         })[];
     });
@@ -439,7 +439,7 @@ export interface components {
       bankName: string;
       accountType: string;
       accountNumber: string;
-      rutHolder: string;
+      rut: string;
       /** Format: email */
       accountEmail: string;
     };
