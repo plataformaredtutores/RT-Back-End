@@ -41,6 +41,15 @@ export async function login(req: Request, res: Response) {
   })
   if (!isPasswordValid) return res.status(401).json({ ok: false, message: 'Invalid credentials' })
 
+  await prisma.refreshToken.updateMany({
+    where: { userId: user.id, revoked: false },
+    data: { revoked: true }
+  })
+  
+  await prisma.refreshToken.deleteMany({
+    where: { userId: user.id, expiresAt: { lt: new Date() } }
+  })
+
   const refreshRaw  = randomToken()
   const refreshHash = await hashToken(refreshRaw)
   await prisma.refreshToken.create({

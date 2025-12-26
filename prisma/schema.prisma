@@ -61,6 +61,7 @@ model AdminPayment {
   periodYear    Int
   periodMonth   Int
   amount        Int
+  status        PaymentStatus @default(pending)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -76,6 +77,8 @@ model CoordinatorPayment {
   periodYear    Int
   periodMonth   Int
   amount        Int
+  status        PaymentStatus @default(pending)
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -147,7 +150,7 @@ model ClassPayment {
 model Fee {
   id                Int      @id @default(autoincrement())
   type              ClassType
-  classModality     ClassModality
+  modality          ClassModality
   numberOfStudents  Int      @default(1)
   tutorAmount       Int      @default(0)
   guardianAmount    Int      @default(0)
@@ -158,7 +161,7 @@ model Fee {
   Institution       Institution @relation(fields: [institutionId], references: [id])
  
   @@index([institutionId])
-  @@unique([type, classModality, numberOfStudents, institutionId])
+  @@unique([type, modality, numberOfStudents, institutionId])
 }
 
 model Institution {
