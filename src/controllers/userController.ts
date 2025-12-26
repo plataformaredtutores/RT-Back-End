@@ -121,8 +121,9 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     const { id } = req.params
     
     const userId = Number(id)
-    await prisma.user.delete({
-      where: { id: userId }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false }
     });
     
     res.status(204).send();
@@ -242,6 +243,38 @@ export async function editUserPersonalInformation(req: Request, res: Response, n
     })
     
     res.json(userResponse)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function changeUserPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+    const { currentPassword, newPassword } = req.body
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: Number(id) },
+      select: { hashedPassword: true }
+    })
+
+    const isPasswordValid = await argon2.verify(user.hashedPassword, currentPassword, {
+      secret: Buffer.from((process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''), 'base64')
+    })
+    if (!isPasswordValid) {
+      return res.status(401).json({ ok: false, message: 'Current password is incorrect' })
+    }
+
+    const newHashedPassword = await argon2.hash(newPassword, {
+      secret: Buffer.from((process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''), 'base64')
+    })
+
+    await prisma.user.update({
+      where: { id: Number(id) },
+      data: { hashedPassword: newHashedPassword }
+    })
+
+    res.status(200).json({ ok: true, message: 'Password updated successfully' })
   } catch (err) {
     next(err)
   }
