@@ -6,7 +6,8 @@ import {
   deleteUser,
   getUserById,
   editUserBankAccount,
-  editUserPersonalInformation
+  editUserPersonalInformation,
+  changeUserPassword
 } from '../controllers/userController'
 
 const router = Router()
@@ -183,4 +184,50 @@ router.patch('/:id/bank-account', editUserBankAccount)
  *         description: User not found
  */
 router.patch('/:id/personal-information', editUserPersonalInformation)
+/**
+ * @openapi
+ * /users/{id}/change-password:
+ *   patch:
+ *     summary: Change a user's password
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Current password is incorrect
+ *       404:
+ *         description: User not found
+ */
+router.patch('/:id/change-password', changeUserPassword)
+
 export default router;

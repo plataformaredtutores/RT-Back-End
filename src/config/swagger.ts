@@ -130,7 +130,7 @@ const options: swaggerJSDoc.Options = {
             id: { type: 'integer' },
             userId: { type: 'integer' },
             bankName: { type: 'string' },
-            accountType: { type: 'string', enum: ['ahorro', 'corriente', 'vista'] },
+            accountType: { type: 'string', enum: ['AHORRO', 'CORRIENTE', 'VISTA'] },
             accountNumber: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
             rut: { type: 'string' },
