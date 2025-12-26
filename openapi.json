@@ -147,7 +147,7 @@
               "admin",
               "coordinator",
               "tutor",
-              "parent"
+              "guardian"
             ]
           },
           "rut": {
@@ -204,7 +204,7 @@
               "admin",
               "coordinator",
               "tutor",
-              "parent"
+              "guardian"
             ]
           },
           "rut": {
@@ -312,7 +312,7 @@
             "type": "string",
             "format": "email"
           },
-          "rutHolder": {
+          "rut": {
             "type": "string"
           },
           "createdAt": {
@@ -334,7 +334,7 @@
           "name": {
             "type": "string"
           },
-          "parentId": {
+          "guardianId": {
             "type": "integer"
           },
           "institutionId": {
@@ -342,10 +342,10 @@
           }
         }
       },
-      "ParentTutor": {
+      "GuardianTutor": {
         "type": "object",
         "properties": {
-          "parentId": {
+          "guardianId": {
             "type": "integer"
           },
           "tutorId": {
@@ -392,13 +392,37 @@
               "TutorLinks": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/ParentTutor"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/GuardianTutor"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "Guardian": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
                 }
               },
-              "ParentLinks": {
+              "GuardianLinks": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/ParentTutor"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/GuardianTutor"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "Tutor": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -417,7 +441,7 @@
           "accountNumber": {
             "type": "string"
           },
-          "rutHolder": {
+          "rut": {
             "type": "string"
           },
           "accountEmail": {
@@ -430,7 +454,7 @@
           "bankName",
           "accountType",
           "accountNumber",
-          "rutHolder",
+          "rut",
           "accountEmail"
         ]
       },

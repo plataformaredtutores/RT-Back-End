@@ -71,7 +71,7 @@ const options: swaggerJSDoc.Options = {
             id: { type: 'integer' },
             name: { type: 'string' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'parent'] },
+            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'guardian'] },
             rut: { type: 'string', nullable: true },
             phone: { type: 'string', nullable: true },
             address: { type: 'string', nullable: true },
@@ -87,7 +87,7 @@ const options: swaggerJSDoc.Options = {
           properties: {
             name: { type: 'string' },
             email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'parent'] },
+            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'guardian'] },
             rut: { type: 'string', nullable: true },
             phone: { type: 'string', nullable: true },
             address: { type: 'string', nullable: true },
@@ -133,7 +133,7 @@ const options: swaggerJSDoc.Options = {
             accountType: { type: 'string', enum: ['ahorro', 'corriente', 'vista'] },
             accountNumber: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
-            rutHolder: { type: 'string' },
+            rut: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
@@ -143,14 +143,14 @@ const options: swaggerJSDoc.Options = {
           properties: {
             id: { type: 'integer' },
             name: { type: 'string' },
-            parentId: { type: 'integer' },
+            guardianId: { type: 'integer' },
             institutionId: { type: 'integer' }
           }
         },
-        ParentTutor: {
+        GuardianTutor: {
           type: 'object',
           properties: {
-            parentId: { type: 'integer' },
+            guardianId: { type: 'integer' },
             tutorId: { type: 'integer' },
             institutionId: { type: 'integer' },
             active: { type: 'boolean' },
@@ -172,11 +172,31 @@ const options: swaggerJSDoc.Options = {
                 },
                 TutorLinks: { 
                   type: 'array', 
-                  items: { $ref: '#/components/schemas/ParentTutor' } 
+                  items: { 
+                    allOf: [
+                      { $ref: '#/components/schemas/GuardianTutor' },
+                      {
+                        type: 'object',
+                        properties: {
+                          Guardian: { $ref: '#/components/schemas/User' }
+                        }
+                      }
+                    ]
+                  } 
                 },
-                ParentLinks: { 
+                GuardianLinks: { 
                   type: 'array', 
-                  items: { $ref: '#/components/schemas/ParentTutor' } 
+                  items: { 
+                    allOf: [
+                      { $ref: '#/components/schemas/GuardianTutor' },
+                      {
+                        type: 'object',
+                        properties: {
+                          Tutor: { $ref: '#/components/schemas/User' }
+                        }
+                      }
+                    ]
+                  } 
                 }
               }
             }
@@ -188,10 +208,10 @@ const options: swaggerJSDoc.Options = {
             bankName: { type: 'string' },
             accountType: { type: 'string' },
             accountNumber: { type: 'string' },
-            rutHolder: { type: 'string' },
+            rut: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
           },
-          required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rutHolder', 'accountEmail']
+          required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rut', 'accountEmail']
         },
         CreateUserWithBankAccountInput: {
           allOf: [

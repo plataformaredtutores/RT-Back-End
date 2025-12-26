@@ -105,7 +105,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
           bankName,
           accountType,
           accountNumber,
-          rutHolder: rutHolder || rut,
+          rut: rutHolder || rut,
           accountEmail: accountEmail || email
         }
       });
@@ -152,8 +152,16 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
         Institution: true,
         BankAccount: true,
         Students: true,
-        TutorLinks: true,
-        ParentLinks: true
+        TutorLinks: {
+          include: {
+            Guardian: true
+          }
+        },
+        GuardianLinks: {
+          include: {
+            Tutor: true
+          }
+        },
         // note: hashedPassword is omitted intentionally to exclude it
       }
     })
@@ -175,7 +183,7 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
       bankName,
       accountType,
       accountNumber,
-      rutHolder,
+      rut,
       accountEmail
     } = req.body
 
@@ -194,14 +202,14 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         bankName,
         accountType: accountType as AccountType,
         accountNumber,
-        rutHolder,
+        rut,
         accountEmail
       },
       update: {
         bankName,
         accountType: accountType as AccountType,
         accountNumber,
-        rutHolder,
+        rut,
         accountEmail
       }
     })
