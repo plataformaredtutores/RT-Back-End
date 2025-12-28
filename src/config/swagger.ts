@@ -312,6 +312,43 @@ const options: swaggerJSDoc.Options = {
             }
           },
           required: ['ok', 'result']
+        },
+        EditFeesRequest: {
+          type: 'object',
+          properties: {
+            fees: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  feeId: { 
+                    type: 'integer',
+                    description: 'Fee ID to update'
+                  },
+                  tutorAmount: { 
+                    type: 'integer',
+                    description: 'New tutor amount'
+                  },
+                  guardianAmount: { 
+                    type: 'integer',
+                    description: 'New guardian amount'
+                  }
+                },
+                required: ['feeId', 'tutorAmount', 'guardianAmount']
+              },
+              minItems: 1,
+              description: 'Array of fees to update. Can also be a single fee object for backward compatibility.'
+            }
+          },
+          required: ['fees']
+        },
+        EditFeesResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' }
+          },
+          required: ['ok', 'message']
         }
       }
     }

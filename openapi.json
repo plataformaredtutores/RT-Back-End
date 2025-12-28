@@ -527,7 +527,7 @@
           "type": {
             "type": "string"
           },
-          "classModality": {
+          "modality": {
             "type": "string",
             "enum": [
               "inPerson",
@@ -538,17 +538,14 @@
           "numberOfStudents": {
             "type": "integer"
           },
-          "amountToPay": {
+          "guardianAmount": {
             "type": "integer"
           },
-          "amountToCharge": {
+          "tutorAmount": {
             "type": "integer"
           },
           "institutionId": {
             "type": "integer"
-          },
-          "currentlyActive": {
-            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -562,12 +559,11 @@
         "required": [
           "id",
           "type",
-          "classModality",
+          "modality",
           "numberOfStudents",
-          "amountToPay",
-          "amountToCharge",
+          "guardianAmount",
+          "tutorAmount",
           "institutionId",
-          "currentlyActive",
           "createdAt",
           "updatedAt"
         ]
@@ -611,16 +607,85 @@
       "SimulateFeePaymentResponse": {
         "type": "object",
         "properties": {
-          "amountToPay": {
-            "type": "number"
+          "ok": {
+            "type": "boolean"
           },
-          "amountToCharge": {
-            "type": "number"
+          "result": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "guardianAmount": {
+                    "type": "number"
+                  },
+                  "tutorAmount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "guardianAmount",
+                  "tutorAmount"
+                ]
+              }
+            ]
           }
         },
         "required": [
-          "amountToPay",
-          "amountToCharge"
+          "ok",
+          "result"
+        ]
+      },
+      "EditFeesRequest": {
+        "type": "object",
+        "properties": {
+          "fees": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "feeId": {
+                  "type": "integer",
+                  "description": "Fee ID to update"
+                },
+                "tutorAmount": {
+                  "type": "integer",
+                  "description": "New tutor amount"
+                },
+                "guardianAmount": {
+                  "type": "integer",
+                  "description": "New guardian amount"
+                }
+              },
+              "required": [
+                "feeId",
+                "tutorAmount",
+                "guardianAmount"
+              ]
+            },
+            "minItems": 1,
+            "description": "Array of fees to update. Can also be a single fee object for backward compatibility."
+          }
+        },
+        "required": [
+          "fees"
+        ]
+      },
+      "EditFeesResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
         ]
       }
     }
@@ -908,6 +973,90 @@
           },
           "404": {
             "description": "Institution not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fees/edit": {
+      "put": {
+        "summary": "Edit fees",
+        "tags": [
+          "Fees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditFeesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fees updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditFeesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "One or more fees not found",
             "content": {
               "application/json": {
                 "schema": {

@@ -9,7 +9,13 @@ export async function getFees(req: Request, res: Response, next: NextFunction) {
     const userRole = (req as any).auth?.role;
 
     const fees = await prisma.fee.findMany({
-      where: { institutionId: Number(institutionId) }
+      where: { institutionId: Number(institutionId) },
+      orderBy: [
+        { type: 'asc' },
+        { numberOfStudents: 'asc' },
+        { modality: 'asc' },
+        { id: 'asc' },
+      ],
     });
     const translatedFees = translateFees(fees);
 
@@ -34,13 +40,56 @@ export async function getFees(req: Request, res: Response, next: NextFunction) {
       res.status(200).json(result);
     }
     else if (userRole === 'coordinator' || userRole === 'admin') {
-      // Return everything
+      // Return type, modality, numberOfStudents, tutorAmount, guardianAmount
       res.status(200).json(translatedFees);
     }
     else {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
   } catch (err) {
+    next(err);
+  }
+}
+
+export async function editFees(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userRole = (req as any).auth?.role;
+    
+    if (userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+    const { fees } = req.body;
+    const feesToUpdate = Array.isArray(fees) ? fees : [fees || req.body];
+
+    const [hasError, errorResponse] = validateFeeUpdateInput(feesToUpdate);
+    if (hasError) {
+      return res.status(400).json(errorResponse);
+    }
+
+    await prisma.$transaction(
+      feesToUpdate.map(fee =>
+        prisma.fee.update({
+          where: {
+            id: Number(fee.feeId)
+          },
+          data: {
+            tutorAmount: Number(fee.tutorAmount),
+            guardianAmount: Number(fee.guardianAmount)
+          }
+        })
+      )
+    );
+
+    return res.status(200).json({ 
+      ok: true, 
+      message: `${feesToUpdate.length} fee(s) updated successfully` 
+    });
+
+  } catch (err: any) {
+    if (err.code === 'P2001') {
+      return res.status(404).json({ ok: false, message: 'One or more fees not found' });
+    }
     next(err);
   }
 }
@@ -82,6 +131,23 @@ export async function simulateFeePayment(req: Request, res: Response, next: Next
 // ############################################################
 // #################### UTILITY FUNCTIONS #####################
 // ############################################################
+
+function validateFeeUpdateInput(fees: any[]): [boolean, { ok: boolean; message: string }] {
+  if (!fees.length) {
+    return [true, { ok: false, message: 'At least one fee is required' }];
+  }
+
+  for (const fee of fees) {
+    if (!fee.feeId || fee.tutorAmount === undefined || fee.guardianAmount === undefined) {
+      return [true, { 
+        ok: false, 
+        message: 'Each fee must have feeId, tutorAmount, and guardianAmount' 
+      }];
+    }
+  }
+
+  return [false, { ok: true, message: 'Fees validated successfully' }];
+}
 
 function findFeeByCriteria(
   fees: Fee[],

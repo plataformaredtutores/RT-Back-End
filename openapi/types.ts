@@ -4,6 +4,11 @@
  */
 
 
+/** OneOf type helpers */
+type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
+type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
+type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
+
 export interface paths {
   "/auth/login": {
     /** User login */
@@ -149,6 +154,51 @@ export interface paths {
           };
         };
         /** @description Institution not found */
+        404: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/fees/edit": {
+    /** Edit fees */
+    put: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditFeesRequest"];
+        };
+      };
+      responses: {
+        /** @description Fees updated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["EditFeesResponse"];
+          };
+        };
+        /** @description Bad request - validation error */
+        400: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Forbidden - admin access required */
+        403: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description One or more fees not found */
         404: {
           content: {
             "application/json": {
@@ -584,7 +634,25 @@ export interface components {
     };
     SimulateFeePaymentResponse: {
       ok: boolean;
-      result: number | { guardianAmount: number; tutorAmount: number };
+      result: OneOf<[number, {
+        guardianAmount: number;
+        tutorAmount: number;
+      }]>;
+    };
+    EditFeesRequest: {
+      /** @description Array of fees to update. Can also be a single fee object for backward compatibility. */
+      fees: {
+          /** @description Fee ID to update */
+          feeId: number;
+          /** @description New tutor amount */
+          tutorAmount: number;
+          /** @description New guardian amount */
+          guardianAmount: number;
+        }[];
+    };
+    EditFeesResponse: {
+      ok: boolean;
+      message: string;
     };
   };
   responses: never;
