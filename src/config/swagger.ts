@@ -245,6 +245,7 @@ const options: swaggerJSDoc.Options = {
         UserBankAccountInput: {
           type: 'object',
           properties: {
+            userId: { type: 'integer' },
             bankName: { type: 'string' },
             accountType: { type: 'string' },
             accountNumber: { type: 'string' },
@@ -253,6 +254,161 @@ const options: swaggerJSDoc.Options = {
             accountName: { type: 'string' }
           },
           required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rut', 'accountEmail', 'accountName']
+        },
+
+        ClassSubject: {
+          type: 'string',
+          enum: [
+            'biology',
+            'chemistry',
+            'physics',
+            'mathematics',
+            'spanish',
+            'french',
+            'english',
+            'pet',
+            'socialStudies',
+            'studySkills',
+            'other'
+          ]
+        },
+        ClassModality: {
+          type: 'string',
+          enum: ['inPerson', 'online']
+        },
+        ClassType: {
+          type: 'string',
+          enum: ['school', 'university', 'cancelled']
+        },
+        PaymentStatus: {
+          type: 'string',
+          enum: ['completed', 'pending']
+        },
+        PaymentType: {
+          type: 'string',
+          enum: ['card', 'bankTransfer']
+        },
+        Class: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            date: { type: 'string', format: 'date-time' },
+            subject: { $ref: '#/components/schemas/ClassSubject' },
+            modality: { $ref: '#/components/schemas/ClassModality' },
+            numberOfStudents: { type: 'integer' },
+            type: { $ref: '#/components/schemas/ClassType' },
+            duration: { type: 'integer' },
+            institutionId: { type: 'integer' },
+            studentId: { type: 'integer' },
+            tutorId: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          },
+          required: [
+            'id',
+            'date',
+            'subject',
+            'modality',
+            'numberOfStudents',
+            'type',
+            'duration',
+            'institutionId',
+            'studentId',
+            'tutorId',
+            'createdAt',
+            'updatedAt'
+          ]
+        },
+        ClassPayment: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            classId: { type: 'integer' },
+            guardianAmount: { type: 'integer' },
+            guardianPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
+            guardianPaymentType: { $ref: '#/components/schemas/PaymentType' },
+            tutorAmount: { type: 'integer' },
+            tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          },
+          required: [
+            'id',
+            'classId',
+            'guardianAmount',
+            'guardianPaymentStatus',
+            'guardianPaymentType',
+            'tutorAmount',
+            'tutorPaymentStatus',
+            'createdAt',
+            'updatedAt'
+          ]
+        },
+        CreateClassBaseInput: {
+          type: 'object',
+          properties: {
+            studentId: { type: 'integer' },
+            date: {
+              type: 'string',
+              description: 'ISO 8601 date-time string',
+              example: '2025-12-31T10:00:00.000Z'
+            },
+            numberOfStudents: { type: 'integer', minimum: 1 },
+            duration: { type: 'integer', minimum: 1, description: 'Duration in minutes' },
+            subject: { $ref: '#/components/schemas/ClassSubject' },
+            type: { $ref: '#/components/schemas/ClassType' },
+            modality: { $ref: '#/components/schemas/ClassModality' }
+          },
+          required: ['studentId', 'date', 'numberOfStudents', 'duration', 'subject', 'type', 'modality']
+        },
+        CreateClassAsTutorInput: {
+          allOf: [
+            { $ref: '#/components/schemas/CreateClassBaseInput' }
+          ],
+          description: 'Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor.'
+        },
+        CreateClassAsCoordinatorInput: {
+          allOf: [
+            { $ref: '#/components/schemas/CreateClassBaseInput' },
+            {
+              type: 'object',
+              properties: {
+                tutorId: { type: 'integer', description: 'Tutor who will teach the class' }
+              },
+              required: ['tutorId']
+            }
+          ],
+          description: 'Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided.'
+        },
+        CreateClassAsAdminInput: {
+          allOf: [
+            { $ref: '#/components/schemas/CreateClassBaseInput' },
+            {
+              type: 'object',
+              properties: {
+                tutorId: { type: 'integer', description: 'Tutor who will teach the class' },
+                institutionId: { type: 'integer', description: 'Institution that owns the class' }
+              },
+              required: ['tutorId', 'institutionId']
+            }
+          ],
+          description: 'Admin creates a class. tutorId and institutionId must be provided.'
+        },
+        CreateClassInput: {
+          oneOf: [
+            { $ref: '#/components/schemas/CreateClassAsTutorInput' },
+            { $ref: '#/components/schemas/CreateClassAsCoordinatorInput' },
+            { $ref: '#/components/schemas/CreateClassAsAdminInput' }
+          ],
+          description: 'Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin).'
+        },
+        CreateClassResponse: {
+          type: 'object',
+          properties: {
+            class: { $ref: '#/components/schemas/Class' },
+            classPayment: { $ref: '#/components/schemas/ClassPayment' }
+          },
+          required: ['class', 'classPayment']
         },
         CreateUserWithBankAccountInput: {
           allOf: [
