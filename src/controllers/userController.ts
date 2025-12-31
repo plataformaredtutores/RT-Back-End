@@ -96,7 +96,8 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         accountType,
         accountNumber,
         rutHolder,
-        accountEmail
+        accountEmail,
+        accountName
       } = BankAccount
 
       await prisma.userBankAccount.create({
@@ -105,6 +106,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
           bankName,
           accountType,
           accountNumber,
+          accountName,
           rut: rutHolder || rut,
           accountEmail: accountEmail || email
         }
@@ -185,7 +187,8 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
       accountType,
       accountNumber,
       rut,
-      accountEmail
+      accountEmail,
+      accountName
     } = req.body
 
     const userId = Number(id)
@@ -203,6 +206,7 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         bankName,
         accountType: accountType as AccountType,
         accountNumber,
+        accountName,
         rut,
         accountEmail
       },

@@ -133,6 +133,7 @@ const options: swaggerJSDoc.Options = {
             accountType: { type: 'string', enum: ['AHORRO', 'CORRIENTE', 'VISTA'] },
             accountNumber: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
+            accountName: { type: 'string' },
             rut: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
@@ -249,8 +250,9 @@ const options: swaggerJSDoc.Options = {
             accountNumber: { type: 'string' },
             rut: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
+            accountName: { type: 'string' }
           },
-          required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rut', 'accountEmail']
+          required: ['userId', 'bankName', 'accountType', 'accountNumber', 'rut', 'accountEmail', 'accountName']
         },
         CreateUserWithBankAccountInput: {
           allOf: [

@@ -440,6 +440,7 @@ export interface components {
       accountNumber?: string;
       /** Format: email */
       accountEmail?: string;
+      accountName?: string;
       rut?: string;
       /** Format: date-time */
       createdAt?: string;
@@ -480,6 +481,7 @@ export interface components {
       rut: string;
       /** Format: email */
       accountEmail: string;
+      accountName: string;
     };
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;

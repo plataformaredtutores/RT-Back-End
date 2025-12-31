@@ -247,6 +247,7 @@ model UserBankAccount {
   userId         Int      @unique
   bankName       String
   accountType    AccountType
+  accountName    String   @default("")
   accountNumber  String
   accountEmail   String
   rut            String   @default("")

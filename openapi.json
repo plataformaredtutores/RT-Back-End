@@ -312,6 +312,9 @@
             "type": "string",
             "format": "email"
           },
+          "accountName": {
+            "type": "string"
+          },
           "rut": {
             "type": "string"
           },
@@ -447,6 +450,9 @@
           "accountEmail": {
             "type": "string",
             "format": "email"
+          },
+          "accountName": {
+            "type": "string"
           }
         },
         "required": [
@@ -455,7 +461,8 @@
           "accountType",
           "accountNumber",
           "rut",
-          "accountEmail"
+          "accountEmail",
+          "accountName"
         ]
       },
       "CreateUserWithBankAccountInput": {
