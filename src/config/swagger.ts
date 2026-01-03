@@ -254,6 +254,111 @@ const options: swaggerJSDoc.Options = {
             newPassword: { type: 'string' },
           },
           required: ['currentPassword', 'newPassword'],
+        },
+        Fee: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            type: { type: 'string' },
+            modality: { 
+              type: 'string', 
+              enum: ['inPerson', 'online', 'cancelled'] 
+            },
+            numberOfStudents: { type: 'integer' },
+            guardianAmount: { type: 'integer' },
+            tutorAmount: { type: 'integer' },
+            institutionId: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          },
+          required: [
+            'id',
+            'type',
+            'modality',
+            'numberOfStudents',
+            'guardianAmount',
+            'tutorAmount',
+            'institutionId',
+            'createdAt',
+            'updatedAt'
+          ]
+        },
+        SimulateFeePaymentRequest: {
+          type: 'object',
+          properties: {
+            fees: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Fee' }
+            },
+            type: { type: 'string' },
+            classModality: { 
+              type: 'string', 
+              enum: ['inPerson', 'online', 'cancelled'] 
+            },
+            numberOfStudents: { type: 'integer' },
+            duration: { 
+              type: 'integer',
+              description: 'Duration in minutes'
+            }
+          },
+          required: ['fees', 'type', 'classModality', 'numberOfStudents', 'duration']
+        },
+        SimulateFeePaymentResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            result: {
+              oneOf: [
+                { type: 'number' },
+                {
+                  type: 'object',
+                  properties: {
+                    guardianAmount: { type: 'number' },
+                    tutorAmount: { type: 'number' }
+                  },
+                  required: ['guardianAmount', 'tutorAmount']
+                }
+              ]
+            }
+          },
+          required: ['ok', 'result']
+        },
+        EditFeesRequest: {
+          type: 'object',
+          properties: {
+            fees: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  feeId: { 
+                    type: 'integer',
+                    description: 'Fee ID to update'
+                  },
+                  tutorAmount: { 
+                    type: 'integer',
+                    description: 'New tutor amount'
+                  },
+                  guardianAmount: { 
+                    type: 'integer',
+                    description: 'New guardian amount'
+                  }
+                },
+                required: ['feeId', 'tutorAmount', 'guardianAmount']
+              },
+              minItems: 1,
+              description: 'Array of fees to update. Can also be a single fee object for backward compatibility.'
+            }
+          },
+          required: ['fees']
+        },
+        EditFeesResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' }
+          },
+          required: ['ok', 'message']
         }
       }
     }

@@ -524,6 +524,7 @@
           "rut"
         ]
       },
+
       "ChangePasswordRequest": {
         "type": "object",
         "properties": {
@@ -537,6 +538,176 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "Fee": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "inPerson",
+              "online",
+              "cancelled"
+            ]
+          },
+          "numberOfStudents": {
+            "type": "integer"
+          },
+          "guardianAmount": {
+            "type": "integer"
+          },
+          "tutorAmount": {
+            "type": "integer"
+          },
+          "institutionId": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "modality",
+          "numberOfStudents",
+          "guardianAmount",
+          "tutorAmount",
+          "institutionId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SimulateFeePaymentRequest": {
+        "type": "object",
+        "properties": {
+          "fees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Fee"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "classModality": {
+            "type": "string",
+            "enum": [
+              "inPerson",
+              "online",
+              "cancelled"
+            ]
+          },
+          "numberOfStudents": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration in minutes"
+          }
+        },
+        "required": [
+          "fees",
+          "type",
+          "classModality",
+          "numberOfStudents",
+          "duration"
+        ]
+      },
+      "SimulateFeePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "guardianAmount": {
+                    "type": "number"
+                  },
+                  "tutorAmount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "guardianAmount",
+                  "tutorAmount"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "ok",
+          "result"
+        ]
+      },
+      "EditFeesRequest": {
+        "type": "object",
+        "properties": {
+          "fees": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "feeId": {
+                  "type": "integer",
+                  "description": "Fee ID to update"
+                },
+                "tutorAmount": {
+                  "type": "integer",
+                  "description": "New tutor amount"
+                },
+                "guardianAmount": {
+                  "type": "integer",
+                  "description": "New guardian amount"
+                }
+              },
+              "required": [
+                "feeId",
+                "tutorAmount",
+                "guardianAmount"
+              ]
+            },
+            "minItems": 1,
+            "description": "Array of fees to update. Can also be a single fee object for backward compatibility."
+          }
+        },
+        "required": [
+          "fees"
+        ]
+      },
+      "EditFeesResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
         ]
       }
     }
@@ -791,6 +962,208 @@
         }
       }
     },
+    "/fees/{institutionId}": {
+      "get": {
+        "summary": "Get all active fees from an institution",
+        "tags": [
+          "Fees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "institutionId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Institution ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active fees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fee"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Institution not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fees/edit": {
+      "put": {
+        "summary": "Edit fees",
+        "tags": [
+          "Fees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditFeesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fees updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditFeesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "One or more fees not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fees/simulate": {
+      "post": {
+        "summary": "Simulate a fee payment given a custom duration",
+        "tags": [
+          "Fees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateFeePaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulated fee payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulateFeePaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - fees list is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Fee not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/institutions": {
       "post": {
         "summary": "Create an institution",
@@ -834,6 +1207,76 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Institution"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/institutions/search": {
+      "get": {
+        "summary": "Search institutions by name",
+        "tags": [
+          "Institutions"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query to match institution names"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of institutions matching the search query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Institution"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - search query is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
                   }
                 }
               }
