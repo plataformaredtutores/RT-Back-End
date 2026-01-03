@@ -345,6 +345,76 @@
           }
         }
       },
+      "StudentSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TutorSummary": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "GuardianLinkWithTutor": {
+        "type": "object",
+        "properties": {
+          "tutorId": {
+            "type": "integer"
+          },
+          "Tutor": {
+            "$ref": "#/components/schemas/TutorSummary"
+          }
+        },
+        "required": [
+          "tutorId",
+          "Tutor"
+        ]
+      },
+      "UserWithGuardianLinks": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "Students": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentSummary"
+            }
+          },
+          "GuardianLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardianLinkWithTutor"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "Students",
+          "GuardianLinks"
+        ]
+      },
       "GuardianTutor": {
         "type": "object",
         "properties": {
@@ -435,6 +505,9 @@
       "UserBankAccountInput": {
         "type": "object",
         "properties": {
+          "userId": {
+            "type": "integer"
+          },
           "bankName": {
             "type": "string"
           },
@@ -463,6 +536,461 @@
           "rut",
           "accountEmail",
           "accountName"
+        ]
+      },
+      "ClassSubject": {
+        "type": "string",
+        "enum": [
+          "biology",
+          "chemistry",
+          "physics",
+          "mathematics",
+          "spanish",
+          "french",
+          "english",
+          "pet",
+          "socialStudies",
+          "studySkills",
+          "other"
+        ]
+      },
+      "ClassModality": {
+        "type": "string",
+        "enum": [
+          "inPerson",
+          "online"
+        ]
+      },
+      "ClassType": {
+        "type": "string",
+        "enum": [
+          "school",
+          "university",
+          "cancelled"
+        ]
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "completed",
+          "pending"
+        ]
+      },
+      "PaymentType": {
+        "type": "string",
+        "enum": [
+          "card",
+          "bankTransfer"
+        ]
+      },
+      "Class": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ClassSubject"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/ClassModality"
+          },
+          "numberOfStudents": {
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ClassType"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "institutionId": {
+            "type": "integer"
+          },
+          "studentId": {
+            "type": "integer"
+          },
+          "tutorId": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "subject",
+          "modality",
+          "numberOfStudents",
+          "type",
+          "duration",
+          "institutionId",
+          "studentId",
+          "tutorId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ClassPayment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "classId": {
+            "type": "integer"
+          },
+          "guardianAmount": {
+            "type": "integer"
+          },
+          "guardianPaymentStatus": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "guardianPaymentType": {
+            "$ref": "#/components/schemas/PaymentType"
+          },
+          "tutorAmount": {
+            "type": "integer"
+          },
+          "tutorPaymentStatus": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "classId",
+          "guardianAmount",
+          "guardianPaymentStatus",
+          "guardianPaymentType",
+          "tutorAmount",
+          "tutorPaymentStatus",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateClassBaseInput": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string",
+            "description": "ISO 8601 date-time string",
+            "example": "2025-12-31T10:00:00.000Z"
+          },
+          "numberOfStudents": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Duration in minutes"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ClassSubject"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ClassType"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/ClassModality"
+          }
+        },
+        "required": [
+          "studentId",
+          "date",
+          "numberOfStudents",
+          "duration",
+          "subject",
+          "type",
+          "modality"
+        ]
+      },
+      "CreateClassAsTutorInput": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateClassBaseInput"
+          }
+        ],
+        "description": "Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor."
+      },
+      "CreateClassAsCoordinatorInput": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateClassBaseInput"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tutorId": {
+                "type": "integer",
+                "description": "Tutor who will teach the class"
+              }
+            },
+            "required": [
+              "tutorId"
+            ]
+          }
+        ],
+        "description": "Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided."
+      },
+      "CreateClassAsAdminInput": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateClassBaseInput"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tutorId": {
+                "type": "integer",
+                "description": "Tutor who will teach the class"
+              },
+              "institutionId": {
+                "type": "integer",
+                "description": "Institution that owns the class"
+              }
+            },
+            "required": [
+              "tutorId",
+              "institutionId"
+            ]
+          }
+        ],
+        "description": "Admin creates a class. tutorId and institutionId must be provided."
+      },
+      "CreateClassInput": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateClassAsTutorInput"
+          },
+          {
+            "$ref": "#/components/schemas/CreateClassAsCoordinatorInput"
+          },
+          {
+            "$ref": "#/components/schemas/CreateClassAsAdminInput"
+          }
+        ],
+        "description": "Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin)."
+      },
+      "CreateClassResponse": {
+        "type": "object",
+        "properties": {
+          "class": {
+            "$ref": "#/components/schemas/Class"
+          },
+          "classPayment": {
+            "$ref": "#/components/schemas/ClassPayment"
+          }
+        },
+        "required": [
+          "class",
+          "classPayment"
+        ]
+      },
+      "ClassesCashFlowSummaryAmounts": {
+        "type": "object",
+        "properties": {
+          "pendingAmount": {
+            "type": "integer",
+            "description": "Pending amount for the authenticated role"
+          },
+          "paidAmount": {
+            "type": "integer",
+            "description": "Paid amount for the authenticated role"
+          }
+        },
+        "required": [
+          "pendingAmount",
+          "paidAmount"
+        ]
+      },
+      "ClassesCashFlowSummaryInstitution": {
+        "type": "object",
+        "properties": {
+          "pendingIncomes": {
+            "type": "integer",
+            "description": "Pending guardian incomes (institution scope)"
+          },
+          "receivedIncomes": {
+            "type": "integer",
+            "description": "Received guardian incomes (institution scope)"
+          },
+          "pendingExpenses": {
+            "type": "integer",
+            "description": "Pending tutor expenses (institution scope)"
+          },
+          "paidExpenses": {
+            "type": "integer",
+            "description": "Paid tutor expenses (institution scope)"
+          }
+        },
+        "required": [
+          "pendingIncomes",
+          "receivedIncomes",
+          "pendingExpenses",
+          "paidExpenses"
+        ]
+      },
+      "ClassesCashFlowSummaryResponse": {
+        "description": "Cash-flow summary. Shape depends on authenticated role (guardian/tutor vs coordinator/admin).",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ClassesCashFlowSummaryAmounts"
+          },
+          {
+            "$ref": "#/components/schemas/ClassesCashFlowSummaryInstitution"
+          }
+        ]
+      },
+      "UserIdName": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "StudentWithGuardianSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "Guardian": {
+            "$ref": "#/components/schemas/UserIdName"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "Guardian"
+        ]
+      },
+      "InstitutionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TutorBrief": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserIdName"
+          }
+        ],
+        "description": "Tutor basic info (id and name)"
+      },
+      "ClassDetails": {
+        "description": "Class with included relations: ClassPayment, Tutor, Student (with Guardian), Institution.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Class"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ClassPayment": {
+                "$ref": "#/components/schemas/ClassPayment",
+                "nullable": true
+              },
+              "Tutor": {
+                "$ref": "#/components/schemas/TutorBrief"
+              },
+              "Student": {
+                "$ref": "#/components/schemas/StudentWithGuardianSummary"
+              },
+              "Institution": {
+                "$ref": "#/components/schemas/InstitutionSummary"
+              }
+            },
+            "required": [
+              "Tutor",
+              "Student",
+              "Institution"
+            ]
+          }
+        ]
+      },
+      "UpdateClassPaymentStatusInput": {
+        "description": "Provide at least one of guardianPaymentStatus or tutorPaymentStatus.",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "guardianPaymentStatus": {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            },
+            "required": [
+              "guardianPaymentStatus"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tutorPaymentStatus": {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            },
+            "required": [
+              "tutorPaymentStatus"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "guardianPaymentStatus": {
+                "$ref": "#/components/schemas/PaymentStatus"
+              },
+              "tutorPaymentStatus": {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            },
+            "required": [
+              "guardianPaymentStatus",
+              "tutorPaymentStatus"
+            ]
+          }
         ]
       },
       "CreateUserWithBankAccountInput": {
@@ -947,6 +1475,106 @@
         }
       }
     },
+    "/classes": {
+      "post": {
+        "summary": "Create a class",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Creates a class and its related ClassPayment.\n\nThis endpoint can be used by 3 roles:\n- tutor: institutionId and tutorId are inferred from the authenticated tutor.\n- coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.\n- admin: tutorId and institutionId must be provided.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClassInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created class and its payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateClassResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (role not allowed)"
+          }
+        }
+      },
+      "get": {
+        "summary": "List classes with details",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Returns classes with related information (ClassPayment, Tutor, Student + Guardian, Institution).\n\nScoping depends on the authenticated role:\n- guardian: only classes for the guardian's students (and institution)\n- tutor: only classes for the tutor (and institution)\n- coordinator: all classes in the coordinator's institution\n- admin: requires institutionId query param\n",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter by class date >= startDate"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter by class date <= endDate"
+          },
+          {
+            "in": "query",
+            "name": "tutorId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by tutorId (ignored for role tutor)"
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by studentId"
+          },
+          {
+            "in": "query",
+            "name": "institutionId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Required for role admin (institution to query)"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Page number (1-based). If provided with pageSize, enables pagination."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Items per page. If provided with page, enables pagination."
     "/fees/{institutionId}": {
       "get": {
         "summary": "Get all active fees from an institution",
@@ -966,12 +1594,136 @@
         ],
         "responses": {
           "200": {
+            "description": "Array of class details",
             "description": "List of active fees",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
+                    "$ref": "#/components/schemas/ClassDetails"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/classes/cash-flow-summary": {
+      "get": {
+        "summary": "Get classes cash flow summary",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Returns a cash-flow summary computed from ClassPayment.\n\nThe returned shape depends on the authenticated role:\n- guardian/tutor: { pendingAmount, paidAmount }\n- coordinator/admin: { pendingIncomes, receivedIncomes, pendingExpenses, paidExpenses }\n\nNotes about scoping:\n- guardian: scoped to the authenticated guardian (and institution)\n- tutor: scoped to the authenticated tutor (and institution)\n- coordinator: scoped to the authenticated coordinator's institution\n- admin: requires institutionId query param\n",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter by class date >= startDate"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter by class date <= endDate"
+          },
+          {
+            "in": "query",
+            "name": "tutorId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by tutorId (ignored for role tutor)"
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by studentId"
+          },
+          {
+            "in": "query",
+            "name": "institutionId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Required for role admin (institution to query)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cash flow summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassesCashFlowSummaryResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/classes/{classId}": {
+      "delete": {
+        "summary": "Delete a class",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Deletes the class and any related ClassPayment.\n",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "classId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/classes/class-payments/{classPaymentId}/status": {
+      "patch": {
+        "summary": "Update class payment status",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.\nProvide at least one of the two fields.\n",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "classPaymentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
                     "$ref": "#/components/schemas/Fee"
                   }
                 }
@@ -1094,6 +1846,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "$ref": "#/components/schemas/UpdateClassPaymentStatusInput"
                 "$ref": "#/components/schemas/SimulateFeePaymentRequest"
               }
             }
@@ -1101,6 +1854,17 @@
         },
         "responses": {
           "200": {
+            "description": "Updated ClassPayment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassPayment"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
             "description": "Simulated fee payment",
             "content": {
               "application/json": {
@@ -1200,6 +1964,9 @@
         }
       }
     },
+    "/institutions/{institutionId}/guardians": {
+      "get": {
+        "summary": "Get guardians from an institution",
     "/institutions/search": {
       "get": {
         "summary": "Search institutions by name",
@@ -1208,23 +1975,28 @@
         ],
         "parameters": [
           {
+            "in": "path",
+            "name": "institutionId",
             "in": "query",
             "name": "query",
             "required": true,
             "schema": {
               "type": "string"
             },
+            "description": "Institution ID"
             "description": "Search query to match institution names"
           }
         ],
         "responses": {
           "200": {
+            "description": "List of guardians",
             "description": "List of institutions matching the search query",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
+                    "$ref": "#/components/schemas/UserWithGuardianLinks"
                     "$ref": "#/components/schemas/Institution"
                   }
                 }
@@ -1616,6 +2388,43 @@
           },
           "401": {
             "description": "Current password is incorrect"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/users/{id}/tutor-links": {
+      "get": {
+        "summary": "Get tutor links for a user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tutor links retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TutorLink"
+                  }
+                }
+              }
+            }
           },
           "404": {
             "description": "User not found"

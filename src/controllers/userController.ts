@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import argon2 from 'argon2';
-import { AccountType, UserRole } from '@prisma/client';
+import { AccountType, PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -280,6 +281,41 @@ export async function changeUserPassword(req: Request, res: Response, next: Next
 
     res.status(200).json({ ok: true, message: 'Password updated successfully' })
   } catch (err) {
+    next(err)
+  }
+}
+
+export async function getTutorLinks(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+
+    const tutorLinks = await prisma.guardianTutor.findMany({
+      where: { tutorId: Number(id) },
+      include: {
+        Guardian: {
+          select: {
+            id: true,
+            name: true,
+            Students: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!tutorLinks) {
+      return res.status(404).json({
+        ok: false,
+        message: 'No tutor links found for this tutor.'
+      })
+    }
+
+    res.json(tutorLinks)
+  } catch (err: PrismaClientKnownRequestError | any) {
     next(err)
   }
 }

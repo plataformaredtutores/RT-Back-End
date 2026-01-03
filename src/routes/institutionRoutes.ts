@@ -1,6 +1,14 @@
 // routes/institutionRoutes.ts
 import { Router } from 'express';
-import { createInstitution, deleteInstitution, getInstitutions, searchInstitutions } from '../controllers/institutionController';
+
+import { 
+  createInstitution,
+  deleteInstitution,
+  getInstitutions,
+  searchInstitutions,
+  getGuardiansFromInstitution
+} from '../controllers/institutionController';
+
 const router = Router();
 
 /**
@@ -44,6 +52,25 @@ router.get('/', getInstitutions);
 
 /**
  * @openapi
+ * /institutions/{institutionId}/guardians:
+ *   get:
+ *     summary: Get guardians from an institution
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: institutionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Institution ID
+ *     responses:
+ *       200:
+ *         description: List of guardian
+ */
+router.get('/:institutionId/guardians', getGuardiansFromInstitution);
+
+/**
+ * @openapi
  * /institutions/search:
  *   get:
  *     summary: Search institutions by name
@@ -63,6 +90,8 @@ router.get('/', getInstitutions);
  *             schema:
  *               type: array
  *               items:
+ *                 $ref: '#/components/schemas/UserWithGuardianLinks'
+ *
  *                 $ref: '#/components/schemas/Institution'
  *       400:
  *         description: Bad request - search query is required

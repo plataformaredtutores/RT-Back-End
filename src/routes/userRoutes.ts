@@ -7,7 +7,8 @@ import {
   getUserById,
   editUserBankAccount,
   editUserPersonalInformation,
-  changeUserPassword
+  changeUserPassword,
+  getTutorLinks
 } from '../controllers/userController'
 
 const router = Router()
@@ -230,4 +231,30 @@ router.patch('/:id/personal-information', editUserPersonalInformation)
  */
 router.patch('/:id/change-password', changeUserPassword)
 
+/**
+ * @openapi
+ * /users/{id}/tutor-links:
+ *   get:
+ *     summary: Get tutor links for a user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Tutor links retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/TutorLink'
+ *       404:
+ *         description: User not found
+ */
+router.get('/:id/tutor-links', getTutorLinks)
 export default router;

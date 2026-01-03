@@ -137,6 +137,172 @@ export interface paths {
       };
     };
   };
+  "/classes": {
+    /**
+     * List classes with details
+     * @description Returns classes with related information (ClassPayment, Tutor, Student + Guardian, Institution).
+     *
+     * Scoping depends on the authenticated role:
+     * - guardian: only classes for the guardian's students (and institution)
+     * - tutor: only classes for the tutor (and institution)
+     * - coordinator: all classes in the coordinator's institution
+     * - admin: requires institutionId query param
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by class date >= startDate */
+          startDate?: string;
+          /** @description Filter by class date <= endDate */
+          endDate?: string;
+          /** @description Optional filter by tutorId (ignored for role tutor) */
+          tutorId?: number;
+          /** @description Optional filter by studentId */
+          studentId?: number;
+          /** @description Required for role admin (institution to query) */
+          institutionId?: number;
+          /** @description Page number (1-based). If provided with pageSize, enables pagination. */
+          page?: number;
+          /** @description Items per page. If provided with page, enables pagination. */
+          pageSize?: number;
+        };
+      };
+      responses: {
+        /** @description Array of class details */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ClassDetails"][];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a class
+     * @description Creates a class and its related ClassPayment.
+     *
+     * This endpoint can be used by 3 roles:
+     * - tutor: institutionId and tutorId are inferred from the authenticated tutor.
+     * - coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.
+     * - admin: tutorId and institutionId must be provided.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateClassInput"];
+        };
+      };
+      responses: {
+        /** @description Created class and its payment */
+        201: {
+          content: {
+            "application/json": components["schemas"]["CreateClassResponse"];
+          };
+        };
+        /** @description Forbidden (role not allowed) */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/classes/cash-flow-summary": {
+    /**
+     * Get classes cash flow summary
+     * @description Returns a cash-flow summary computed from ClassPayment.
+     *
+     * The returned shape depends on the authenticated role:
+     * - guardian/tutor: { pendingAmount, paidAmount }
+     * - coordinator/admin: { pendingIncomes, receivedIncomes, pendingExpenses, paidExpenses }
+     *
+     * Notes about scoping:
+     * - guardian: scoped to the authenticated guardian (and institution)
+     * - tutor: scoped to the authenticated tutor (and institution)
+     * - coordinator: scoped to the authenticated coordinator's institution
+     * - admin: requires institutionId query param
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by class date >= startDate */
+          startDate?: string;
+          /** @description Filter by class date <= endDate */
+          endDate?: string;
+          /** @description Optional filter by tutorId (ignored for role tutor) */
+          tutorId?: number;
+          /** @description Optional filter by studentId */
+          studentId?: number;
+          /** @description Required for role admin (institution to query) */
+          institutionId?: number;
+        };
+      };
+      responses: {
+        /** @description Cash flow summary */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ClassesCashFlowSummaryResponse"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/classes/{classId}": {
+    /**
+     * Delete a class
+     * @description Deletes the class and any related ClassPayment.
+     */
+    delete: {
+      parameters: {
+        path: {
+          classId: number;
+        };
+      };
+      responses: {
+        /** @description Deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/classes/class-payments/{classPaymentId}/status": {
+    /**
+     * Update class payment status
+     * @description Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.
+     * Provide at least one of the two fields.
+     */
+    patch: {
+      parameters: {
+        path: {
+          classPaymentId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateClassPaymentStatusInput"];
+        };
+      };
+      responses: {
+        /** @description Updated ClassPayment */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ClassPayment"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
   "/fees/{institutionId}": {
     /** Get all active fees from an institution */
     get: {
@@ -275,6 +441,20 @@ export interface paths {
       };
     };
   };
+  "/institutions/{institutionId}/guardians": {
+    /** Get guardians from an institution */
+    get: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          institutionId: string;
+        };
+      };
+      responses: {
+        /** @description List of guardians */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserWithGuardianLinks"][];
   "/institutions/search": {
     /** Search institutions by name */
     get: {
@@ -508,6 +688,29 @@ export interface paths {
       };
     };
   };
+  "/users/{id}/tutor-links": {
+    /** Get tutor links for a user */
+    get: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Tutor links retrieved successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["TutorLink"][];
+          };
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -604,6 +807,23 @@ export interface components {
       guardianId?: number;
       institutionId?: number;
     };
+    StudentSummary: {
+      id: number;
+      name: string;
+    };
+    TutorSummary: {
+      name: string;
+    };
+    GuardianLinkWithTutor: {
+      tutorId: number;
+      Tutor: components["schemas"]["TutorSummary"];
+    };
+    UserWithGuardianLinks: {
+      id: number;
+      name: string;
+      Students: components["schemas"]["StudentSummary"][];
+      GuardianLinks: components["schemas"]["GuardianLinkWithTutor"][];
+    };
     GuardianTutor: {
       guardianId?: number;
       tutorId?: number;
@@ -626,6 +846,7 @@ export interface components {
         })[];
     });
     UserBankAccountInput: {
+      userId: number;
       bankName: string;
       accountType: string;
       accountNumber: string;
@@ -634,6 +855,129 @@ export interface components {
       accountEmail: string;
       accountName: string;
     };
+    /** @enum {string} */
+    ClassSubject: "biology" | "chemistry" | "physics" | "mathematics" | "spanish" | "french" | "english" | "pet" | "socialStudies" | "studySkills" | "other";
+    /** @enum {string} */
+    ClassModality: "inPerson" | "online";
+    /** @enum {string} */
+    ClassType: "school" | "university" | "cancelled";
+    /** @enum {string} */
+    PaymentStatus: "completed" | "pending";
+    /** @enum {string} */
+    PaymentType: "card" | "bankTransfer";
+    Class: {
+      id: number;
+      /** Format: date-time */
+      date: string;
+      subject: components["schemas"]["ClassSubject"];
+      modality: components["schemas"]["ClassModality"];
+      numberOfStudents: number;
+      type: components["schemas"]["ClassType"];
+      duration: number;
+      institutionId: number;
+      studentId: number;
+      tutorId: number;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    ClassPayment: {
+      id: number;
+      classId: number;
+      guardianAmount: number;
+      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
+      guardianPaymentType: components["schemas"]["PaymentType"];
+      tutorAmount: number;
+      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    CreateClassBaseInput: {
+      studentId: number;
+      /**
+       * @description ISO 8601 date-time string
+       * @example 2025-12-31T10:00:00.000Z
+       */
+      date: string;
+      numberOfStudents: number;
+      /** @description Duration in minutes */
+      duration: number;
+      subject: components["schemas"]["ClassSubject"];
+      type: components["schemas"]["ClassType"];
+      modality: components["schemas"]["ClassModality"];
+    };
+    /** @description Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor. */
+    CreateClassAsTutorInput: components["schemas"]["CreateClassBaseInput"];
+    /** @description Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided. */
+    CreateClassAsCoordinatorInput: components["schemas"]["CreateClassBaseInput"] & {
+      /** @description Tutor who will teach the class */
+      tutorId: number;
+    };
+    /** @description Admin creates a class. tutorId and institutionId must be provided. */
+    CreateClassAsAdminInput: components["schemas"]["CreateClassBaseInput"] & {
+      /** @description Tutor who will teach the class */
+      tutorId: number;
+      /** @description Institution that owns the class */
+      institutionId: number;
+    };
+    /** @description Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin). */
+    CreateClassInput: components["schemas"]["CreateClassAsTutorInput"] | components["schemas"]["CreateClassAsCoordinatorInput"] | components["schemas"]["CreateClassAsAdminInput"];
+    CreateClassResponse: {
+      class: components["schemas"]["Class"];
+      classPayment: components["schemas"]["ClassPayment"];
+    };
+    ClassesCashFlowSummaryAmounts: {
+      /** @description Pending amount for the authenticated role */
+      pendingAmount: number;
+      /** @description Paid amount for the authenticated role */
+      paidAmount: number;
+    };
+    ClassesCashFlowSummaryInstitution: {
+      /** @description Pending guardian incomes (institution scope) */
+      pendingIncomes: number;
+      /** @description Received guardian incomes (institution scope) */
+      receivedIncomes: number;
+      /** @description Pending tutor expenses (institution scope) */
+      pendingExpenses: number;
+      /** @description Paid tutor expenses (institution scope) */
+      paidExpenses: number;
+    };
+    /** @description Cash-flow summary. Shape depends on authenticated role (guardian/tutor vs coordinator/admin). */
+    ClassesCashFlowSummaryResponse: components["schemas"]["ClassesCashFlowSummaryAmounts"] | components["schemas"]["ClassesCashFlowSummaryInstitution"];
+    UserIdName: {
+      id: number;
+      name: string;
+    };
+    StudentWithGuardianSummary: {
+      id: number;
+      name: string;
+      Guardian: components["schemas"]["UserIdName"];
+    };
+    InstitutionSummary: {
+      id: number;
+      name: string;
+    };
+    /** @description Tutor basic info (id and name) */
+    TutorBrief: components["schemas"]["UserIdName"];
+    /** @description Class with included relations: ClassPayment, Tutor, Student (with Guardian), Institution. */
+    ClassDetails: components["schemas"]["Class"] & {
+      ClassPayment?: components["schemas"]["ClassPayment"];
+      Tutor: components["schemas"]["TutorBrief"];
+      Student: components["schemas"]["StudentWithGuardianSummary"];
+      Institution: components["schemas"]["InstitutionSummary"];
+    };
+    /** @description Provide at least one of guardianPaymentStatus or tutorPaymentStatus. */
+    UpdateClassPaymentStatusInput: OneOf<[{
+      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
+    }, {
+      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
+    }, {
+      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
+      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
+    }]>;
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
     });
