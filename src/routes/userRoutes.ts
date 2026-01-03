@@ -202,15 +202,7 @@ router.patch('/:id/personal-information', editUserPersonalInformation)
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               currentPassword:
- *                 type: string
- *               newPassword:
- *                 type: string
- *             required:
- *               - currentPassword
- *               - newPassword
+ *             $ref: '#/components/schemas/ChangePasswordRequest'
  *     responses:
  *       200:
  *         description: Password updated successfully

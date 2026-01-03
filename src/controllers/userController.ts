@@ -215,7 +215,8 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         accountType: accountType as AccountType,
         accountNumber,
         rut,
-        accountEmail
+        accountEmail,
+        accountName
       }
     })
 

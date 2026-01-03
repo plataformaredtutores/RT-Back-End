@@ -456,7 +456,6 @@
           }
         },
         "required": [
-          "userId",
           "bankName",
           "accountType",
           "accountNumber",
@@ -523,6 +522,21 @@
           "name",
           "phone",
           "rut"
+        ]
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
         ]
       }
     }
@@ -1136,19 +1150,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "currentPassword": {
-                    "type": "string"
-                  },
-                  "newPassword": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "currentPassword",
-                  "newPassword"
-                ]
+                "$ref": "#/components/schemas/ChangePasswordRequest"
               }
             }
           }
