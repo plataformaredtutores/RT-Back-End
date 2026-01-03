@@ -613,17 +613,41 @@ export async function deleteClass(req: Request, res: Response, next: NextFunctio
   try {
     const { classId } = req.params
 
-    await prisma.classPayment.deleteMany({
+    if (Number.isNaN(Number(classId))) {
+      return res.status(400).json({ message: "Invalid class ID" })
+    }
+
+    const classWithPayment = await prisma.class.findUnique({
       where: {
-        classId: Number(classId)
+        id: Number(classId)
+      },
+      include: {
+        ClassPayment: true
       }
     })
 
-    await prisma.class.delete({
-      where: {
-        id: Number(classId)
-      }
-    })
+    if (!classWithPayment) { 
+      return res.status(404).json({ message: "Class not found" })
+    }
+
+    const payment = classWithPayment.ClassPayment
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" })
+    }
+
+    if (payment.guardianPaymentStatus !== PaymentStatus.pending || payment.tutorPaymentStatus !== PaymentStatus.pending) {
+      return res.status(409).json({ message: "Class cannot be deleted because guardian or tutor payment is already completed"})
+    }
+
+    await prisma.$transaction([
+      prisma.classPayment.delete({
+        where: { id: payment.id }
+      }),
+      prisma.class.delete({
+        where: { id: Number(classId) }
+      })
+    ])
 
     res.status(204).send()
   } catch (err) {
