@@ -838,6 +838,9 @@ export interface components {
       /** Format: date-time */
       updatedAt?: string;
     };
+    TutorLink: components["schemas"]["GuardianTutor"] & {
+      Guardian?: components["schemas"]["User"];
+    };
     UserDetail: components["schemas"]["User"] & ({
       Institution?: components["schemas"]["Institution"];
       BankAccount?: components["schemas"]["UserBankAccount"];

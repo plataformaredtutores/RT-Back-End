@@ -198,6 +198,18 @@ const options: swaggerJSDoc.Options = {
             updatedAt: { type: 'string', format: 'date-time' }
           }
         },
+        TutorLink: {
+          type: 'object',
+          allOf: [
+            { $ref: '#/components/schemas/GuardianTutor' },
+            {
+              type: 'object',
+              properties: {
+                Guardian: { $ref: '#/components/schemas/User' }
+              }
+            }
+          ]
+        },
         UserDetail: {
           allOf: [
             { $ref: '#/components/schemas/User' },
