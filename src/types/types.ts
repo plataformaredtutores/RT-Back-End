@@ -416,39 +416,6 @@ export interface paths {
       };
     };
   };
-  "/guardians/create": {
-    /**
-     * Create a new guardian
-     * @description Create a new guardian user in the system.
-     * - Admins must provide the institution ID
-     * - Coordinators automatically use their own institution
-     * - Requires authentication with admin or coordinator role
-     * - Initial password is set to the RUT number without the verifying digit
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateGuardianInput"];
-        };
-      };
-      responses: {
-        /** @description Guardian created successfully */
-        201: {
-          content: {
-            "application/json": components["schemas"]["CreateGuardianResponse"];
-          };
-        };
-        /** @description Invalid input or validation error */
-        400: {
-          content: never;
-        };
-        /** @description Forbidden - user is not an admin or coordinator */
-        403: {
-          content: never;
-        };
-      };
-    };
-  };
   "/institutions": {
     /** Get all institutions */
     get: {
@@ -549,6 +516,110 @@ export interface paths {
               id?: string;
             };
           };
+        };
+      };
+    };
+  };
+  "/students/{guardianId}": {
+    /**
+     * Get students by guardian ID
+     * @description Retrieve all students associated with a specific guardian.
+     * - Requires admin or coordinator role
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Guardian ID */
+          guardianId: number;
+        };
+      };
+      responses: {
+        /** @description List of students retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              students?: components["schemas"]["Student"][];
+            };
+          };
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+        /** @description No students found for the specified guardian */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/add": {
+    /**
+     * Add a student to a guardian
+     * @description Create a new student and associate them with a guardian.
+     * - Requires admin or coordinator role
+     * - All fields are required
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AddStudentToGuardianRequest"];
+        };
+      };
+      responses: {
+        /** @description Student created and added to guardian successfully */
+        201: {
+          content: {
+            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
+          };
+        };
+        /** @description Invalid input or validation error (missing required fields, institution not found) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+        /** @description Guardian not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/delete": {
+    /**
+     * Remove a student from a guardian
+     * @description Delete a student record and remove their association with a guardian.
+     * - Requires admin or coordinator role
+     * - The student must be associated with the specified guardian
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["RemoveStudentFromGuardianRequest"];
+        };
+      };
+      responses: {
+        /** @description Student removed from guardian successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RemoveStudentFromGuardianResponse"];
+          };
+        };
+        /** @description Invalid input or validation error (missing required fields) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+        /** @description Student not found for the specified guardian */
+        404: {
+          content: never;
         };
       };
     };
@@ -1151,6 +1222,28 @@ export interface components {
     CreateGuardianResponse: {
       ok: boolean;
       guardian: components["schemas"]["User"];
+    };
+    AddStudentToGuardianRequest: {
+      /** @description Student name (required) */
+      name: string;
+      /** @description Institution ID (required) */
+      institutionId: number;
+      /** @description Guardian ID (required) */
+      guardianId: number;
+    };
+    AddStudentToGuardianResponse: {
+      ok: boolean;
+      student: components["schemas"]["Student"];
+    };
+    RemoveStudentFromGuardianRequest: {
+      /** @description Guardian ID (required) */
+      guardianId: number;
+      /** @description Student ID (required) */
+      studentId: number;
+    };
+    RemoveStudentFromGuardianResponse: {
+      ok: boolean;
+      message: string;
     };
   };
   responses: never;
