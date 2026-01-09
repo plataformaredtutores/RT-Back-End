@@ -13,7 +13,7 @@ export async function getFees(req: Request, res: Response, next: NextFunction) {
       orderBy: [
         { type: 'asc' },
         { numberOfStudents: 'asc' },
-        { modality: 'asc' },
+        { modality: 'desc' },
         { id: 'asc' },
       ],
     });
