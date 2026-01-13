@@ -78,6 +78,11 @@ router.post("/", createClass)
  *           type: integer
  *         description: Optional filter by tutorId (ignored for role tutor)
  *       - in: query
+ *         name: guardianId
+ *         schema:
+ *           type: integer
+ *         description: Optional filter by guardianId (ignored for role guardian)
+ *       - in: query
  *         name: studentId
  *         schema:
  *           type: integer
@@ -131,6 +136,11 @@ router.get('/cash-flow-summary', getClassesCashFlowSummary)
  *         schema:
  *           type: integer
  *         description: Optional filter by tutorId (ignored for role tutor)
+ *       - in: query
+ *         name: guardianId
+ *         schema:
+ *           type: integer
+ *         description: Optional filter by guardianId (ignored for role guardian)
  *       - in: query
  *         name: studentId
  *         schema:
