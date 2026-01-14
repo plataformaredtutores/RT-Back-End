@@ -24,7 +24,7 @@ const router = Router()
  *         name: role
  *         schema:
  *           type: string
- *           enum: [admin, coordinator, tutor, parent]
+ *           enum: [admin, coordinator, tutor, guardian]
  *         description: Filter by user role
  *       - in: query
  *         name: institutionId

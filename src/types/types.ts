@@ -630,7 +630,7 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter by user role */
-          role?: "admin" | "coordinator" | "tutor" | "parent";
+          role?: "admin" | "coordinator" | "tutor" | "guardian";
           /** @description Filter by institution id */
           institutionId?: number;
           /** @description Case-insensitive search in name or email */
