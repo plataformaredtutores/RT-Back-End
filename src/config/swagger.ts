@@ -85,16 +85,16 @@ const options: swaggerJSDoc.Options = {
         UserInput: {
           type: 'object',
           properties: {
-            name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'guardian'] },
-            rut: { type: 'string', nullable: true },
-            phone: { type: 'string', nullable: true },
-            address: { type: 'string', nullable: true },
-            chargeEmail: { type: 'string', nullable: true },
-            institutionId: { type: 'integer', nullable: true },
+            name: { type: 'string', description: 'User full name (required)' },
+            email: { type: 'string', format: 'email', description: 'User email (must be unique, required)' },
+            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'guardian'], description: 'User role (required)' },
+            rut: { type: 'string', description: 'RUT in format XX.XXX.XXX-K (required, used to generate initial password)' },
+            phone: { type: 'string', nullable: true, description: 'Phone number (optional)' },
+            address: { type: 'string', nullable: true, description: 'Address (optional)' },
+            chargeEmail: { type: 'string', format: 'email', nullable: true, description: 'Charge email (optional)' },
+            institutionId: { type: 'integer', nullable: true, description: 'Institution ID (required for non-admin users, inferred for coordinators)' },
           },
-          required: ['name', 'email', 'role']
+          required: ['name', 'email', 'role', 'rut']
         },
         Institution: {
           type: 'object',
@@ -671,6 +671,60 @@ const options: swaggerJSDoc.Options = {
           required: ['fees']
         },
         EditFeesResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' }
+          },
+          required: ['ok', 'message']
+        },
+        CreateGuardianInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Guardian name' },
+            email: { type: 'string', format: 'email', description: 'Guardian email' },
+            rut: { type: 'string', description: 'Guardian RUT (e.g., 12345678-9)' },
+            phone: { type: 'string', nullable: true, description: 'Guardian phone number (optional)' },
+            address: { type: 'string', nullable: true, description: 'Guardian address (optional)' },
+            chargeEmail: { type: 'string', format: 'email', nullable: true, description: 'Charge email (optional)' },
+            institution: { type: 'integer', description: 'Institution ID (required for admin, inferred for coordinator)' }
+          },
+          required: ['name', 'email', 'rut']
+        },
+        CreateGuardianResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            guardian: { $ref: '#/components/schemas/User' }
+          },
+          required: ['ok', 'guardian']
+        },
+        AddStudentToGuardianRequest: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Student name (required)' },
+            institutionId: { type: 'integer', description: 'Institution ID (required)' },
+            guardianId: { type: 'integer', description: 'Guardian ID (required)' }
+          },
+          required: ['name', 'institutionId', 'guardianId']
+        },
+        AddStudentToGuardianResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            student: { $ref: '#/components/schemas/Student' }
+          },
+          required: ['ok', 'student']
+        },
+        RemoveStudentFromGuardianRequest: {
+          type: 'object',
+          properties: {
+            guardianId: { type: 'integer', description: 'Guardian ID (required)' },
+            studentId: { type: 'integer', description: 'Student ID (required)' }
+          },
+          required: ['guardianId', 'studentId']
+        },
+        RemoveStudentFromGuardianResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },

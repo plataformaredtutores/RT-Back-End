@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import argon2 from 'argon2';
 import { AccountType, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { userInfo } from 'os';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -16,6 +17,7 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
 
     const users = await prisma.user.findMany({
       where: {
+        isActive: true,
         role: role as UserRole | undefined,
         institutionId: institutionId ? Number(institutionId) : undefined,
         OR: nameOrEmail ? [
@@ -34,6 +36,7 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
     next(err)
   }
 }
+
 export async function createUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { 
@@ -47,6 +50,97 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       institutionId,
       BankAccount
     } = req.body
+
+    const userRole = (req as any).auth?.role;
+
+    /*     
+    if (userRole !== 'admin' || userRole !== 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
+    }
+    if (userRole === 'coordinator' && (role === 'admin' || role === 'coordinator')) {
+      return res.status(403).json({ ok: false, message: 'Coordinators cannot create admin or coordinator users.' })
+    } */
+
+    // Input Validation
+
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ ok: false, message: 'Name is required and must be a non-empty string' });
+    }
+
+    if (!email || typeof email !== 'string' || email.trim() === '') {
+      return res.status(400).json({ ok: false, message: 'Email is required and must be a non-empty string' });
+    }
+
+    if (!rut || typeof rut !== 'string' || rut.trim() === '') {
+      return res.status(400).json({ ok: false, message: 'RUT is required and must be a non-empty string' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ ok: false, message: 'Invalid email format' });
+    }
+
+    if (phone !== undefined && phone !== null && (typeof phone !== 'string' || phone.trim() === '')) {
+      return res.status(400).json({ ok: false, message: 'Phone must be a non-empty string if provided' });
+    }
+
+    if (address !== undefined && address !== null && (typeof address !== 'string' || address.trim() === '')) {
+      return res.status(400).json({ ok: false, message: 'Address must be a non-empty string if provided' });
+    }
+
+    if (chargeEmail !== undefined && chargeEmail !== null) {
+      if (typeof chargeEmail !== 'string' || chargeEmail.trim() === '') {
+        return res.status(400).json({ ok: false, message: 'Charge email must be a non-empty string if provided' });
+      }
+      if (!emailRegex.test(chargeEmail.trim())) {
+        return res.status(400).json({ ok: false, message: 'Invalid charge email format' });
+      }
+    }
+
+
+    if (role !== 'admin' && institutionId == null) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Non-admin users must be associated with an institution.'
+      })
+    }
+
+    if (role === 'guardian' && BankAccount) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Guardian users cannot have bank account information.'
+      })
+    }
+
+    // Validate institution exists
+
+    let finalInstitutionId: number;
+
+    if (userRole === 'coordinator') {
+      const coordinatorInstitutionId = (req as any).auth?.institutionId;
+      finalInstitutionId = coordinatorInstitutionId;
+    } else {
+      if (!institutionId || typeof institutionId !== 'number') {
+        return res.status(400).json({ ok: false, message: 'Institution ID is required and must be a number' });
+      }
+      finalInstitutionId = institutionId;
+    }
+
+    const institutionExists = await prisma.institution.findUnique({
+      where: { id: institutionId },
+    });
+
+    if (!institutionExists) {
+      return res.status(400).json({ ok: false, message: 'Institution not found' });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.trim() },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ ok: false, message: 'Email already exists' });
+    }
 
     const password = rut != null
       ? String(rut).split('-')[0].replace(/\D/g, '')
@@ -63,20 +157,6 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
     })
 
-    if (role !== 'admin' && institutionId == null) {
-      return res.status(400).json({
-        ok: false,
-        message: 'Non-admin users must be associated with an institution.'
-      })
-    }
-
-    if (role === 'guardian' && BankAccount) {
-      return res.status(400).json({
-        ok: false,
-        message: 'Guardian users cannot have bank account information.'
-      })
-    }
-
     const newUser = await prisma.user.create({
       data: {
         role,
@@ -87,7 +167,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         address,
         chargeEmail,
         hashedPassword,
-        institutionId
+        institutionId: finalInstitutionId
       }
     })
 
@@ -122,8 +202,26 @@ export async function createUser(req: Request, res: Response, next: NextFunction
 export async function deleteUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
+
+    const userRole = (req as any).auth?.role;
+
+/*     if (userRole !== 'admin' || userRole !== 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
+    } */
+    
+    
     
     const userId = Number(id)
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+
+    if (!user) {
+      return res.status(404).json({ ok: false, message: 'User not found' })
+    }
+
+    if (userRole === 'coordinator' && user.role === 'admin' || user.role === 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Coordinators cannot delete admin or coordinator users.' })
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { isActive: false }
@@ -134,6 +232,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     next(err)
   }
 }
+
 export async function getUserById(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
@@ -200,6 +299,7 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
     next(err)
   }
 }
+
 export async function editUserBankAccount(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;

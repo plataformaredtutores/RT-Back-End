@@ -67,6 +67,13 @@ router.get('/', getUsers)
  * /users:
  *   post:
  *     summary: Create a user
+ *     description: |
+ *       Create a new user in the system.
+ *       - Admins must provide the institution ID
+ *       - Coordinators automatically use their own institution
+ *       - Initial password is set to the RUT number without the verifying digit
+ *       - Email must be unique
+ *       - Phone, address, and chargeEmail are optional
  *     tags: [Users]
  *     requestBody:
  *       required: true
@@ -76,11 +83,15 @@ router.get('/', getUsers)
  *             $ref: '#/components/schemas/CreateUserWithBankAccountInput'
  *     responses:
  *       201:
- *         description: Created user
+ *         description: User created successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists)
+ *       403:
+ *         description: Forbidden - insufficient permissions
  */
 router.post('/', createUser)
 /**
@@ -88,6 +99,10 @@ router.post('/', createUser)
  * /users/{id}:
  *   delete:
  *     summary: Delete a user by ID
+ *     description: |
+ *       Soft delete a user by marking them as inactive (isActive = false).
+ *       - Admins and coordinators can delete users
+ *       - Coordinators cannot delete admin or coordinator users
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -98,7 +113,11 @@ router.post('/', createUser)
  *         description: User ID
  *     responses:
  *       204:
- *         description: User deleted successfully
+ *         description: User deleted successfully (soft delete)
+ *       403:
+ *         description: Forbidden - user lacks permission to delete this user
+ *       404:
+ *         description: User not found
  */
 router.delete('/:id', deleteUser)
 /**

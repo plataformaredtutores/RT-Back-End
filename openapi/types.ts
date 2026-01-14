@@ -157,6 +157,8 @@ export interface paths {
           endDate?: string;
           /** @description Optional filter by tutorId (ignored for role tutor) */
           tutorId?: number;
+          /** @description Optional filter by guardianId (ignored for role guardian) */
+          guardianId?: number;
           /** @description Optional filter by studentId */
           studentId?: number;
           /** @description Required for role admin (institution to query) */
@@ -233,6 +235,8 @@ export interface paths {
           endDate?: string;
           /** @description Optional filter by tutorId (ignored for role tutor) */
           tutorId?: number;
+          /** @description Optional filter by guardianId (ignored for role guardian) */
+          guardianId?: number;
           /** @description Optional filter by studentId */
           studentId?: number;
           /** @description Required for role admin (institution to query) */
@@ -520,117 +524,13 @@ export interface paths {
       };
     };
   };
-  "/students/{guardianId}": {
-    /**
-     * Get students by guardian ID
-     * @description Retrieve all students associated with a specific guardian.
-     * - Requires admin or coordinator role
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Guardian ID */
-          guardianId: number;
-        };
-      };
-      responses: {
-        /** @description List of students retrieved successfully */
-        200: {
-          content: {
-            "application/json": {
-              ok?: boolean;
-              students?: components["schemas"]["Student"][];
-            };
-          };
-        };
-        /** @description Forbidden - user is not an admin or coordinator */
-        403: {
-          content: never;
-        };
-        /** @description No students found for the specified guardian */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/students/add": {
-    /**
-     * Add a student to a guardian
-     * @description Create a new student and associate them with a guardian.
-     * - Requires admin or coordinator role
-     * - All fields are required
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["AddStudentToGuardianRequest"];
-        };
-      };
-      responses: {
-        /** @description Student created and added to guardian successfully */
-        201: {
-          content: {
-            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
-          };
-        };
-        /** @description Invalid input or validation error (missing required fields, institution not found) */
-        400: {
-          content: never;
-        };
-        /** @description Forbidden - user is not an admin or coordinator */
-        403: {
-          content: never;
-        };
-        /** @description Guardian not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/students/delete": {
-    /**
-     * Remove a student from a guardian
-     * @description Delete a student record and remove their association with a guardian.
-     * - Requires admin or coordinator role
-     * - The student must be associated with the specified guardian
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["RemoveStudentFromGuardianRequest"];
-        };
-      };
-      responses: {
-        /** @description Student removed from guardian successfully */
-        200: {
-          content: {
-            "application/json": components["schemas"]["RemoveStudentFromGuardianResponse"];
-          };
-        };
-        /** @description Invalid input or validation error (missing required fields) */
-        400: {
-          content: never;
-        };
-        /** @description Forbidden - user is not an admin or coordinator */
-        403: {
-          content: never;
-        };
-        /** @description Student not found for the specified guardian */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
   "/users": {
     /** List users */
     get: {
       parameters: {
         query?: {
           /** @description Filter by user role */
-          role?: "admin" | "coordinator" | "tutor" | "guardian";
+          role?: "admin" | "coordinator" | "tutor" | "parent";
           /** @description Filter by institution id */
           institutionId?: number;
           /** @description Case-insensitive search in name or email */
@@ -650,15 +550,7 @@ export interface paths {
         };
       };
     };
-    /**
-     * Create a user
-     * @description Create a new user in the system.
-     * - Admins must provide the institution ID
-     * - Coordinators automatically use their own institution
-     * - Initial password is set to the RUT number without the verifying digit
-     * - Email must be unique
-     * - Phone, address, and chargeEmail are optional
-     */
+    /** Create a user */
     post: {
       requestBody: {
         content: {
@@ -666,19 +558,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description User created successfully */
+        /** @description Created user */
         201: {
           content: {
             "application/json": components["schemas"]["User"];
           };
-        };
-        /** @description Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists) */
-        400: {
-          content: never;
-        };
-        /** @description Forbidden - insufficient permissions */
-        403: {
-          content: never;
         };
       };
     };
@@ -705,12 +589,7 @@ export interface paths {
         };
       };
     };
-    /**
-     * Delete a user by ID
-     * @description Soft delete a user by marking them as inactive (isActive = false).
-     * - Admins and coordinators can delete users
-     * - Coordinators cannot delete admin or coordinator users
-     */
+    /** Delete a user by ID */
     delete: {
       parameters: {
         path: {
@@ -719,16 +598,8 @@ export interface paths {
         };
       };
       responses: {
-        /** @description User deleted successfully (soft delete) */
+        /** @description User deleted successfully */
         204: {
-          content: never;
-        };
-        /** @description Forbidden - user lacks permission to delete this user */
-        403: {
-          content: never;
-        };
-        /** @description User not found */
-        404: {
           content: never;
         };
       };
@@ -897,30 +768,15 @@ export interface components {
       updatedAt: string;
     };
     UserInput: {
-      /** @description User full name (required) */
       name: string;
-      /**
-       * Format: email
-       * @description User email (must be unique, required)
-       */
+      /** Format: email */
       email: string;
-      /**
-       * @description User role (required)
-       * @enum {string}
-       */
+      /** @enum {string} */
       role: "admin" | "coordinator" | "tutor" | "guardian";
-      /** @description RUT in format XX.XXX.XXX-K (required, used to generate initial password) */
-      rut: string;
-      /** @description Phone number (optional) */
+      rut?: string | null;
       phone?: string | null;
-      /** @description Address (optional) */
       address?: string | null;
-      /**
-       * Format: email
-       * @description Charge email (optional)
-       */
       chargeEmail?: string | null;
-      /** @description Institution ID (required for non-admin users, inferred for coordinators) */
       institutionId?: number | null;
     };
     Institution: {
@@ -1194,54 +1050,6 @@ export interface components {
         }[];
     };
     EditFeesResponse: {
-      ok: boolean;
-      message: string;
-    };
-    CreateGuardianInput: {
-      /** @description Guardian name */
-      name: string;
-      /**
-       * Format: email
-       * @description Guardian email
-       */
-      email: string;
-      /** @description Guardian RUT (e.g., 12345678-9) */
-      rut: string;
-      /** @description Guardian phone number (optional) */
-      phone?: string | null;
-      /** @description Guardian address (optional) */
-      address?: string | null;
-      /**
-       * Format: email
-       * @description Charge email (optional)
-       */
-      chargeEmail?: string | null;
-      /** @description Institution ID (required for admin, inferred for coordinator) */
-      institution?: number;
-    };
-    CreateGuardianResponse: {
-      ok: boolean;
-      guardian: components["schemas"]["User"];
-    };
-    AddStudentToGuardianRequest: {
-      /** @description Student name (required) */
-      name: string;
-      /** @description Institution ID (required) */
-      institutionId: number;
-      /** @description Guardian ID (required) */
-      guardianId: number;
-    };
-    AddStudentToGuardianResponse: {
-      ok: boolean;
-      student: components["schemas"]["Student"];
-    };
-    RemoveStudentFromGuardianRequest: {
-      /** @description Guardian ID (required) */
-      guardianId: number;
-      /** @description Student ID (required) */
-      studentId: number;
-    };
-    RemoveStudentFromGuardianResponse: {
       ok: boolean;
       message: string;
     };

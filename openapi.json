@@ -192,11 +192,13 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "User full name (required)"
           },
           "email": {
             "type": "string",
-            "format": "email"
+            "format": "email",
+            "description": "User email (must be unique, required)"
           },
           "role": {
             "type": "string",
@@ -205,33 +207,40 @@
               "coordinator",
               "tutor",
               "guardian"
-            ]
+            ],
+            "description": "User role (required)"
           },
           "rut": {
             "type": "string",
-            "nullable": true
+            "description": "RUT in format XX.XXX.XXX-K (required, used to generate initial password)"
           },
           "phone": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Phone number (optional)"
           },
           "address": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Address (optional)"
           },
           "chargeEmail": {
             "type": "string",
-            "nullable": true
+            "format": "email",
+            "nullable": true,
+            "description": "Charge email (optional)"
           },
           "institutionId": {
             "type": "integer",
-            "nullable": true
+            "nullable": true,
+            "description": "Institution ID (required for non-admin users, inferred for coordinators)"
           }
         },
         "required": [
           "name",
           "email",
-          "role"
+          "role",
+          "rut"
         ]
       },
       "Institution": {
@@ -1259,6 +1268,133 @@
           "ok",
           "message"
         ]
+      },
+      "CreateGuardianInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Guardian name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Guardian email"
+          },
+          "rut": {
+            "type": "string",
+            "description": "Guardian RUT (e.g., 12345678-9)"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Guardian phone number (optional)"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true,
+            "description": "Guardian address (optional)"
+          },
+          "chargeEmail": {
+            "type": "string",
+            "format": "email",
+            "nullable": true,
+            "description": "Charge email (optional)"
+          },
+          "institution": {
+            "type": "integer",
+            "description": "Institution ID (required for admin, inferred for coordinator)"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "rut"
+        ]
+      },
+      "CreateGuardianResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "guardian": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "ok",
+          "guardian"
+        ]
+      },
+      "AddStudentToGuardianRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Student name (required)"
+          },
+          "institutionId": {
+            "type": "integer",
+            "description": "Institution ID (required)"
+          },
+          "guardianId": {
+            "type": "integer",
+            "description": "Guardian ID (required)"
+          }
+        },
+        "required": [
+          "name",
+          "institutionId",
+          "guardianId"
+        ]
+      },
+      "AddStudentToGuardianResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "student": {
+            "$ref": "#/components/schemas/Student"
+          }
+        },
+        "required": [
+          "ok",
+          "student"
+        ]
+      },
+      "RemoveStudentFromGuardianRequest": {
+        "type": "object",
+        "properties": {
+          "guardianId": {
+            "type": "integer",
+            "description": "Guardian ID (required)"
+          },
+          "studentId": {
+            "type": "integer",
+            "description": "Student ID (required)"
+          }
+        },
+        "required": [
+          "guardianId",
+          "studentId"
+        ]
+      },
+      "RemoveStudentFromGuardianResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
       }
     }
   },
@@ -1580,6 +1716,14 @@
           },
           {
             "in": "query",
+            "name": "guardianId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by guardianId (ignored for role guardian)"
+          },
+          {
+            "in": "query",
             "name": "studentId",
             "schema": {
               "type": "integer"
@@ -1667,6 +1811,14 @@
               "type": "integer"
             },
             "description": "Optional filter by tutorId (ignored for role tutor)"
+          },
+          {
+            "in": "query",
+            "name": "guardianId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filter by guardianId (ignored for role guardian)"
           },
           {
             "in": "query",
@@ -2158,6 +2310,135 @@
         }
       }
     },
+    "/students/{guardianId}": {
+      "get": {
+        "summary": "Get students by guardian ID",
+        "description": "Retrieve all students associated with a specific guardian.\n- Requires admin or coordinator role\n",
+        "tags": [
+          "Students"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guardianId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Guardian ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of students retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "students": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Student"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user is not an admin or coordinator"
+          },
+          "404": {
+            "description": "No students found for the specified guardian"
+          }
+        }
+      }
+    },
+    "/students/add": {
+      "post": {
+        "summary": "Add a student to a guardian",
+        "description": "Create a new student and associate them with a guardian.\n- Requires admin or coordinator role\n- All fields are required\n",
+        "tags": [
+          "Students"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStudentToGuardianRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Student created and added to guardian successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddStudentToGuardianResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or validation error (missing required fields, institution not found)"
+          },
+          "403": {
+            "description": "Forbidden - user is not an admin or coordinator"
+          },
+          "404": {
+            "description": "Guardian not found"
+          }
+        }
+      }
+    },
+    "/students/delete": {
+      "post": {
+        "summary": "Remove a student from a guardian",
+        "description": "Delete a student record and remove their association with a guardian.\n- Requires admin or coordinator role\n- The student must be associated with the specified guardian\n",
+        "tags": [
+          "Students"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveStudentFromGuardianRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Student removed from guardian successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveStudentFromGuardianResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or validation error (missing required fields)"
+          },
+          "403": {
+            "description": "Forbidden - user is not an admin or coordinator"
+          },
+          "404": {
+            "description": "Student not found for the specified guardian"
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "summary": "List users",
@@ -2235,6 +2516,7 @@
       },
       "post": {
         "summary": "Create a user",
+        "description": "Create a new user in the system.\n- Admins must provide the institution ID\n- Coordinators automatically use their own institution\n- Initial password is set to the RUT number without the verifying digit\n- Email must be unique\n- Phone, address, and chargeEmail are optional\n",
         "tags": [
           "Users"
         ],
@@ -2250,7 +2532,7 @@
         },
         "responses": {
           "201": {
-            "description": "Created user",
+            "description": "User created successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -2258,6 +2540,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists)"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
           }
         }
       }
@@ -2265,6 +2553,7 @@
     "/users/{id}": {
       "delete": {
         "summary": "Delete a user by ID",
+        "description": "Soft delete a user by marking them as inactive (isActive = false).\n- Admins and coordinators can delete users\n- Coordinators cannot delete admin or coordinator users\n",
         "tags": [
           "Users"
         ],
@@ -2281,7 +2570,13 @@
         ],
         "responses": {
           "204": {
-            "description": "User deleted successfully"
+            "description": "User deleted successfully (soft delete)"
+          },
+          "403": {
+            "description": "Forbidden - user lacks permission to delete this user"
+          },
+          "404": {
+            "description": "User not found"
           }
         }
       },

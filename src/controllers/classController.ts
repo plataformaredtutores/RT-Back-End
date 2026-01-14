@@ -92,6 +92,7 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
       startDate,
       endDate,
       tutorId,
+      guardianId,
       studentId,
     } = req.query
 
@@ -161,6 +162,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
           tutorPaymentStatus: PaymentStatus.pending,
           Class: {
             tutorId: tutorId,
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
               lte: endDate ? new Date(endDate as string) : undefined,
@@ -179,6 +183,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
           tutorPaymentStatus: PaymentStatus.completed,
           Class: {
             tutorId: tutorId,
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
               lte: endDate ? new Date(endDate as string) : undefined,
@@ -205,6 +212,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           guardianPaymentStatus: PaymentStatus.pending,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: institutionId
             },
@@ -225,6 +235,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           guardianPaymentStatus: PaymentStatus.completed,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: institutionId
             },
@@ -245,6 +258,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           tutorPaymentStatus: PaymentStatus.pending,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: institutionId
             },
@@ -265,6 +281,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           tutorPaymentStatus: PaymentStatus.completed,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: institutionId
             },
@@ -296,6 +315,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           guardianPaymentStatus: PaymentStatus.pending,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: Number(institutionId)
             },
@@ -316,6 +338,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           guardianPaymentStatus: PaymentStatus.completed,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: Number(institutionId)
             },
@@ -336,6 +361,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           tutorPaymentStatus: PaymentStatus.pending,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: Number(institutionId)
             },
@@ -356,6 +384,9 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
         where: {
           tutorPaymentStatus: PaymentStatus.completed,
           Class: {
+            Student: guardianId ? {
+              guardianId: Number(guardianId)
+            } : undefined,
             Institution: {
               id: Number(institutionId)
             },
@@ -389,6 +420,7 @@ export async function getClassesDetails(req: Request, res: Response, next: NextF
       endDate,
       tutorId,
       studentId,
+      guardianId,
       page,
       pageSize
     } = req.query
@@ -455,6 +487,9 @@ export async function getClassesDetails(req: Request, res: Response, next: NextF
 
       const classes = await prisma.class.findMany({
         where: {
+          Student: guardianId ? {
+            guardianId: Number(guardianId)
+          } : undefined,
           tutorId: tutorId,
           date: {
             gte: startDate ? new Date(startDate as string) : undefined,
@@ -505,6 +540,9 @@ export async function getClassesDetails(req: Request, res: Response, next: NextF
 
       const classes = await prisma.class.findMany({
         where: {
+          Student: guardianId ? {
+            guardianId: Number(guardianId)
+          } : undefined,
           Institution: {
             id: institutionId
           },
@@ -558,6 +596,9 @@ export async function getClassesDetails(req: Request, res: Response, next: NextF
       
       const classes = await prisma.class.findMany({
         where: {
+          Student: guardianId ? {
+            guardianId: Number(guardianId)
+          } : undefined,
           Institution: {
             id: Number(institutionId)
           },

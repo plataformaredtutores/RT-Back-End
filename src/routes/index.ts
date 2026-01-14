@@ -1,5 +1,6 @@
 import { Express } from 'express'
 import userRoutes from './userRoutes'
+import studentRoutes from './studentRoutes'
 import institutionRoutes from './institutionRoutes'
 import mailRoutes from './mailRoutes'
 import authRoutes from './authRoutes'
@@ -8,13 +9,16 @@ import feeRoutes from './feeRoutes'
 import { health } from '../controllers/healthController'
 import { requireAuth } from '../middlewares/auth'
 import { authorize } from '../middlewares/authorize'
+import { checkActive } from '../middlewares/checkActive'
 
 export function setRoutes(app: Express) {
   app.get('/health', health)
   app.use('/mail', mailRoutes)
   app.use('/auth', authRoutes)
   app.use(requireAuth)
+  app.use(checkActive)
   app.use('/users', userRoutes)
+  app.use('/students', authorize(['admin', 'coordinator']), studentRoutes)
   app.use('/institutions', authorize(['admin', "coordinator"]), institutionRoutes)
   app.use('/classes', classRoutes)
   app.use('/fees', authorize(['admin', 'coordinator', 'tutor','guardian']), feeRoutes)
