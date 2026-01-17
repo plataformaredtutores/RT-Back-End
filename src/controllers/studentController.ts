@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 
-// Create a student
 async function createStudent(name: string, institutionId: number, guardianId: number) {
   const student = await prisma.student.create({
     data: {
@@ -13,7 +12,6 @@ async function createStudent(name: string, institutionId: number, guardianId: nu
   return student;
 }
 
-// Add a student to a guardian
 export async function addStudentToGuardian(req: Request, res: Response, next: NextFunction) {
   try {
     const { name, institutionId, guardianId } = req.body;
@@ -23,7 +21,6 @@ export async function addStudentToGuardian(req: Request, res: Response, next: Ne
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    // Input validation
     if (!name || typeof name !== 'string' || name.trim() === '') {
       return res.status(400).json({ ok: false, message: 'Name is required and must be a non-empty string' });
     }
@@ -36,34 +33,40 @@ export async function addStudentToGuardian(req: Request, res: Response, next: Ne
       return res.status(400).json({ ok: false, message: 'Guardian ID is required and must be a number' });
     }
 
-    // Verify guardian exists and has the correct role
-    const guardian = await prisma.user.findUnique({
-      where: { id: guardianId },
+    const normalizedName = name.trim();
+
+    // If a student with the same name exists for this guardian, reactivate instead of creating
+    const existing = await prisma.student.findFirst({
+      where: {
+        guardianId,
+        name: {
+          equals: normalizedName,
+          mode: 'insensitive',
+        },
+      },
     });
 
-    if (!guardian || guardian.role !== 'guardian') {
-      return res.status(404).json({ ok: false, message: 'Guardian not found' });
+    if (existing) {
+      if (!existing.isActive) {
+        const reactivated = await prisma.student.update({
+          where: { id: existing.id },
+          data: { isActive: true },
+        });
+        return res.status(200).json({ ok: true, student: reactivated, reactivated: true });
+      }
+
+      return res.status(200).json({ ok: true, student: existing, reactivated: false });
     }
 
-    // Verify institution exists
-    const institution = await prisma.institution.findUnique({
-      where: { id: institutionId },
-    });
+    const student = await createStudent(normalizedName, institutionId, guardianId);
 
-    if (!institution) {
-      return res.status(404).json({ ok: false, message: 'Institution not found' });
-    }
-
-    const student = await createStudent(name, institutionId, guardianId);
-
-    res.status(201).json({ ok: true, student });
+    res.status(201).json({ ok: true, student, reactivated: false });
 
   } catch (err) {
     next(err);
   }
 }
 
-// Remove a student from a guardian
 export async function removeStudentFromGuardian(req: Request, res: Response, next: NextFunction) {
   try {
     const { guardianId, studentId } = req.body;
@@ -73,7 +76,6 @@ export async function removeStudentFromGuardian(req: Request, res: Response, nex
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    // Input validation
     if (!guardianId || typeof guardianId !== 'number') {
       return res.status(400).json({ ok: false, message: 'Guardian ID is required and must be a number' });
     }
@@ -82,19 +84,19 @@ export async function removeStudentFromGuardian(req: Request, res: Response, nex
       return res.status(400).json({ ok: false, message: 'Student ID is required and must be a number' });
     }
 
-    // Verify student exists and is linked to the guardian
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
+    const updateResult = await prisma.student.updateMany({
+      where: {
+        id: studentId,
+        guardianId,
+      },
+      data: {
+        isActive: false,
+      },
     });
 
-    if (!student || student.guardianId !== guardianId) {
+    if (updateResult.count === 0) {
       return res.status(404).json({ ok: false, message: 'Student not found for the specified guardian' });
     }
-
-    // TODO: check if we delete or do a soft delete
-    await prisma.student.delete({
-      where: { id: studentId }
-    });
 
     res.status(200).json({ ok: true, message: 'Student removed from guardian successfully' });
 
@@ -113,7 +115,10 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
     }
 
     const students = await prisma.student.findMany({
-      where: { guardianId: Number(guardianId) },
+      where: {
+        guardianId: Number(guardianId),
+        isActive: true,
+      },
     });
 
     res.status(200).json({ ok: true, students });

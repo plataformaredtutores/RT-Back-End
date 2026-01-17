@@ -157,6 +157,8 @@ export interface paths {
           endDate?: string;
           /** @description Optional filter by tutorId (ignored for role tutor) */
           tutorId?: number;
+          /** @description Optional filter by guardianId (ignored for role guardian) */
+          guardianId?: number;
           /** @description Optional filter by studentId */
           studentId?: number;
           /** @description Required for role admin (institution to query) */
@@ -233,6 +235,8 @@ export interface paths {
           endDate?: string;
           /** @description Optional filter by tutorId (ignored for role tutor) */
           tutorId?: number;
+          /** @description Optional filter by guardianId (ignored for role guardian) */
+          guardianId?: number;
           /** @description Optional filter by studentId */
           studentId?: number;
           /** @description Required for role admin (institution to query) */
@@ -428,7 +432,10 @@ export interface paths {
         };
       };
     };
-    /** Create an institution */
+    /**
+     * Create an institution
+     * @description Creates an institution and seeds default fee rows (all amounts set to 0) for every type/modality/student-count combination.
+     */
     post: {
       requestBody: {
         content: {
@@ -499,6 +506,34 @@ export interface paths {
       };
     };
   };
+  "/institutions/{id}": {
+    /**
+     * Delete (deactivate) an institution
+     * @description Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution deleted */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+        /** @description Cannot delete due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
   "/mail": {
     /** Send email */
     post: {
@@ -523,8 +558,9 @@ export interface paths {
   "/students/{guardianId}": {
     /**
      * Get students by guardian ID
-     * @description Retrieve all students associated with a specific guardian.
+     * @description Retrieve all active students associated with a specific guardian.
      * - Requires admin or coordinator role
+     * - Returns only students where isActive = true
      */
     get: {
       parameters: {
@@ -557,9 +593,10 @@ export interface paths {
   "/students/add": {
     /**
      * Add a student to a guardian
-     * @description Create a new student and associate them with a guardian.
+     * @description Create a student for a guardian or reactivate an existing inactive one with the same name (case-insensitive).
      * - Requires admin or coordinator role
      * - All fields are required
+     * - If a student with the same name exists for the guardian and is inactive, it will be reactivated instead of creating a new record
      */
     post: {
       requestBody: {
@@ -568,6 +605,12 @@ export interface paths {
         };
       };
       responses: {
+        /** @description Student reactivated or already active */
+        200: {
+          content: {
+            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
+          };
+        };
         /** @description Student created and added to guardian successfully */
         201: {
           content: {
@@ -592,7 +635,7 @@ export interface paths {
   "/students/delete": {
     /**
      * Remove a student from a guardian
-     * @description Delete a student record and remove their association with a guardian.
+     * @description Soft-delete (deactivate) a student by setting isActive = false for the specified guardian/student pair.
      * - Requires admin or coordinator role
      * - The student must be associated with the specified guardian
      */
@@ -656,7 +699,7 @@ export interface paths {
      * - Admins must provide the institution ID
      * - Coordinators automatically use their own institution
      * - Initial password is set to the RUT number without the verifying digit
-     * - Email must be unique
+     * - Email must be unique (database constraint)
      * - Phone, address, and chargeEmail are optional
      */
     post: {
@@ -672,7 +715,7 @@ export interface paths {
             "application/json": components["schemas"]["User"];
           };
         };
-        /** @description Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists) */
+        /** @description Invalid input or validation error (missing required fields, invalid email format, or database constraint violation) */
         400: {
           content: never;
         };
@@ -926,6 +969,7 @@ export interface components {
     Institution: {
       id: number;
       name: string;
+      isActive: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -933,6 +977,10 @@ export interface components {
     };
     CreateInstitutionInput: {
       name: string;
+    };
+    DeleteInstitutionResponse: {
+      ok: boolean;
+      message: string;
     };
     UserWithInstitution: components["schemas"]["User"] & {
       Institution?: components["schemas"]["Institution"];
@@ -958,6 +1006,7 @@ export interface components {
       name?: string;
       guardianId?: number;
       institutionId?: number;
+      isActive?: boolean;
     };
     StudentSummary: {
       id: number;
@@ -1234,6 +1283,8 @@ export interface components {
     AddStudentToGuardianResponse: {
       ok: boolean;
       student: components["schemas"]["Student"];
+      /** @description True when an existing inactive student was reactivated instead of creating a new record */
+      reactivated?: boolean;
     };
     RemoveStudentFromGuardianRequest: {
       /** @description Guardian ID (required) */

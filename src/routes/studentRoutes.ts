@@ -13,8 +13,9 @@ const router = Router();
  *   get:
  *     summary: Get students by guardian ID
  *     description: |
- *       Retrieve all students associated with a specific guardian.
+ *       Retrieve all active students associated with a specific guardian.
  *       - Requires admin or coordinator role
+ *       - Returns only students where isActive = true
  *     tags: [Students]
  *     parameters:
  *       - in: path
@@ -50,9 +51,10 @@ router.get('/:guardianId', getStudentsByGuardianId);
  *   post:
  *     summary: Add a student to a guardian
  *     description: |
- *       Create a new student and associate them with a guardian.
+ *       Create a student for a guardian or reactivate an existing inactive one with the same name (case-insensitive).
  *       - Requires admin or coordinator role
  *       - All fields are required
+ *       - If a student with the same name exists for the guardian and is inactive, it will be reactivated instead of creating a new record
  *     tags: [Students]
  *     requestBody:
  *       required: true
@@ -61,6 +63,12 @@ router.get('/:guardianId', getStudentsByGuardianId);
  *           schema:
  *             $ref: '#/components/schemas/AddStudentToGuardianRequest'
  *     responses:
+ *       200:
+ *         description: Student reactivated or already active
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AddStudentToGuardianResponse'
  *       201:
  *         description: Student created and added to guardian successfully
  *         content:
@@ -82,7 +90,7 @@ router.post('/add', addStudentToGuardian);
  *   post:
  *     summary: Remove a student from a guardian
  *     description: |
- *       Delete a student record and remove their association with a guardian.
+ *       Soft-delete (deactivate) a student by setting isActive = false for the specified guardian/student pair.
  *       - Requires admin or coordinator role
  *       - The student must be associated with the specified guardian
  *     tags: [Students]

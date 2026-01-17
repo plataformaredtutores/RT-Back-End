@@ -112,8 +112,6 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
-    // Validate institution exists
-
     let finalInstitutionId: number;
 
     if (userRole === 'coordinator') {
@@ -124,22 +122,6 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         return res.status(400).json({ ok: false, message: 'Institution ID is required and must be a number' });
       }
       finalInstitutionId = institutionId;
-    }
-
-    const institutionExists = await prisma.institution.findUnique({
-      where: { id: institutionId },
-    });
-
-    if (!institutionExists) {
-      return res.status(400).json({ ok: false, message: 'Institution not found' });
-    }
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.trim() },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ ok: false, message: 'Email already exists' });
     }
 
     const password = rut != null

@@ -101,10 +101,11 @@ const options: swaggerJSDoc.Options = {
           properties: {
             id: { type: 'integer' },
             name: { type: 'string' },
+            isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'name', 'createdAt', 'updatedAt']
+          required: ['id', 'name', 'isActive', 'createdAt', 'updatedAt']
         },
         CreateInstitutionInput: {
           type: 'object',
@@ -112,6 +113,14 @@ const options: swaggerJSDoc.Options = {
             name: { type: 'string' },
           },
           required: ['name']
+        },
+        DeleteInstitutionResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+          required: ['ok', 'message'],
         },
         UserWithInstitution: {
           allOf: [
@@ -145,7 +154,8 @@ const options: swaggerJSDoc.Options = {
             id: { type: 'integer' },
             name: { type: 'string' },
             guardianId: { type: 'integer' },
-            institutionId: { type: 'integer' }
+            institutionId: { type: 'integer' },
+            isActive: { type: 'boolean' }
           }
         },
         StudentSummary: {
@@ -712,7 +722,8 @@ const options: swaggerJSDoc.Options = {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            student: { $ref: '#/components/schemas/Student' }
+            student: { $ref: '#/components/schemas/Student' },
+            reactivated: { type: 'boolean', description: 'True when an existing inactive student was reactivated instead of creating a new record' }
           },
           required: ['ok', 'student']
         },
