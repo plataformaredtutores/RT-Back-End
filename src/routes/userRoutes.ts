@@ -72,7 +72,7 @@ router.get('/', getUsers)
  *       - Admins must provide the institution ID
  *       - Coordinators automatically use their own institution
  *       - Initial password is set to the RUT number without the verifying digit
- *       - Email must be unique
+ *       - Email must be unique (database constraint)
  *       - Phone, address, and chargeEmail are optional
  *     tags: [Users]
  *     requestBody:
@@ -89,7 +89,7 @@ router.get('/', getUsers)
  *             schema:
  *               $ref: '#/components/schemas/User'
  *       400:
- *         description: Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists)
+ *         description: Invalid input or validation error (missing required fields, invalid email format, or database constraint violation)
  *       403:
  *         description: Forbidden - insufficient permissions
  */

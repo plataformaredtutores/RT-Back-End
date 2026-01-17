@@ -204,6 +204,7 @@ model Student {
   name          String
   guardianId    Int
   institutionId Int
+  isActive      Boolean    @default(true)
 
   Guardian      User        @relation("GuardianStudents", fields: [guardianId], references: [id])
   Institution   Institution @relation(fields: [institutionId], references: [id])

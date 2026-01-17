@@ -145,7 +145,8 @@ const options: swaggerJSDoc.Options = {
             id: { type: 'integer' },
             name: { type: 'string' },
             guardianId: { type: 'integer' },
-            institutionId: { type: 'integer' }
+            institutionId: { type: 'integer' },
+            isActive: { type: 'boolean' }
           }
         },
         StudentSummary: {
@@ -712,7 +713,8 @@ const options: swaggerJSDoc.Options = {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            student: { $ref: '#/components/schemas/Student' }
+            student: { $ref: '#/components/schemas/Student' },
+            reactivated: { type: 'boolean', description: 'True when an existing inactive student was reactivated instead of creating a new record' }
           },
           required: ['ok', 'student']
         },

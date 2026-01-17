@@ -351,6 +351,9 @@
           },
           "institutionId": {
             "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         }
       },
@@ -1357,6 +1360,10 @@
           },
           "student": {
             "$ref": "#/components/schemas/Student"
+          },
+          "reactivated": {
+            "type": "boolean",
+            "description": "True when an existing inactive student was reactivated instead of creating a new record"
           }
         },
         "required": [
@@ -2130,6 +2137,7 @@
     "/institutions": {
       "post": {
         "summary": "Create an institution",
+        "description": "Creates an institution and seeds default fee rows (all amounts set to 0) for every type/modality/student-count combination.",
         "tags": [
           "Institutions"
         ],
@@ -2313,7 +2321,7 @@
     "/students/{guardianId}": {
       "get": {
         "summary": "Get students by guardian ID",
-        "description": "Retrieve all students associated with a specific guardian.\n- Requires admin or coordinator role\n",
+        "description": "Retrieve all active students associated with a specific guardian.\n- Requires admin or coordinator role\n- Returns only students where isActive = true\n",
         "tags": [
           "Students"
         ],
@@ -2362,7 +2370,7 @@
     "/students/add": {
       "post": {
         "summary": "Add a student to a guardian",
-        "description": "Create a new student and associate them with a guardian.\n- Requires admin or coordinator role\n- All fields are required\n",
+        "description": "Create a student for a guardian or reactivate an existing inactive one with the same name (case-insensitive).\n- Requires admin or coordinator role\n- All fields are required\n- If a student with the same name exists for the guardian and is inactive, it will be reactivated instead of creating a new record\n",
         "tags": [
           "Students"
         ],
@@ -2377,6 +2385,16 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Student reactivated or already active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddStudentToGuardianResponse"
+                }
+              }
+            }
+          },
           "201": {
             "description": "Student created and added to guardian successfully",
             "content": {
@@ -2402,7 +2420,7 @@
     "/students/delete": {
       "post": {
         "summary": "Remove a student from a guardian",
-        "description": "Delete a student record and remove their association with a guardian.\n- Requires admin or coordinator role\n- The student must be associated with the specified guardian\n",
+        "description": "Soft-delete (deactivate) a student by setting isActive = false for the specified guardian/student pair.\n- Requires admin or coordinator role\n- The student must be associated with the specified guardian\n",
         "tags": [
           "Students"
         ],
@@ -2516,7 +2534,7 @@
       },
       "post": {
         "summary": "Create a user",
-        "description": "Create a new user in the system.\n- Admins must provide the institution ID\n- Coordinators automatically use their own institution\n- Initial password is set to the RUT number without the verifying digit\n- Email must be unique\n- Phone, address, and chargeEmail are optional\n",
+        "description": "Create a new user in the system.\n- Admins must provide the institution ID\n- Coordinators automatically use their own institution\n- Initial password is set to the RUT number without the verifying digit\n- Email must be unique (database constraint)\n- Phone, address, and chargeEmail are optional\n",
         "tags": [
           "Users"
         ],
@@ -2542,7 +2560,7 @@
             }
           },
           "400": {
-            "description": "Invalid input or validation error (missing required fields, invalid email format, institution not found, email already exists)"
+            "description": "Invalid input or validation error (missing required fields, invalid email format, or database constraint violation)"
           },
           "403": {
             "description": "Forbidden - insufficient permissions"
