@@ -506,6 +506,34 @@ export interface paths {
       };
     };
   };
+  "/institutions/{id}": {
+    /**
+     * Delete (deactivate) an institution
+     * @description Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution deleted */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+        /** @description Cannot delete due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
   "/mail": {
     /** Send email */
     post: {
@@ -941,6 +969,7 @@ export interface components {
     Institution: {
       id: number;
       name: string;
+      isActive: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -948,6 +977,10 @@ export interface components {
     };
     CreateInstitutionInput: {
       name: string;
+    };
+    DeleteInstitutionResponse: {
+      ok: boolean;
+      message: string;
     };
     UserWithInstitution: components["schemas"]["User"] & {
       Institution?: components["schemas"]["Institution"];

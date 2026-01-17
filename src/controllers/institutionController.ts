@@ -99,8 +99,110 @@ export async function getGuardiansFromInstitution(req: Request, res: Response, n
 
 export async function deleteInstitution(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('TODO: delete institution');
-    res.status(200).json({ ok: true, message: 'TODO: delete institution' });
+    const { id } = req.params;
+    const institutionId = Number(id);
+
+    if (Number.isNaN(institutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institution id' });
+    }
+
+    const institution = await prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, createdAt: true },
+    });
+
+    if (!institution) {
+      return res.status(404).json({ ok: false, message: 'Institution not found' });
+    }
+
+    // Check class payments (last 12 months) are all completed for this institution
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+    const effectiveStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), institution.createdAt.getTime()));
+
+    const recentClassPayments = await prisma.classPayment.findMany({
+      where: {
+        Class: {
+          institutionId,
+          date: {
+            gte: effectiveStartDate,
+          },
+        },
+      },
+      select: {
+        tutorPaymentStatus: true,
+        guardianPaymentStatus: true,
+      },
+    });
+
+    const hasPendingClassPayments = recentClassPayments.some(
+      (p) => p.tutorPaymentStatus === 'pending' || p.guardianPaymentStatus === 'pending',
+    );
+
+    if (hasPendingClassPayments) {
+      return res.status(400).json({
+        ok: false,
+        message: 'No se puede eliminar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
+      });
+    }
+
+    // Check coordinator payments for the last 12 months: every month must exist and be completed
+    const months: Array<{ year: number; month: number }> = [];
+    const now = new Date();
+    const earliestMonth = new Date(institution.createdAt.getFullYear(), institution.createdAt.getMonth(), 1);
+    for (let i = 0; i < 12; i++) {
+      const dt = new Date(now);
+      dt.setMonth(now.getMonth() - i);
+      const monthStart = new Date(dt.getFullYear(), dt.getMonth(), 1);
+      if (monthStart < earliestMonth) break;
+      months.push({ year: dt.getFullYear(), month: dt.getMonth() + 1 });
+    }
+
+    const coordinatorPayments = await prisma.coordinatorPayment.findMany({
+      where: {
+        institutionId,
+        OR: months.map((m) => ({ periodYear: m.year, periodMonth: m.month })),
+      },
+      select: {
+        periodYear: true,
+        periodMonth: true,
+        status: true,
+      },
+    });
+
+    const paymentMap = new Map<string, 'pending' | 'completed'>();
+    coordinatorPayments.forEach((p) => {
+      paymentMap.set(`${p.periodYear}-${p.periodMonth}`, p.status);
+    });
+
+    const missingOrPendingCoordinatorPayments = months.some((m) => {
+      const key = `${m.year}-${m.month}`;
+      const status = paymentMap.get(key);
+      // Missing is considered pending
+      if (!status) return true;
+      return status === 'pending';
+    });
+
+    if (missingOrPendingCoordinatorPayments) {
+      return res.status(400).json({
+        ok: false,
+        message: 'No se puede eliminar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
+      });
+    }
+
+    // Soft-delete institution
+    await prisma.user.updateMany({
+      where: { institutionId },
+      data: { isActive: false },
+    });
+
+    await prisma.institution.update({
+      where: { id: institutionId },
+      data: { isActive: false },
+    });
+
+    res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
   }
   catch (err) {
     next(err);

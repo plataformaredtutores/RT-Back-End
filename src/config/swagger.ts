@@ -101,10 +101,11 @@ const options: swaggerJSDoc.Options = {
           properties: {
             id: { type: 'integer' },
             name: { type: 'string' },
+            isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'name', 'createdAt', 'updatedAt']
+          required: ['id', 'name', 'isActive', 'createdAt', 'updatedAt']
         },
         CreateInstitutionInput: {
           type: 'object',
@@ -112,6 +113,14 @@ const options: swaggerJSDoc.Options = {
             name: { type: 'string' },
           },
           required: ['name']
+        },
+        DeleteInstitutionResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+          required: ['ok', 'message'],
         },
         UserWithInstitution: {
           allOf: [

@@ -5,7 +5,8 @@ import {
   createInstitution,
   getInstitutions,
   searchInstitutions,
-  getGuardiansFromInstitution
+  getGuardiansFromInstitution,
+  deleteInstitution,
 } from '../controllers/institutionController';
 
 const router = Router();
@@ -115,5 +116,35 @@ router.get('/:institutionId/guardians', getGuardiansFromInstitution);
  *                   type: string
  */
 router.get('/search', searchInstitutions);
+
+/**
+ * @openapi
+ * /institutions/{id}:
+ *   delete:
+ *     summary: Delete (deactivate) an institution
+ *     description: Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Institution ID
+ *     responses:
+ *       200:
+ *         description: Institution deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ *       400:
+ *         description: Cannot delete due to pending or missing payments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ */
+router.delete('/:id', deleteInstitution);
 
 export default router;
