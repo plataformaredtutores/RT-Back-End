@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { 
   addStudentToGuardian,
   removeStudentFromGuardian,
-  getStudentsByGuardianId
+  getStudentsByGuardianId,
+  reactivateStudent
 } from '../controllers/studentController';
 
 const router = Router();
@@ -13,9 +14,9 @@ const router = Router();
  *   get:
  *     summary: Get students by guardian ID
  *     description: |
- *       Retrieve all active students associated with a specific guardian.
- *       - Requires admin or coordinator role
- *       - Returns only students where isActive = true
+ *       Retrieve students associated with a specific guardian.
+ *       - Admins/coordinators: returns all students
+ *       - Guardians/tutors: returns only active students
  *     tags: [Students]
  *     parameters:
  *       - in: path
@@ -39,11 +40,45 @@ const router = Router();
  *                   items:
  *                     $ref: '#/components/schemas/Student'
  *       403:
- *         description: Forbidden - user is not an admin or coordinator
+ *         description: Forbidden - user is not authenticated
  *       404:
  *         description: No students found for the specified guardian
  */
 router.get('/:guardianId', getStudentsByGuardianId);
+/**
+ * @openapi
+ * /students/{id}/reactivate:
+ *   patch:
+ *     summary: Reactivate a student
+ *     description: |
+ *       Reactivates a previously deactivated student.
+ *       - Requires admin or coordinator role
+ *     tags: [Students]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Student ID
+ *     responses:
+ *       200:
+ *         description: Student reactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid student id
+ *       403:
+ *         description: Forbidden - user is not an admin or coordinator
+ */
+router.patch('/:id/reactivate', reactivateStudent);
 
 /**
  * @openapi
