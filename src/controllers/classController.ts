@@ -319,7 +319,7 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
               guardianId: Number(guardianId)
             } : undefined,
             Institution: {
-              id: Number(institutionId)
+              id: institutionId ? Number(institutionId) : undefined
             },
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
@@ -342,7 +342,7 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
               guardianId: Number(guardianId)
             } : undefined,
             Institution: {
-              id: Number(institutionId)
+              id: institutionId ? Number(institutionId) : undefined
             },
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
@@ -365,7 +365,7 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
               guardianId: Number(guardianId)
             } : undefined,
             Institution: {
-              id: Number(institutionId)
+              id: institutionId ? Number(institutionId) : undefined
             },
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
@@ -388,7 +388,7 @@ export async function getClassesCashFlowSummary(req: Request, res: Response, nex
               guardianId: Number(guardianId)
             } : undefined,
             Institution: {
-              id: Number(institutionId)
+              id: institutionId ? Number(institutionId) : undefined
             },
             date: {
               gte: startDate ? new Date(startDate as string) : undefined,
@@ -600,7 +600,7 @@ export async function getClassesDetails(req: Request, res: Response, next: NextF
             guardianId: Number(guardianId)
           } : undefined,
           Institution: {
-            id: Number(institutionId)
+            id: institutionId ? Number(institutionId) : undefined
           },
           date: {
             gte: startDate ? new Date(startDate as string) : undefined,

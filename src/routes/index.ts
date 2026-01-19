@@ -16,7 +16,6 @@ export function setRoutes(app: Express) {
   app.use('/mail', mailRoutes)
   app.use('/auth', authRoutes)
   app.use(requireAuth)
-  app.use(checkActive)
   app.use('/users', userRoutes)
   app.use('/students', authorize(['admin', 'coordinator']), studentRoutes)
   app.use('/institutions', authorize(['admin', "coordinator"]), institutionRoutes)
