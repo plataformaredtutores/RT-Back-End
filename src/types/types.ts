@@ -534,6 +534,34 @@ export interface paths {
       };
     };
   };
+  "/institutions/{id}/reactivate": {
+    /**
+     * Reactivate an institution
+     * @description Reactivates a previously deactivated institution.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution reactivated */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
+          };
+        };
+        /** @description Institution not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
   "/mail": {
     /** Send email */
     post: {
@@ -979,6 +1007,10 @@ export interface components {
       name: string;
     };
     DeleteInstitutionResponse: {
+      ok: boolean;
+      message: string;
+    };
+    ReactivateInstitutionResponse: {
       ok: boolean;
       message: string;
     };

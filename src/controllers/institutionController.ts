@@ -240,3 +240,38 @@ export async function searchInstitutions(req: Request, res: Response, next: Next
     next(err);
   }
 }
+
+export async function reactivateInstitution(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const institutionId = Number(id);
+
+    if (Number.isNaN(institutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institution id' });
+    }
+
+    const institution = await prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true },
+    });
+
+    if (!institution) {
+      return res.status(404).json({ ok: false, message: 'Institution not found' });
+    }
+
+    await prisma.institution.update({
+      where: { id: institutionId },
+      data: { isActive: true },
+    });
+
+    await prisma.user.updateMany({
+      where: { institutionId },
+      data: { isActive: true },
+    });
+
+    res.status(200).json({ ok: true, message: 'Institution reactivated successfully' });
+
+  } catch (err) {
+    next(err);
+  }
+}

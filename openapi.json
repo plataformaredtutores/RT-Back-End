@@ -298,6 +298,21 @@
           "message"
         ]
       },
+      "ReactivateInstitutionResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
       "UserWithInstitution": {
         "allOf": [
           {
@@ -2334,6 +2349,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeleteInstitutionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/institutions/{id}/reactivate": {
+      "patch": {
+        "summary": "Reactivate an institution",
+        "description": "Reactivates a previously deactivated institution.",
+        "tags": [
+          "Institutions"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Institution ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Institution reactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactivateInstitutionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Institution not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactivateInstitutionResponse"
                 }
               }
             }

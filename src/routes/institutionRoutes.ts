@@ -7,6 +7,7 @@ import {
   searchInstitutions,
   getGuardiansFromInstitution,
   deleteInstitution,
+  reactivateInstitution,
 } from '../controllers/institutionController';
 
 const router = Router();
@@ -146,5 +147,35 @@ router.get('/search', searchInstitutions);
  *               $ref: '#/components/schemas/DeleteInstitutionResponse'
  */
 router.delete('/:id', deleteInstitution);
+
+/**
+ * @openapi
+ * /institutions/{id}/reactivate:
+ *   patch:
+ *     summary: Reactivate an institution
+ *     description: Reactivates a previously deactivated institution.
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Institution ID
+ *     responses:
+ *       200:
+ *         description: Institution reactivated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReactivateInstitutionResponse'
+ *       404:
+ *         description: Institution not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReactivateInstitutionResponse'
+ */
+router.patch('/:id/reactivate', reactivateInstitution);
 
 export default router;

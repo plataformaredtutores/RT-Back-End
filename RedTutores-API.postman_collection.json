@@ -1,0 +1,660 @@
+{
+  "info": {
+    "_postman_id": "red-tutores-api",
+    "name": "RedTutores API",
+    "description": "API collection for RedTutores backend with authentication support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.user) {",
+                  "        pm.environment.set('authToken', pm.cookies.get('connect.sid'));",
+                  "        pm.environment.set('userId', response.user.id);",
+                  "        pm.environment.set('userRole', response.user.role);",
+                  "        pm.environment.set('userName', response.user.name);",
+                  "        console.log('Login successful. Token saved.');",
+                  "    }",
+                  "}",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@example.com\", \"password\": \"password123\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/logout",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Request Password Reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/request-password-reset",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "request-password-reset"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"reset-token-here\", \"newPassword\": \"newPassword123\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/reset-password",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "reset-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users?role=tutor&institutionId=1&page=1&pageSize=10",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "tutor",
+                  "disabled": true
+                },
+                {
+                  "key": "institutionId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "nameOrEmail",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"John Doe\", \"email\": \"john@example.com\", \"role\": \"tutor\", \"rut\": \"12.345.678-9\", \"phone\": \"+56987654321\", \"address\": \"123 Main St\", \"chargeEmail\": \"charge@example.com\", \"institutionId\": 1, \"bankAccount\": {\"accountType\": \"CHECKING\", \"accountNumber\": \"123456789\", \"bankName\": \"Banco de Chile\", \"accountEmail\": \"bank@example.com\"}}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Edit User Personal Information",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Jane Doe\", \"rut\": \"12.345.678-9\", \"phone\": \"+56987654321\", \"address\": \"456 Oak Ave\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/1/personal-information",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1", "personal-information"]
+            }
+          }
+        },
+        {
+          "name": "Edit User Bank Account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"accountType\": \"SAVINGS\", \"accountNumber\": \"987654321\", \"bankName\": \"Banco Santander\", \"accountEmail\": \"newemail@bank.com\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/1/bank-account",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1", "bank-account"]
+            }
+          }
+        },
+        {
+          "name": "Change User Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"currentPassword\": \"oldPassword123\", \"newPassword\": \"newPassword123\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/1/change-password",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Get User Tutor Links",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/1/tutor-links",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "1", "tutor-links"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Institutions",
+      "item": [
+        {
+          "name": "Get All Institutions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/institutions",
+              "host": ["{{BASE_URL}}"],
+              "path": ["institutions"]
+            }
+          }
+        },
+        {
+          "name": "Search Institutions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/institutions/search?query=school",
+              "host": ["{{BASE_URL}}"],
+              "path": ["institutions", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "school"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Institution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"New Institution\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/institutions",
+              "host": ["{{BASE_URL}}"],
+              "path": ["institutions"]
+            }
+          }
+        },
+        {
+          "name": "Get Institution Guardians",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/institutions/1/guardians",
+              "host": ["{{BASE_URL}}"],
+              "path": ["institutions", "1", "guardians"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Classes",
+      "item": [
+        {
+          "name": "List Classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/classes?startDate=2025-01-01&endDate=2025-12-31&tutorId=1&studentId=1&institutionId=1&page=1&pageSize=10",
+              "host": ["{{BASE_URL}}"],
+              "path": ["classes"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "disabled": true
+                },
+                {
+                  "key": "tutorId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "studentId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "institutionId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"studentId\": 1, \"tutorId\": 1, \"institutionId\": 1, \"subject\": \"MATHEMATICS\", \"modality\": \"ONLINE\", \"classType\": \"SINGLE\", \"duration\": 60, \"startDate\": \"2025-01-15T10:00:00Z\", \"endDate\": \"2025-01-15T11:00:00Z\", \"classValue\": 50000}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/classes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["classes"]
+            }
+          }
+        },
+        {
+          "name": "Delete Class",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/classes/1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["classes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Classes Cash Flow Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/classes/cash-flow-summary?startDate=2025-01-01&endDate=2025-12-31&tutorId=1&studentId=1&institutionId=1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["classes", "cash-flow-summary"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "disabled": true
+                },
+                {
+                  "key": "tutorId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "studentId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "institutionId",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Class Payment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"guardianPaymentStatus\": \"PAID\", \"tutorPaymentStatus\": \"PAID\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/classes/class-payments/1/status",
+              "host": ["{{BASE_URL}}"],
+              "path": ["classes", "class-payments", "1", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fees",
+      "item": [
+        {
+          "name": "Get Fees by Institution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/fees/1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["fees", "1"]
+            }
+          }
+        },
+        {
+          "name": "Simulate Fee Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"institutionId\": 1, \"amount\": 100000, \"durationInMonths\": 12}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/fees/simulate",
+              "host": ["{{BASE_URL}}"],
+              "path": ["fees", "simulate"]
+            }
+          }
+        },
+        {
+          "name": "Edit Fees",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fees\": [{\"id\": 1, \"percentage\": 10, \"durationInMonths\": 12}, {\"id\": 2, \"percentage\": 15, \"durationInMonths\": 24}]}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/fees/edit",
+              "host": ["{{BASE_URL}}"],
+              "path": ["fees", "edit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get Students by Guardian ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/students/1",
+              "host": ["{{BASE_URL}}"],
+              "path": ["students", "1"]
+            }
+          }
+        },
+        {
+          "name": "Add Student to Guardian",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"guardianId\": 1, \"name\": \"Student Name\", \"email\": \"student@example.com\", \"birthDate\": \"2010-05-15\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/students/add",
+              "host": ["{{BASE_URL}}"],
+              "path": ["students", "add"]
+            }
+          }
+        },
+        {
+          "name": "Remove Student from Guardian",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"guardianId\": 1, \"studentId\": 1}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/students/delete",
+              "host": ["{{BASE_URL}}"],
+              "path": ["students", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mail",
+      "item": [
+        {
+          "name": "Send Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"to\": \"recipient@example.com\", \"cc\": \"cc@example.com\", \"bcc\": \"bcc@example.com\", \"subject\": \"Test Email\", \"text\": \"This is a test email\", \"html\": \"<p>This is a test email</p>\", \"replyTo\": \"reply@example.com\"}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/mail",
+              "host": ["{{BASE_URL}}"],
+              "path": ["mail"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userRole",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userName",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
