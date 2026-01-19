@@ -1,6 +1,7 @@
 import { UserRole, PaymentStatus } from "@prisma/client"
 import { Request, Response, NextFunction } from "express"
 import prisma from "../lib/prisma"
+import { calculateFeeAmount } from "./utils"
 
 export async function createClass(req: Request, res: Response, next: NextFunction) {
   try {
@@ -68,22 +69,28 @@ export async function createClass(req: Request, res: Response, next: NextFunctio
         institutionId
       }
     })
+
+    let amounts = { guardianAmount: 0, tutorAmount: 0 }
+
+    if (classFee) {
+      amounts = calculateFeeAmount(classFee, duration)
+    }
+
     const classPayment = await prisma.classPayment.create({
       data: {
         classId: newClass.id,
-        guardianAmount: classFee ? classFee.guardianAmount : 0,
-        tutorAmount: classFee ? classFee.tutorAmount : 0
+        guardianAmount: amounts.guardianAmount,
+        tutorAmount: amounts.tutorAmount
       }
     })
-
     return res.status(201).json({ class: newClass, classPayment })
-
-    
 
   } catch (err) {
     next(err)
   }
 }
+
+
 
 export async function getClassesCashFlowSummary(req: Request, res: Response, next: NextFunction) {
   try {

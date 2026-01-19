@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { Fee } from '@prisma/client';
+import { calculateFeeAmount } from './utils';
 
 // Get all active fees from an institution
 export async function getFees(req: Request, res: Response, next: NextFunction) {
@@ -161,16 +162,6 @@ function findFeeByCriteria(
       fee.modality === classModality &&
       fee.numberOfStudents === numberOfStudents
   );
-}
-
-function calculateFeeAmount(
-  fee: Fee,
-  duration: number
-) {
-  return {
-    guardianAmount: fee.guardianAmount * Number(duration)/60,
-    tutorAmount: fee.tutorAmount * Number(duration)/60
-  };
 }
 
 function translateFees(fees: Fee[]) {
