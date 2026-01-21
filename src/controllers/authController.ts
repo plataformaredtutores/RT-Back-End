@@ -5,6 +5,42 @@ import prisma from "../lib/prisma";
 import { randomToken, hashToken, verifyTokenHash } from "../lib/tokens";
 import { sendEmail } from "../services/mailService";
 
+function isHttpsUrl(url?: string) {
+  if (!url) return false
+  try {
+    return new URL(url).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function getCookieSecurity() {
+  const isProd = process.env.NODE_ENV === 'production'
+  const frontendUrl = process.env.FRONTEND_URL
+  const secure = isProd || isHttpsUrl(frontendUrl)
+  const sameSite = secure ? ('none' as const) : ('lax' as const)
+  return { secure, sameSite }
+}
+
+function getCookieBaseOptions() {
+  const { secure, sameSite } = getCookieSecurity()
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/',
+  }
+}
+
+function parseRefreshCookie(presented: string): { id?: string; raw: string } {
+  const dot = presented.indexOf('.')
+  if (dot <= 0) return { raw: presented }
+  const id = presented.slice(0, dot)
+  const raw = presented.slice(dot + 1)
+  if (!id || !raw) return { raw: presented }
+  return { id, raw }
+}
+
 function b64ToKey(b64?: string) {
   const raw = b64 || ''
   return raw.startsWith('base64:') ? Buffer.from(raw.slice(7), 'base64') : Buffer.from(raw, 'base64')
@@ -12,18 +48,12 @@ function b64ToKey(b64?: string) {
 const JWT_SECRET = b64ToKey(process.env.JWT_SECRET)
 
 const cookieOptsAT = {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none' as const,
-  path: '/',
-  maxAge: 30 * 60 * 1000 // 30 minutos
+  ...getCookieBaseOptions(),
+  maxAge: 30 * 60 * 1000 // 30 minutes
 }
 const cookieOptsRT = {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none' as const,
-  path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+  ...getCookieBaseOptions(),
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 }
 
 export async function login(req: Request, res: Response) {
@@ -37,27 +67,26 @@ export async function login(req: Request, res: Response) {
 
   const pepper = (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, '')
   const isPasswordValid = await argon2.verify(user.hashedPassword, password, {
-    secret: Buffer.from(pepper, 'base64')
+    secret: Buffer.from(pepper, 'base64'),
   })
   if (!isPasswordValid) return res.status(401).json({ ok: false, message: 'Invalid credentials' })
 
   await prisma.refreshToken.updateMany({
     where: { userId: user.id, revoked: false },
-    data: { revoked: true }
+    data: { revoked: true },
   })
-  
   await prisma.refreshToken.deleteMany({
-    where: { userId: user.id, expiresAt: { lt: new Date() } }
+    where: { userId: user.id, expiresAt: { lt: new Date() } },
   })
 
-  const refreshRaw  = randomToken()
+  const refreshRaw = randomToken()
   const refreshHash = await hashToken(refreshRaw)
-  await prisma.refreshToken.create({
+  const refreshRecord = await prisma.refreshToken.create({
     data: {
       userId: user.id,
       tokenHash: refreshHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    }
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
   })
 
   const payload = {
@@ -75,11 +104,11 @@ export async function login(req: Request, res: Response) {
     .sign(JWT_SECRET)
 
   res
-    .cookie('access_token',  accessToken, cookieOptsAT)
-    .cookie('refresh_token', refreshRaw,  cookieOptsRT)
+    .cookie('access_token', accessToken, cookieOptsAT)
+    .cookie('refresh_token', `${refreshRecord.id}.${refreshRaw}`, cookieOptsRT)
     .json({
       ok: true,
-      user: { id: user.id, email: user.email, role: user.role, name: user.name, institutionId: user.institutionId }
+      user: { id: user.id, email: user.email, role: user.role, name: user.name, institutionId: user.institutionId },
     })
 }
 
@@ -88,12 +117,12 @@ export async function logout(req: Request, res: Response) {
   if (uid) {
     await prisma.refreshToken.updateMany({
       where: { userId: parseInt(uid), expiresAt: { gt: new Date() } },
-      data: { revoked: true }
-    });
+      data: { revoked: true },
+    })
   }
   res
-    .clearCookie('access_token',  { path: '/', sameSite: 'none', secure: true, httpOnly: true })
-    .clearCookie('refresh_token', { path: '/', sameSite: 'none', secure: true, httpOnly: true })
+    .clearCookie('access_token', getCookieBaseOptions())
+    .clearCookie('refresh_token', getCookieBaseOptions())
     .json({ ok: true })
 }
 
@@ -103,35 +132,78 @@ export async function refreshToken(req: Request, res: Response) {
     return res.status(401).json({ ok: false, message: 'No refresh token provided' })
   }
 
-  const rt = await prisma.refreshToken.findFirst({
-    where: {
-      revoked: false,
-      expiresAt: { gt: new Date() }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  const { id: refreshId, raw: refreshRaw } = parseRefreshCookie(presented)
 
-  if (!rt || !(await verifyTokenHash(rt.tokenHash, presented))) {
+  type RefreshTokenRecord = {
+    id: string
+    userId: number
+    tokenHash: string
+    revoked: boolean
+    expiresAt: Date
+  }
+
+  let rt: RefreshTokenRecord | null = null
+
+  if (refreshId) {
+    rt = await prisma.refreshToken.findUnique({
+      where: { id: refreshId },
+      select: { id: true, userId: true, tokenHash: true, revoked: true, expiresAt: true },
+    })
+  } else {
+    // Legacy fallback: previous cookie format stored only the raw token.
+    // This should disappear once clients refresh.
+    const candidates = await prisma.refreshToken.findMany({
+      where: { revoked: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, userId: true, tokenHash: true, revoked: true, expiresAt: true },
+    })
+    for (const candidate of candidates) {
+      if (await verifyTokenHash(candidate.tokenHash, refreshRaw)) {
+        rt = candidate
+        break
+      }
+    }
+  }
+
+  if (!rt || rt.revoked || rt.expiresAt <= new Date() || !(await verifyTokenHash(rt.tokenHash, refreshRaw))) {
     return res.status(401).json({ ok: false, message: 'Invalid refresh' })
   }
 
-  const user = await prisma.user.findUnique({ where: { id: rt.userId }, select: { id: true, email: true, role: true, institutionId: true } })
+  const user = await prisma.user.findUnique({
+    where: { id: rt.userId },
+    select: { id: true, email: true, role: true, institutionId: true },
+  })
   if (!user) return res.status(401).json({ ok: false })
 
-  const payload = { sub: `user:${user.id}`, uid: user.id, email: user.email, role: user.role, institutionId: user.institutionId ?? null }
+  const payload = {
+    sub: `user:${user.id}`,
+    uid: user.id,
+    email: user.email,
+    role: user.role,
+    institutionId: user.institutionId ?? null,
+  }
   const { SignJWT } = await getJose()
-  const token = await new SignJWT(payload).setProtectedHeader({ alg: 'HS256', typ: 'JWT' }).setIssuedAt().setExpirationTime('30m').sign(JWT_SECRET)
+  const token = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime('30m')
+    .sign(JWT_SECRET)
 
   await prisma.refreshToken.update({ where: { id: rt.id }, data: { revoked: true } })
+
   const newRaw = randomToken()
   const newHash = await hashToken(newRaw)
-  await prisma.refreshToken.create({
-    data: { userId: rt.userId, tokenHash: newHash, expiresAt: new Date(Date.now() + 7*24*60*60*1000) }
+  const newRecord = await prisma.refreshToken.create({
+    data: {
+      userId: rt.userId,
+      tokenHash: newHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
   })
 
   res
     .cookie('access_token', token, { ...cookieOptsAT, maxAge: 30 * 60 * 1000 })
-    .cookie('refresh_token', newRaw, { ...cookieOptsRT, maxAge: 7 * 24 * 60 * 60 * 1000 })
+    .cookie('refresh_token', `${newRecord.id}.${newRaw}`, { ...cookieOptsRT, maxAge: 7 * 24 * 60 * 60 * 1000 })
     .json({ ok: true, expiresIn: '30m' })
 }
 
@@ -188,8 +260,9 @@ export async function resetPassword(req: Request, res: Response) {
     
     const userId = Number(subParts[1])
 
+    const pepper = (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, '')
     const hashedPassword = await argon2.hash(newPassword, {
-      secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
+      secret: Buffer.from(pepper, 'base64')
     });
 
     await prisma.user.update({
