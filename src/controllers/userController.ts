@@ -4,6 +4,7 @@ import argon2 from 'argon2';
 import { AccountType, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { userInfo } from 'os';
+import { unknown } from 'zod';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -112,16 +113,16 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
-    let finalInstitutionId: number;
+    let finalInstitutionId: number | null;
 
     if (userRole === 'coordinator') {
       const coordinatorInstitutionId = (req as any).auth?.institutionId;
       finalInstitutionId = coordinatorInstitutionId;
     } else {
-      if (!institutionId || typeof institutionId !== 'number') {
-        return res.status(400).json({ ok: false, message: 'Institution ID is required and must be a number' });
-      }
-      finalInstitutionId = institutionId;
+      //if (!institutionId || typeof institutionId !== 'number') {
+        //return res.status(400).json({ ok: false, message: 'Institution ID is required and must be a number' });
+      //}
+      finalInstitutionId = null;
     }
 
     const password = rut != null
