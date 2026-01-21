@@ -9,7 +9,6 @@ import feeRoutes from './feeRoutes'
 import { health } from '../controllers/healthController'
 import { requireAuth } from '../middlewares/auth'
 import { authorize } from '../middlewares/authorize'
-import { checkActive } from '../middlewares/checkActive'
 
 export function setRoutes(app: Express) {
   app.get('/health', health)

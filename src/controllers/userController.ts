@@ -113,16 +113,11 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
-    let finalInstitutionId: number | null;
+    let finalInstitutionId: number | null = null;
 
     if (userRole === 'coordinator') {
       const coordinatorInstitutionId = (req as any).auth?.institutionId;
       finalInstitutionId = coordinatorInstitutionId;
-    } else {
-      //if (!institutionId || typeof institutionId !== 'number') {
-        //return res.status(400).json({ ok: false, message: 'Institution ID is required and must be a number' });
-      //}
-      finalInstitutionId = null;
     }
 
     const password = rut != null
