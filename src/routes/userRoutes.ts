@@ -125,6 +125,9 @@ router.delete('/:id', deleteUser)
  * /users/{id}:
  *   get:
  *     summary: Get a user by ID
+ *     description: |
+ *       Returns user details.
+ *       - For guardians/tutors, only active students are returned
  *     tags: [Users]
  *     parameters:
  *       - in: path

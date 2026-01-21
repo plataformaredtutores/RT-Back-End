@@ -110,18 +110,51 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
     const { guardianId } = req.params;
     const userRole = (req as any).auth?.role;
 
-    if (userRole !== 'admin' && userRole !== 'coordinator') {
+    if (!userRole) {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+    const where: { guardianId: number; isActive?: boolean } = {
+      guardianId: Number(guardianId),
+    }
+
+    if (userRole === 'guardian' || userRole === 'tutor') {
+      where.isActive = true
+    } else if (userRole !== 'admin' && userRole !== 'coordinator') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
     const students = await prisma.student.findMany({
-      where: {
-        guardianId: Number(guardianId),
-        isActive: true,
-      },
+      where,
     });
 
     res.status(200).json({ ok: true, students });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function reactivateStudent(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const studentId = Number(id);
+
+    const userRole = (req as any).auth?.role;
+
+    if (userRole !== 'admin' && userRole !== 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+    if (Number.isNaN(studentId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid student id' });
+    }
+
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { isActive: true },
+    });
+
+    res.status(200).json({ ok: true, message: 'Student reactivated successfully' });
   } catch (err) {
     next(err);
   }

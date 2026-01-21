@@ -586,9 +586,9 @@ export interface paths {
   "/students/{guardianId}": {
     /**
      * Get students by guardian ID
-     * @description Retrieve all active students associated with a specific guardian.
-     * - Requires admin or coordinator role
-     * - Returns only students where isActive = true
+     * @description Retrieve students associated with a specific guardian.
+     * - Admins/coordinators: returns all students
+     * - Guardians/tutors: returns only active students
      */
     get: {
       parameters: {
@@ -607,12 +607,46 @@ export interface paths {
             };
           };
         };
-        /** @description Forbidden - user is not an admin or coordinator */
+        /** @description Forbidden - user is not authenticated */
         403: {
           content: never;
         };
         /** @description No students found for the specified guardian */
         404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/{id}/reactivate": {
+    /**
+     * Reactivate a student
+     * @description Reactivates a previously deactivated student.
+     * - Requires admin or coordinator role
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description Student ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Student reactivated successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid student id */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
           content: never;
         };
       };
@@ -755,7 +789,11 @@ export interface paths {
     };
   };
   "/users/{id}": {
-    /** Get a user by ID */
+    /**
+     * Get a user by ID
+     * @description Returns user details.
+     * - For guardians/tutors, only active students are returned
+     */
     get: {
       parameters: {
         path: {

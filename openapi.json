@@ -2439,7 +2439,7 @@
     "/students/{guardianId}": {
       "get": {
         "summary": "Get students by guardian ID",
-        "description": "Retrieve all active students associated with a specific guardian.\n- Requires admin or coordinator role\n- Returns only students where isActive = true\n",
+        "description": "Retrieve students associated with a specific guardian.\n- Admins/coordinators: returns all students\n- Guardians/tutors: returns only active students\n",
         "tags": [
           "Students"
         ],
@@ -2477,10 +2477,56 @@
             }
           },
           "403": {
-            "description": "Forbidden - user is not an admin or coordinator"
+            "description": "Forbidden - user is not authenticated"
           },
           "404": {
             "description": "No students found for the specified guardian"
+          }
+        }
+      }
+    },
+    "/students/{id}/reactivate": {
+      "patch": {
+        "summary": "Reactivate a student",
+        "description": "Reactivates a previously deactivated student.\n- Requires admin or coordinator role\n",
+        "tags": [
+          "Students"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Student ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Student reactivated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid student id"
+          },
+          "403": {
+            "description": "Forbidden - user is not an admin or coordinator"
           }
         }
       }
@@ -2718,6 +2764,7 @@
       },
       "get": {
         "summary": "Get a user by ID",
+        "description": "Returns user details.\n- For guardians/tutors, only active students are returned\n",
         "tags": [
           "Users"
         ],

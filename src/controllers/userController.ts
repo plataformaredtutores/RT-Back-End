@@ -258,6 +258,10 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
     }
 
     const response = { ...user } as typeof user & { coordinatorProfitShare?: number }
+    // Only return active students for guardians and tutors
+    if (user.role === 'guardian' || user.role === 'tutor') {
+      response.Students = (response.Students ?? []).filter((s: any) => s?.isActive !== false)
+    }
 
     if (user.role === 'coordinator' && user.institutionId) {
       const profit = await prisma.coordinatorProfitShare.findUnique({
