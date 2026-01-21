@@ -283,6 +283,24 @@
           "name"
         ]
       },
+      "CreateInstitutionResponse": {
+        "type": "object",
+        "properties": {
+          "institution": {
+            "$ref": "#/components/schemas/Institution"
+          },
+          "fees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Fee"
+            }
+          }
+        },
+        "required": [
+          "institution",
+          "fees"
+        ]
+      },
       "DeleteInstitutionResponse": {
         "type": "object",
         "properties": {
@@ -2171,7 +2189,7 @@
     "/institutions": {
       "post": {
         "summary": "Create an institution",
-        "description": "Creates an institution and seeds default fee rows (all amounts set to 0) for every type/modality/student-count combination.",
+        "description": "Creates an institution and clones fee rows from institution id=1 (The Grange School).",
         "tags": [
           "Institutions"
         ],
@@ -2191,7 +2209,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Institution"
+                  "$ref": "#/components/schemas/CreateInstitutionResponse"
                 }
               }
             }

@@ -432,7 +432,10 @@ export interface paths {
         };
       };
     };
-    /** Create an institution */
+    /**
+     * Create an institution
+     * @description Creates an institution and clones fee rows from institution id=1 (The Grange School).
+     */
     post: {
       requestBody: {
         content: {
@@ -443,7 +446,7 @@ export interface paths {
         /** @description Created institution */
         201: {
           content: {
-            "application/json": components["schemas"]["Institution"];
+            "application/json": components["schemas"]["CreateInstitutionResponse"];
           };
         };
       };
@@ -503,6 +506,62 @@ export interface paths {
       };
     };
   };
+  "/institutions/{id}": {
+    /**
+     * Delete (deactivate) an institution
+     * @description Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution deleted */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+        /** @description Cannot delete due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/institutions/{id}/reactivate": {
+    /**
+     * Reactivate an institution
+     * @description Reactivates a previously deactivated institution.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution reactivated */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
+          };
+        };
+        /** @description Institution not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
   "/mail": {
     /** Send email */
     post: {
@@ -524,13 +583,159 @@ export interface paths {
       };
     };
   };
+  "/students/{guardianId}": {
+    /**
+     * Get students by guardian ID
+     * @description Retrieve students associated with a specific guardian.
+     * - Admins/coordinators: returns all students
+     * - Guardians/tutors: returns only active students
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Guardian ID */
+          guardianId: number;
+        };
+      };
+      responses: {
+        /** @description List of students retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              students?: components["schemas"]["Student"][];
+            };
+          };
+        };
+        /** @description Forbidden - user is not authenticated */
+        403: {
+          content: never;
+        };
+        /** @description No students found for the specified guardian */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/{id}/reactivate": {
+    /**
+     * Reactivate a student
+     * @description Reactivates a previously deactivated student.
+     * - Requires admin or coordinator role
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description Student ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Student reactivated successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid student id */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/add": {
+    /**
+     * Add a student to a guardian
+     * @description Create a student for a guardian or reactivate an existing inactive one with the same name (case-insensitive).
+     * - Requires admin or coordinator role
+     * - All fields are required
+     * - If a student with the same name exists for the guardian and is inactive, it will be reactivated instead of creating a new record
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AddStudentToGuardianRequest"];
+        };
+      };
+      responses: {
+        /** @description Student reactivated or already active */
+        200: {
+          content: {
+            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
+          };
+        };
+        /** @description Student created and added to guardian successfully */
+        201: {
+          content: {
+            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
+          };
+        };
+        /** @description Invalid input or validation error (missing required fields, institution not found) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+        /** @description Guardian not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/students/delete": {
+    /**
+     * Remove a student from a guardian
+     * @description Soft-delete (deactivate) a student by setting isActive = false for the specified guardian/student pair.
+     * - Requires admin or coordinator role
+     * - The student must be associated with the specified guardian
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["RemoveStudentFromGuardianRequest"];
+        };
+      };
+      responses: {
+        /** @description Student removed from guardian successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RemoveStudentFromGuardianResponse"];
+          };
+        };
+        /** @description Invalid input or validation error (missing required fields) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - user is not an admin or coordinator */
+        403: {
+          content: never;
+        };
+        /** @description Student not found for the specified guardian */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/users": {
     /** List users */
     get: {
       parameters: {
         query?: {
           /** @description Filter by user role */
-          role?: "admin" | "coordinator" | "tutor" | "parent";
+          role?: "admin" | "coordinator" | "tutor" | "guardian";
           /** @description Filter by institution id */
           institutionId?: number;
           /** @description Case-insensitive search in name or email */
@@ -550,7 +755,15 @@ export interface paths {
         };
       };
     };
-    /** Create a user */
+    /**
+     * Create a user
+     * @description Create a new user in the system.
+     * - Admins must provide the institution ID
+     * - Coordinators automatically use their own institution
+     * - Initial password is set to the RUT number without the verifying digit
+     * - Email must be unique (database constraint)
+     * - Phone, address, and chargeEmail are optional
+     */
     post: {
       requestBody: {
         content: {
@@ -558,17 +771,29 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Created user */
+        /** @description User created successfully */
         201: {
           content: {
             "application/json": components["schemas"]["User"];
           };
         };
+        /** @description Invalid input or validation error (missing required fields, invalid email format, or database constraint violation) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden - insufficient permissions */
+        403: {
+          content: never;
+        };
       };
     };
   };
   "/users/{id}": {
-    /** Get a user by ID */
+    /**
+     * Get a user by ID
+     * @description Returns user details.
+     * - For guardians/tutors, only active students are returned
+     */
     get: {
       parameters: {
         path: {
@@ -589,7 +814,12 @@ export interface paths {
         };
       };
     };
-    /** Delete a user by ID */
+    /**
+     * Delete a user by ID
+     * @description Soft delete a user by marking them as inactive (isActive = false).
+     * - Admins and coordinators can delete users
+     * - Coordinators cannot delete admin or coordinator users
+     */
     delete: {
       parameters: {
         path: {
@@ -598,8 +828,16 @@ export interface paths {
         };
       };
       responses: {
-        /** @description User deleted successfully */
+        /** @description User deleted successfully (soft delete) */
         204: {
+          content: never;
+        };
+        /** @description Forbidden - user lacks permission to delete this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
           content: never;
         };
       };
@@ -768,20 +1006,36 @@ export interface components {
       updatedAt: string;
     };
     UserInput: {
+      /** @description User full name (required) */
       name: string;
-      /** Format: email */
+      /**
+       * Format: email
+       * @description User email (must be unique, required)
+       */
       email: string;
-      /** @enum {string} */
+      /**
+       * @description User role (required)
+       * @enum {string}
+       */
       role: "admin" | "coordinator" | "tutor" | "guardian";
-      rut?: string | null;
+      /** @description RUT in format XX.XXX.XXX-K (required, used to generate initial password) */
+      rut: string;
+      /** @description Phone number (optional) */
       phone?: string | null;
+      /** @description Address (optional) */
       address?: string | null;
+      /**
+       * Format: email
+       * @description Charge email (optional)
+       */
       chargeEmail?: string | null;
+      /** @description Institution ID (required for non-admin users, inferred for coordinators) */
       institutionId?: number | null;
     };
     Institution: {
       id: number;
       name: string;
+      isActive: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -789,6 +1043,18 @@ export interface components {
     };
     CreateInstitutionInput: {
       name: string;
+    };
+    CreateInstitutionResponse: {
+      institution: components["schemas"]["Institution"];
+      fees: components["schemas"]["Fee"][];
+    };
+    DeleteInstitutionResponse: {
+      ok: boolean;
+      message: string;
+    };
+    ReactivateInstitutionResponse: {
+      ok: boolean;
+      message: string;
     };
     UserWithInstitution: components["schemas"]["User"] & {
       Institution?: components["schemas"]["Institution"];
@@ -814,6 +1080,7 @@ export interface components {
       name?: string;
       guardianId?: number;
       institutionId?: number;
+      isActive?: boolean;
     };
     StudentSummary: {
       id: number;
@@ -1050,6 +1317,56 @@ export interface components {
         }[];
     };
     EditFeesResponse: {
+      ok: boolean;
+      message: string;
+    };
+    CreateGuardianInput: {
+      /** @description Guardian name */
+      name: string;
+      /**
+       * Format: email
+       * @description Guardian email
+       */
+      email: string;
+      /** @description Guardian RUT (e.g., 12345678-9) */
+      rut: string;
+      /** @description Guardian phone number (optional) */
+      phone?: string | null;
+      /** @description Guardian address (optional) */
+      address?: string | null;
+      /**
+       * Format: email
+       * @description Charge email (optional)
+       */
+      chargeEmail?: string | null;
+      /** @description Institution ID (required for admin, inferred for coordinator) */
+      institution?: number;
+    };
+    CreateGuardianResponse: {
+      ok: boolean;
+      guardian: components["schemas"]["User"];
+    };
+    AddStudentToGuardianRequest: {
+      /** @description Student name (required) */
+      name: string;
+      /** @description Institution ID (required) */
+      institutionId: number;
+      /** @description Guardian ID (required) */
+      guardianId: number;
+    };
+    AddStudentToGuardianResponse: {
+      ok: boolean;
+      student: components["schemas"]["Student"];
+      /** @description True when an existing inactive student was reactivated instead of creating a new record */
+      reactivated?: boolean;
+    };
+    RemoveStudentFromGuardianRequest: {
+      /** @description Guardian ID (required) */
+      guardianId: number;
+      /** @description Student ID (required) */
+      studentId: number;
+    };
+    RemoveStudentFromGuardianResponse: {
       ok: boolean;
       message: string;
     };
