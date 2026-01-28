@@ -38,6 +38,11 @@ const router = Router()
  *           type: string
  *         description: Case-insensitive search in name or email
  *       - in: query
+ *         name: sendInactive
+ *         schema:
+ *           type: boolean
+ *         description: If false, only active users are returned. If true or omitted, returns all.
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer

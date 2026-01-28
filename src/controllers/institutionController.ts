@@ -42,9 +42,16 @@ export async function createInstitution(req: Request, res: Response, next: NextF
     next(err);
   }
 }
-export async function getInstitutions(_req: Request, res: Response, next: NextFunction) {
+
+export async function getInstitutions(req: Request, res: Response, next: NextFunction) {
   try {
-    const institutions = await prisma.institution.findMany();
+    const sendInactive = req.query.sendInactive === undefined
+      ? true
+      : req.query.sendInactive === 'true';
+
+    const institutions = await prisma.institution.findMany({
+      where: sendInactive ? undefined : { isActive: true },
+    });
     res.json(institutions);
   } catch (err) {
     next(err);

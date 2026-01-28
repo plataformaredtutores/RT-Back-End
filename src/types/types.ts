@@ -423,6 +423,12 @@ export interface paths {
   "/institutions": {
     /** Get all institutions */
     get: {
+      parameters: {
+        query?: {
+          /** @description If false, only active institutions are returned. If true or omitted, returns all. */
+          sendInactive?: boolean;
+        };
+      };
       responses: {
         /** @description List of institutions */
         200: {
@@ -434,7 +440,7 @@ export interface paths {
     };
     /**
      * Create an institution
-     * @description Creates an institution and seeds default fee rows (all amounts set to 0) for every type/modality/student-count combination.
+     * @description Creates an institution and clones fee rows from institution id=1 (The Grange School).
      */
     post: {
       requestBody: {
@@ -446,7 +452,7 @@ export interface paths {
         /** @description Created institution */
         201: {
           content: {
-            "application/json": components["schemas"]["Institution"];
+            "application/json": components["schemas"]["CreateInstitutionResponse"];
           };
         };
       };
@@ -592,6 +598,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If false, only active students are returned for admin/coordinator. If true or omitted, returns all. Guardians/tutors always receive only active students. */
+          sendInactive?: boolean;
+        };
         path: {
           /** @description Guardian ID */
           guardianId: number;
@@ -740,6 +750,8 @@ export interface paths {
           institutionId?: number;
           /** @description Case-insensitive search in name or email */
           nameOrEmail?: string;
+          /** @description If false, only active users are returned. If true or omitted, returns all. */
+          sendInactive?: boolean;
           /** @description Page number (1-based) */
           page?: number;
           /** @description Items per page */
@@ -957,6 +969,29 @@ export interface paths {
       };
     };
   };
+  "/users/{id}/guardian-links": {
+    /** Get guardian links for a user */
+    get: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Guardian links retrieved successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["GuardianLink"][];
+          };
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -1044,6 +1079,10 @@ export interface components {
     CreateInstitutionInput: {
       name: string;
     };
+    CreateInstitutionResponse: {
+      institution: components["schemas"]["Institution"];
+      fees: components["schemas"]["Fee"][];
+    };
     DeleteInstitutionResponse: {
       ok: boolean;
       message: string;
@@ -1107,6 +1146,9 @@ export interface components {
     };
     TutorLink: components["schemas"]["GuardianTutor"] & {
       Guardian?: components["schemas"]["User"];
+    };
+    GuardianLink: components["schemas"]["GuardianTutor"] & {
+      Tutor?: components["schemas"]["User"];
     };
     UserDetail: components["schemas"]["User"] & ({
       Institution?: components["schemas"]["Institution"];

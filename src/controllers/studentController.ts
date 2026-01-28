@@ -109,6 +109,9 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
   try {
     const { guardianId } = req.params;
     const userRole = (req as any).auth?.role;
+    const sendInactive = req.query.sendInactive === undefined
+      ? true
+      : req.query.sendInactive === 'true';
 
     if (!userRole) {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
@@ -120,7 +123,11 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
 
     if (userRole === 'guardian' || userRole === 'tutor') {
       where.isActive = true
-    } else if (userRole !== 'admin' && userRole !== 'coordinator') {
+    } else if (userRole === 'admin' || userRole === 'coordinator') {
+      if (!sendInactive) {
+        where.isActive = true
+      }
+    } else {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 

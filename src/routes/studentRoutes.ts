@@ -25,6 +25,12 @@ const router = Router();
  *         schema:
  *           type: integer
  *         description: Guardian ID
+ *       - in: query
+ *         name: sendInactive
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: If false, only active students are returned for admin/coordinator. If true or omitted, returns all. Guardians/tutors always receive only active students.
  *     responses:
  *       200:
  *         description: List of students retrieved successfully

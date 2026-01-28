@@ -40,6 +40,13 @@ router.post('/', createInstitution);
  *   get:
  *     summary: Get all institutions
  *     tags: [Institutions]
+ *     parameters:
+ *       - in: query
+ *         name: sendInactive
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: If false, only active institutions are returned. If true or omitted, returns all.
  *     responses:
  *       200:
  *         description: List of institutions

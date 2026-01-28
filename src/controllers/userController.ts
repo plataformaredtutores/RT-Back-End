@@ -16,9 +16,13 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
       pageSize = 10
     } = _req.query
 
+    const sendInactive = _req.query.sendInactive === undefined
+      ? true
+      : _req.query.sendInactive === 'true'
+
     const users = await prisma.user.findMany({
       where: {
-        isActive: true,
+        isActive: sendInactive ? undefined : true,
         role: role as UserRole | undefined,
         institutionId: institutionId ? Number(institutionId) : undefined,
         OR: nameOrEmail ? [
