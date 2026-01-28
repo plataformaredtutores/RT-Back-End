@@ -113,7 +113,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
-    let finalInstitutionId: number | null = institutionId ?? null;
+    let finalInstitutionId: number = institutionId;
 
     if (userRole === 'coordinator') {
       const coordinatorInstitutionId = (req as any).auth?.institutionId;
