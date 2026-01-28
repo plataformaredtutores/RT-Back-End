@@ -11,8 +11,23 @@ import cookieParser from 'cookie-parser'
 const app = express()
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 
+const corsOrigins = (process.env.CORS_ORIGINS || '')
+	.split(',')
+	.map(s => s.trim())
+	.filter(Boolean)
+
+if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+	app.set('trust proxy', 1)
+}
+
 app.use(cors({
-	origin: true, // reflect request origin — allows all origins
+	origin: corsOrigins.length
+		? (origin, callback) => {
+			// Allow non-browser / same-origin requests that omit Origin
+			if (!origin) return callback(null, true)
+			return callback(null, corsOrigins.includes(origin))
+		}
+		: true, // reflect request origin — allows all origins
 	credentials: true,
 	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 	allowedHeaders: ['Content-Type', 'Authorization'],

@@ -14,22 +14,52 @@ function isHttpsUrl(url?: string) {
   }
 }
 
-function getCookieSecurity() {
+function isRequestSecure(req: Request) {
+	if ((req as any).secure) return true
+	const xfProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase()
+	return xfProto === 'https'
+}
+
+function getCookieSecurity(req: Request) {
   const isProd = process.env.NODE_ENV === 'production'
   const frontendUrl = process.env.FRONTEND_URL
-  const secure = isProd || isHttpsUrl(frontendUrl)
-  const sameSite = secure ? ('none' as const) : ('lax' as const)
+  const secureFromEnv = process.env.COOKIE_SECURE
+  const secure = secureFromEnv === 'true'
+		? true
+		: secureFromEnv === 'false'
+			? false
+			: (isRequestSecure(req) || (isProd && isHttpsUrl(frontendUrl)))
+
+  const sameSiteFromEnv = (process.env.COOKIE_SAMESITE || '').toLowerCase()
+  const sameSite =
+    sameSiteFromEnv === 'lax' ? ('lax' as const) :
+    sameSiteFromEnv === 'strict' ? ('strict' as const) :
+    sameSiteFromEnv === 'none' ? ('none' as const) :
+    (secure ? ('none' as const) : ('lax' as const))
+
   return { secure, sameSite }
 }
 
-function getCookieBaseOptions() {
-  const { secure, sameSite } = getCookieSecurity()
+function getCookieBaseOptions(req: Request) {
+  const { secure, sameSite } = getCookieSecurity(req)
+  const domain = (process.env.COOKIE_DOMAIN || '').trim() || undefined
   return {
     httpOnly: true,
     secure,
     sameSite,
+    ...(domain ? { domain } : {}),
     path: '/',
   }
+}
+
+function shouldIncludeAccessTokenInBody(req: Request) {
+  // Useful as a Safari fallback when cookies are blocked (e.g., third‑party cookie restrictions).
+  // Client can then send `Authorization: Bearer <token>` (supported by requireAuth middleware).
+  const q = req.query as any
+  const fromQuery = q?.includeToken === 'true' || q?.include_token === 'true'
+  const fromHeader = (req.header('x-auth-token-in-body') || '').toLowerCase() === 'true'
+  const fromEnv = (process.env.AUTH_TOKEN_IN_BODY || '').toLowerCase() === 'true'
+  return Boolean(fromQuery || fromHeader || fromEnv)
 }
 
 function parseRefreshCookie(presented: string): { id?: string; raw: string } {
@@ -47,13 +77,18 @@ function b64ToKey(b64?: string) {
 }
 const JWT_SECRET = b64ToKey(process.env.JWT_SECRET)
 
-const cookieOptsAT = {
-  ...getCookieBaseOptions(),
-  maxAge: 30 * 60 * 1000 // 30 minutes
+function cookieOptsAT(req: Request) {
+  return {
+    ...getCookieBaseOptions(req),
+    maxAge: 30 * 60 * 1000, // 30 minutes
+  }
 }
-const cookieOptsRT = {
-  ...getCookieBaseOptions(),
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+
+function cookieOptsRT(req: Request) {
+  return {
+    ...getCookieBaseOptions(req),
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  }
 }
 
 export async function login(req: Request, res: Response) {
@@ -103,11 +138,14 @@ export async function login(req: Request, res: Response) {
     .setExpirationTime('30m')
     .sign(JWT_SECRET)
 
+  const includeToken = shouldIncludeAccessTokenInBody(req)
+
   res
-    .cookie('access_token', accessToken, cookieOptsAT)
-    .cookie('refresh_token', `${refreshRecord.id}.${refreshRaw}`, cookieOptsRT)
+    .cookie('access_token', accessToken, cookieOptsAT(req))
+    .cookie('refresh_token', `${refreshRecord.id}.${refreshRaw}`, cookieOptsRT(req))
     .json({
       ok: true,
+      ...(includeToken ? { accessToken } : {}),
       user: { id: user.id, email: user.email, role: user.role, name: user.name, institutionId: user.institutionId },
     })
 }
@@ -121,8 +159,8 @@ export async function logout(req: Request, res: Response) {
     })
   }
   res
-    .clearCookie('access_token', getCookieBaseOptions())
-    .clearCookie('refresh_token', getCookieBaseOptions())
+    .clearCookie('access_token', getCookieBaseOptions(req))
+    .clearCookie('refresh_token', getCookieBaseOptions(req))
     .json({ ok: true })
 }
 
@@ -201,10 +239,12 @@ export async function refreshToken(req: Request, res: Response) {
     },
   })
 
+  const includeToken = shouldIncludeAccessTokenInBody(req)
+
   res
-    .cookie('access_token', token, { ...cookieOptsAT, maxAge: 30 * 60 * 1000 })
-    .cookie('refresh_token', `${newRecord.id}.${newRaw}`, { ...cookieOptsRT, maxAge: 7 * 24 * 60 * 60 * 1000 })
-    .json({ ok: true, expiresIn: '30m' })
+    .cookie('access_token', token, { ...cookieOptsAT(req), maxAge: 30 * 60 * 1000 })
+    .cookie('refresh_token', `${newRecord.id}.${newRaw}`, { ...cookieOptsRT(req), maxAge: 7 * 24 * 60 * 60 * 1000 })
+    .json({ ok: true, expiresIn: '30m', ...(includeToken ? { accessToken: token } : {}) })
 }
 
 export async function requestPasswordReset(req: Request, res: Response) {

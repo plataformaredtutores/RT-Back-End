@@ -48,6 +48,30 @@ La documentación dinámica se puede acceder en  `http://localhost:3000/docs `
 - `DATABASE_URL`: cadena de conexión (usa la de Supabase por entorno)
 - `DIRECT_URL`: (opcional) URL directa para Prisma (útil si usas pooling en DATABASE_URL)
 
+### Cookies, CORS y Safari
+
+Esta API autentica con JWT en cookies (`HttpOnly`). En Safari (macOS/iOS) es común que el login “falle” cuando el frontend y el backend están en **sitios distintos** (third‑party cookies), porque Safari/ITP bloquea esas cookies por defecto.
+
+Recomendado (para que funcione en Safari):
+
+- Sirve frontend y API bajo el **mismo site** (mismo eTLD+1). Ejemplo: `https://app.tu-dominio.com` y `https://api.tu-dominio.com` o, mejor aún, `https://tu-dominio.com/api` via reverse proxy.
+
+Opciones de configuración:
+
+- `CORS_ORIGINS`: lista separada por comas de orígenes permitidos (ej: `https://app.tu-dominio.com,https://admin.tu-dominio.com`). Si no se define, se refleja el Origin.
+- `TRUST_PROXY`: ponlo en `true`/`1` si estás detrás de un proxy (Nginx/Cloudflare/Render/etc) y necesitas confiar en `X-Forwarded-*`.
+- `COOKIE_DOMAIN`: dominio para la cookie (ej: `.tu-dominio.com`). En `localhost` normalmente NO se debe setear.
+- `COOKIE_SECURE`: `true`/`false` para forzar el atributo `Secure`.
+- `COOKIE_SAMESITE`: `lax` | `strict` | `none` para forzar SameSite.
+
+Fallback cuando Safari bloquea cookies (workaround):
+
+- El middleware acepta `Authorization: Bearer <token>`.
+- Puedes pedir que `POST /auth/login` (y `/auth/refresh`) devuelva el access token en el body usando:
+	- query `?includeToken=true`, o
+	- header `X-Auth-Token-In-Body: true`, o
+	- env `AUTH_TOKEN_IN_BODY=true`
+
 ## Prisma
 
 - Generar cliente:
