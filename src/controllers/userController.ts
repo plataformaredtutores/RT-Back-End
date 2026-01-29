@@ -215,6 +215,34 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
   }
 }
 
+export async function reactivateUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params
+
+    const userRole = (req as any).auth?.role;
+
+    const userId = Number(id)
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+
+    if (!user) {
+      return res.status(404).json({ ok: false, message: 'User not found' })
+    }
+
+    if (userRole === 'coordinator' && (user.role === 'admin' || user.role === 'coordinator')) {
+      return res.status(403).json({ ok: false, message: 'Coordinators cannot reactivate admin or coordinator users.' })
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isActive: true }
+    })
+
+    res.status(200).json({ ok: true, message: 'User reactivated successfully' })
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function getUserById(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params

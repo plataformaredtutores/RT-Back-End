@@ -331,6 +331,21 @@
           "message"
         ]
       },
+      "ReactivateUserResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
       "UserWithInstitution": {
         "allOf": [
           {
@@ -2851,6 +2866,44 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/users/{id}/reactivate": {
+      "patch": {
+        "summary": "Reactivate a user by ID",
+        "description": "Reactivates a previously deactivated user (isActive = true).\n- Admins and coordinators can reactivate users\n- Coordinators cannot reactivate admin or coordinator users\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User reactivated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactivateUserResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user lacks permission to reactivate this user"
           },
           "404": {
             "description": "User not found"

@@ -4,6 +4,7 @@ import {
   createUser,
   getUsers,
   deleteUser,
+  reactivateUser,
   getUserById,
   editUserBankAccount,
   editUserPersonalInformation,
@@ -126,6 +127,36 @@ router.post('/', createUser)
  *         description: User not found
  */
 router.delete('/:id', deleteUser)
+/**
+ * @openapi
+ * /users/{id}/reactivate:
+ *   patch:
+ *     summary: Reactivate a user by ID
+ *     description: |
+ *       Reactivates a previously deactivated user (isActive = true).
+ *       - Admins and coordinators can reactivate users
+ *       - Coordinators cannot reactivate admin or coordinator users
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User reactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReactivateUserResponse'
+ *       403:
+ *         description: Forbidden - user lacks permission to reactivate this user
+ *       404:
+ *         description: User not found
+ */
+router.patch('/:id/reactivate', reactivateUser)
 /**
  * @openapi
  * /users/{id}:

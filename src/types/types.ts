@@ -855,6 +855,38 @@ export interface paths {
       };
     };
   };
+  "/users/{id}/reactivate": {
+    /**
+     * Reactivate a user by ID
+     * @description Reactivates a previously deactivated user (isActive = true).
+     * - Admins and coordinators can reactivate users
+     * - Coordinators cannot reactivate admin or coordinator users
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User reactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateUserResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to reactivate this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/users/{id}/bank-account": {
     /** Edit a user's bank account information */
     patch: {
@@ -1088,6 +1120,10 @@ export interface components {
       message: string;
     };
     ReactivateInstitutionResponse: {
+      ok: boolean;
+      message: string;
+    };
+    ReactivateUserResponse: {
       ok: boolean;
       message: string;
     };
