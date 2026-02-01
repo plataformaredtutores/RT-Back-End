@@ -423,23 +423,38 @@ export async function changeUserPassword(req: Request, res: Response, next: Next
 export async function getTutorLinks(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
+    const institutionId = req.query.institutionId
+    const activeOnly = req.query.activeOnly
+
+    const parsedInstitutionId = institutionId !== undefined ? Number(institutionId) : undefined
+    if (institutionId !== undefined && Number.isNaN(parsedInstitutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institutionId' })
+    }
+
+    const where: any = {
+      tutorId: Number(id),
+    }
+    if (parsedInstitutionId !== undefined) {
+      where.institutionId = parsedInstitutionId
+    }
+    if (activeOnly !== 'false') {
+      where.active = true
+    }
 
     const tutorLinks = await prisma.guardianTutor.findMany({
-      where: { tutorId: Number(id) },
-      include: {
+      where,
+      select: {
+        guardianId: true,
+        tutorId: true,
+        institutionId: true,
+        active: true,
         Guardian: {
           select: {
             id: true,
             name: true,
-            Students: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
           }
         }
-      }
+      },
     })
 
     if (!tutorLinks) {
@@ -458,23 +473,38 @@ export async function getTutorLinks(req: Request, res: Response, next: NextFunct
 export async function getGuardianLinks(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
+    const institutionId = req.query.institutionId
+    const activeOnly = req.query.activeOnly
+
+    const parsedInstitutionId = institutionId !== undefined ? Number(institutionId) : undefined
+    if (institutionId !== undefined && Number.isNaN(parsedInstitutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institutionId' })
+    }
+
+    const where: any = {
+      guardianId: Number(id),
+    }
+    if (parsedInstitutionId !== undefined) {
+      where.institutionId = parsedInstitutionId
+    }
+    if (activeOnly !== 'false') {
+      where.active = true
+    }
 
     const guardianLinks = await prisma.guardianTutor.findMany({
-      where: { guardianId: Number(id) },
-      include: {
+      where,
+      select: {
+        guardianId: true,
+        tutorId: true,
+        institutionId: true,
+        active: true,
         Tutor: {
           select: {
             id: true,
             name: true,
-            Students: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
           }
         }
-      }
+      },
     })
 
     if (!guardianLinks) {
