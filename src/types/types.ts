@@ -980,7 +980,11 @@ export interface paths {
     };
   };
   "/users/{id}/tutor-links": {
-    /** Get tutor links for a user */
+    /**
+     * Get tutor links for a user
+     * @description Returns tutor links. Only active links are returned by default,
+     * and guardians must be active to be included.
+     */
     get: {
       parameters: {
         path: {
@@ -1181,6 +1185,7 @@ export interface components {
       /** Format: date-time */
       updatedAt?: string;
     };
+    /** @description Tutor link with active guardian only. */
     TutorLink: components["schemas"]["GuardianTutor"] & {
       Guardian?: components["schemas"]["User"];
     };
