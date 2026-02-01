@@ -237,6 +237,7 @@ const options: swaggerJSDoc.Options = {
         },
         TutorLink: {
           type: 'object',
+          description: 'Tutor link with active guardian only.',
           allOf: [
             { $ref: '#/components/schemas/GuardianTutor' },
             {

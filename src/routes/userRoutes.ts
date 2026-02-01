@@ -287,6 +287,9 @@ router.patch('/:id/change-password', changeUserPassword)
  * /users/{id}/tutor-links:
  *   get:
  *     summary: Get tutor links for a user
+ *     description: |
+ *       Returns tutor links. Only active links are returned by default,
+ *       and guardians must be active to be included.
  *     tags: [Users]
  *     parameters:
  *       - in: path

@@ -3,8 +3,6 @@ import prisma from '../lib/prisma';
 import argon2 from 'argon2';
 import { AccountType, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { userInfo } from 'os';
-import { unknown } from 'zod';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -208,6 +206,20 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       where: { id: userId },
       data: { isActive: false }
     });
+
+    if (user.role === 'guardian') {
+      await prisma.guardianTutor.updateMany({
+        where: { guardianId: userId, active: true },
+        data: { active: false }
+      })
+    }
+
+    if (user.role === 'tutor') {
+      await prisma.guardianTutor.updateMany({
+        where: { tutorId: userId, active: true },
+        data: { active: false }
+      })
+    }
     
     res.status(204).send();
   } catch (err) {
@@ -236,6 +248,20 @@ export async function reactivateUser(req: Request, res: Response, next: NextFunc
       where: { id: userId },
       data: { isActive: true }
     })
+
+    if (user.role === 'guardian') {
+      await prisma.guardianTutor.updateMany({
+        where: { guardianId: userId, active: false },
+        data: { active: true }
+      })
+    }
+
+    if (user.role === 'tutor') {
+      await prisma.guardianTutor.updateMany({
+        where: { tutorId: userId, active: false },
+        data: { active: true }
+      })
+    }
 
     res.status(200).json({ ok: true, message: 'User reactivated successfully' })
   } catch (err) {
@@ -433,6 +459,9 @@ export async function getTutorLinks(req: Request, res: Response, next: NextFunct
 
     const where: any = {
       tutorId: Number(id),
+      Guardian: {
+        isActive: true
+      }
     }
     if (parsedInstitutionId !== undefined) {
       where.institutionId = parsedInstitutionId

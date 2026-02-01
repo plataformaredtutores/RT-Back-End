@@ -109,6 +109,7 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
   try {
     const { guardianId } = req.params;
     const userRole = (req as any).auth?.role;
+    const userId = (req as any).auth?.uid as number | undefined;
     const sendInactive = req.query.sendInactive === undefined
       ? true
       : req.query.sendInactive === 'true';
@@ -121,7 +122,29 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
       guardianId: Number(guardianId),
     }
 
-    if (userRole === 'guardian' || userRole === 'tutor') {
+    if (userRole === 'guardian') {
+      if (!userId || userId !== Number(guardianId)) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
+      where.isActive = true
+    } else if (userRole === 'tutor') {
+      if (!userId) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
+
+      const link = await prisma.guardianTutor.findFirst({
+        where: {
+          tutorId: Number(userId),
+          guardianId: Number(guardianId),
+          active: true,
+        },
+        select: { tutorId: true },
+      })
+
+      if (!link) {
+        return res.status(403).json({ ok: false, message: 'Forbidden' });
+      }
+
       where.isActive = true
     } else if (userRole === 'admin' || userRole === 'coordinator') {
       if (!sendInactive) {
