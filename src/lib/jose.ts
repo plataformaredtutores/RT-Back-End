@@ -2,6 +2,11 @@
 
 // IMPORTANT: This is an AI generated file. PR Reviewer: idk if it need revision (if works ok, just check that it works), who tf is jose? jaja
 
+// WORKAROUND: Force 'jose' inclusion in Vercel/NFT builds
+try {
+  require.resolve('jose')
+} catch {}
+
 let _jose: typeof import('jose') | null = null
 
 export async function getJose() {
