@@ -147,9 +147,7 @@ export async function getStudentsByGuardianId(req: Request, res: Response, next:
 
       where.isActive = true
     } else if (userRole === 'admin' || userRole === 'coordinator') {
-      if (!sendInactive) {
-        where.isActive = true
-      }
+      // Admins and coordinators should receive both active and inactive students.
     } else {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }

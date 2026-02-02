@@ -133,6 +133,39 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, isActive: true, rut: true }
+    })
+
+    if (existingUser) {
+      if (existingUser.isActive) {
+        return res.status(400).json({ ok: false, message: 'Email already exists' })
+      }
+
+      const existingPassword = existingUser.rut
+        ? String(existingUser.rut).split('-')[0].replace(/\D/g, '')
+        : undefined
+
+      if (!existingPassword) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Existing RUT not provided or invalid, cannot generate password.'
+        })
+      }
+
+      const resetHashedPassword = await argon2.hash(existingPassword, {
+        secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
+      })
+
+      const reactivatedUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: { isActive: true, hashedPassword: resetHashedPassword }
+      })
+
+      return res.status(200).json({ ok: true, reactivated: true, user: reactivatedUser })
+    }
+
     const hashedPassword = await argon2.hash(password, {
       secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
     })
@@ -174,7 +207,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       });
     }
     // Then: Send email with credentials (omitted for now)
-    res.status(201).json(newUser)
+    res.status(201).json({ ok: true, reactivated: false, user: newUser })
   } catch (err) {
     next(err)
   }

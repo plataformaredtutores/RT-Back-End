@@ -112,6 +112,17 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
       return res.status(404).json({ ok: false, message: 'Institution not found' });
     }
 
+    const usersCount = await prisma.user.count({ where: { institutionId } });
+
+    if (usersCount === 0) {
+      await prisma.institution.update({
+        where: { id: institutionId },
+        data: { isActive: false },
+      });
+
+      return res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
+    }
+
     // Check class payments (last 12 months) are all completed for this institution
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
@@ -268,6 +279,57 @@ export async function reactivateInstitution(req: Request, res: Response, next: N
 
     res.status(200).json({ ok: true, message: 'Institution reactivated successfully' });
 
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getInstitutionDeletionOptions(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const institutionId = Number(id);
+
+    if (Number.isNaN(institutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institution id' });
+    }
+
+    const usersCount = await prisma.user.count({ where: { institutionId } });
+
+    res.status(200).json({ ok: true, canHardDelete: usersCount === 0 });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function hardDeleteInstitution(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const institutionId = Number(id);
+
+    if (Number.isNaN(institutionId)) {
+      return res.status(400).json({ ok: false, message: 'Invalid institution id' });
+    }
+
+    const usersCount = await prisma.user.count({ where: { institutionId } });
+    if (usersCount > 0) {
+      return res.status(400).json({
+        ok: false,
+        message: 'No se puede borrar permanentemente una sede con usuarios asociados.'
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.classPayment.deleteMany({ where: { Class: { institutionId } } }),
+      prisma.class.deleteMany({ where: { institutionId } }),
+      prisma.student.deleteMany({ where: { institutionId } }),
+      prisma.guardianTutor.deleteMany({ where: { institutionId } }),
+      prisma.coordinatorPayment.deleteMany({ where: { institutionId } }),
+      prisma.coordinatorProfitShare.deleteMany({ where: { institutionId } }),
+      prisma.fee.deleteMany({ where: { institutionId } }),
+      prisma.institution.delete({ where: { id: institutionId } })
+    ]);
+
+    res.status(200).json({ ok: true, message: 'Sede eliminada permanentemente' });
   } catch (err) {
     next(err);
   }

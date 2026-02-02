@@ -331,6 +331,36 @@
           "message"
         ]
       },
+      "InstitutionDeletionOptionsResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "canHardDelete": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "canHardDelete"
+        ]
+      },
+      "HardDeleteInstitutionResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
       "ReactivateUserResponse": {
         "type": "object",
         "properties": {
@@ -1122,6 +1152,25 @@
               }
             }
           }
+        ]
+      },
+      "CreateUserResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "reactivated": {
+            "type": "boolean"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "ok",
+          "reactivated",
+          "user"
         ]
       },
       "UserByIdResponse": {
@@ -2378,7 +2427,7 @@
     "/institutions/{id}": {
       "delete": {
         "summary": "Delete (deactivate) an institution",
-        "description": "Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.",
+        "description": "Soft delete an institution.\n- If the institution has no users, it can be deactivated immediately (no payment checks).\n- Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.\n",
         "tags": [
           "Institutions"
         ],
@@ -2452,6 +2501,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReactivateInstitutionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/institutions/{id}/deletion-options": {
+      "get": {
+        "summary": "Get deletion options for an institution",
+        "description": "Returns whether the institution can be hard-deleted (no users associated).",
+        "tags": [
+          "Institutions"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Institution ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deletion options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionDeletionOptionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid institution id"
+          }
+        }
+      }
+    },
+    "/institutions/{id}/hard-delete": {
+      "delete": {
+        "summary": "Permanently delete an institution",
+        "description": "Hard-delete an institution only if it has no users associated.",
+        "tags": [
+          "Institutions"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Institution ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Institution deleted permanently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HardDeleteInstitutionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cannot hard-delete institution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HardDeleteInstitutionResponse"
                 }
               }
             }
@@ -2791,12 +2917,22 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "User reactivated instead of created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserResponse"
+                }
+              }
+            }
+          },
           "201": {
             "description": "User created successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/CreateUserResponse"
                 }
               }
             }

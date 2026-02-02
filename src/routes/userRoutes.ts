@@ -94,7 +94,13 @@ router.get('/', getUsers)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/User'
+ *               $ref: '#/components/schemas/CreateUserResponse'
+ *       200:
+ *         description: User reactivated instead of created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateUserResponse'
  *       400:
  *         description: Invalid input or validation error (missing required fields, invalid email format, or database constraint violation)
  *       403:

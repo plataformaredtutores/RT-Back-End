@@ -141,6 +141,22 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['ok', 'message'],
         },
+        InstitutionDeletionOptionsResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            canHardDelete: { type: 'boolean' },
+          },
+          required: ['ok', 'canHardDelete'],
+        },
+        HardDeleteInstitutionResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+          required: ['ok', 'message'],
+        },
         ReactivateUserResponse: {
           type: 'object',
           properties: {
@@ -587,6 +603,15 @@ const options: swaggerJSDoc.Options = {
               }
             }
           ]
+        },
+        CreateUserResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            reactivated: { type: 'boolean' },
+            user: { $ref: '#/components/schemas/User' }
+          },
+          required: ['ok', 'reactivated', 'user']
         },
         UserByIdResponse: {
           description: 'UserDetail with optional coordinatorProfitShare field. coordinatorProfitShare is only present when user role is coordinator.',

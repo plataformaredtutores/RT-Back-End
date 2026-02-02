@@ -8,6 +8,8 @@ import {
   getGuardiansFromInstitution,
   deleteInstitution,
   reactivateInstitution,
+  getInstitutionDeletionOptions,
+  hardDeleteInstitution,
 } from '../controllers/institutionController';
 
 const router = Router();
@@ -130,7 +132,10 @@ router.get('/search', searchInstitutions);
  * /institutions/{id}:
  *   delete:
  *     summary: Delete (deactivate) an institution
- *     description: Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+ *     description: |
+ *       Soft delete an institution.
+ *       - If the institution has no users, it can be deactivated immediately (no payment checks).
+ *       - Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.
  *     tags: [Institutions]
  *     parameters:
  *       - in: path
@@ -184,5 +189,61 @@ router.delete('/:id', deleteInstitution);
  *               $ref: '#/components/schemas/ReactivateInstitutionResponse'
  */
 router.patch('/:id/reactivate', reactivateInstitution);
+
+/**
+ * @openapi
+ * /institutions/{id}/deletion-options:
+ *   get:
+ *     summary: Get deletion options for an institution
+ *     description: Returns whether the institution can be hard-deleted (no users associated).
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Institution ID
+ *     responses:
+ *       200:
+ *         description: Deletion options
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InstitutionDeletionOptionsResponse'
+ *       400:
+ *         description: Invalid institution id
+ */
+router.get('/:id/deletion-options', getInstitutionDeletionOptions);
+
+/**
+ * @openapi
+ * /institutions/{id}/hard-delete:
+ *   delete:
+ *     summary: Permanently delete an institution
+ *     description: Hard-delete an institution only if it has no users associated.
+ *     tags: [Institutions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Institution ID
+ *     responses:
+ *       200:
+ *         description: Institution deleted permanently
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HardDeleteInstitutionResponse'
+ *       400:
+ *         description: Cannot hard-delete institution
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HardDeleteInstitutionResponse'
+ */
+router.delete('/:id/hard-delete', hardDeleteInstitution);
 
 export default router;
