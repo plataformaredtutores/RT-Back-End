@@ -110,9 +110,6 @@ export async function login(req: Request, res: Response) {
     where: { userId: user.id, revoked: false },
     data: { revoked: true },
   })
-  await prisma.refreshToken.deleteMany({
-    where: { userId: user.id, expiresAt: { lt: new Date() } },
-  })
 
   const refreshRaw = randomToken()
   const refreshHash = await hashToken(refreshRaw)

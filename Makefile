@@ -19,6 +19,9 @@ help:
 	@echo "  make docker-shell      # open shell in running container"
 	@echo "  make compose-up        # docker compose up -d"
 	@echo "  make compose-down      # docker compose down"
+	@echo "  make db-up             # start postgres db container"
+	@echo "  make db-restore        # restore database from supabase_backup.sql"
+	@echo "  make db-shell          # open psql shell in db container"
 
 .PHONY: install
 install:
@@ -27,6 +30,18 @@ install:
 .PHONY: dev
 dev:
 	npm run dev
+
+.PHONY: db-up
+db-up:
+	docker compose up -d db --wait
+
+.PHONY: db-restore
+db-restore:
+	docker compose exec -T -e PGPASSWORD=password db psql -U postgres -d rt-backend < supabase_backup.sql
+
+.PHONY: db-shell
+db-shell:
+	docker compose exec -e PGPASSWORD=password db psql -U postgres -d rt-backend
 
 .PHONY: build
 build:
