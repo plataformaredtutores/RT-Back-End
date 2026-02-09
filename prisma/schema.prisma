@@ -132,7 +132,7 @@ model ClassPayment {
   classId                 Int
   guardianAmount          Int           
   guardianPaymentStatus   PaymentStatus @default(pending)
-  guardianPaymentType             PaymentType   @default(bankTransfer)
+  guardianPaymentType     PaymentType   @default(bankTransfer)
   tutorAmount             Int
   tutorPaymentStatus      PaymentStatus @default(pending)
   createdAt               DateTime      @default(now())

@@ -137,6 +137,52 @@ export interface paths {
       };
     };
   };
+  "/cashflow/summary": {
+    /**
+     * Get cash flow summary
+     * @description Returns a summary of amounts to receive and pay for the institution.
+     *
+     * Calculates:
+     * - ammountToReceive: Pending payments from Guardians
+     * - amountReceived: Completed payments from Guardians
+     * - amountToPay: Pending payments to Tutors
+     * - amountPaid: Completed payments to Tutors
+     *
+     * Role behavior:
+     * - coordinator: Data scoped to their institution.
+     * - admin: Requires institutionId query parameter.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter from this date */
+          startDate?: string;
+          /** @description Filter until this date */
+          endDate?: string;
+          /** @description Required for admin role */
+          institutionId?: number;
+        };
+      };
+      responses: {
+        /** @description Cash flow summary */
+        200: {
+          content: {
+            "application/json": {
+              ammountToReceive?: number;
+              amountReceived?: number;
+              amountToPay?: number;
+              amountPaid?: number;
+              share?: number;
+            };
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/classes": {
     /**
      * List classes with details
@@ -423,6 +469,12 @@ export interface paths {
   "/institutions": {
     /** Get all institutions */
     get: {
+      parameters: {
+        query?: {
+          /** @description If false, only active institutions are returned. If true or omitted, returns all. */
+          sendInactive?: boolean;
+        };
+      };
       responses: {
         /** @description List of institutions */
         200: {
@@ -509,7 +561,9 @@ export interface paths {
   "/institutions/{id}": {
     /**
      * Delete (deactivate) an institution
-     * @description Deletes an institution only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed. Operation is a soft delete that deactivates the institution and its users.
+     * @description Soft delete an institution.
+     * - If the institution has no users, it can be deactivated immediately (no payment checks).
+     * - Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.
      */
     delete: {
       parameters: {
@@ -562,6 +616,60 @@ export interface paths {
       };
     };
   };
+  "/institutions/{id}/deletion-options": {
+    /**
+     * Get deletion options for an institution
+     * @description Returns whether the institution can be hard-deleted (no users associated).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Deletion options */
+        200: {
+          content: {
+            "application/json": components["schemas"]["InstitutionDeletionOptionsResponse"];
+          };
+        };
+        /** @description Invalid institution id */
+        400: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/institutions/{id}/hard-delete": {
+    /**
+     * Permanently delete an institution
+     * @description Hard-delete an institution only if it has no users associated.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          id: number;
+        };
+      };
+      responses: {
+        /** @description Institution deleted permanently */
+        200: {
+          content: {
+            "application/json": components["schemas"]["HardDeleteInstitutionResponse"];
+          };
+        };
+        /** @description Cannot hard-delete institution */
+        400: {
+          content: {
+            "application/json": components["schemas"]["HardDeleteInstitutionResponse"];
+          };
+        };
+      };
+    };
+  };
   "/mail": {
     /** Send email */
     post: {
@@ -588,10 +696,15 @@ export interface paths {
      * Get students by guardian ID
      * @description Retrieve students associated with a specific guardian.
      * - Admins/coordinators: returns all students
-     * - Guardians/tutors: returns only active students
+     * - Guardians: returns only active students for their own guardianId
+     * - Tutors: returns only active students when there is an active tutor-guardian link
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If false, only active students are returned for admin/coordinator. If true or omitted, returns all. Guardians/tutors always receive only active students. */
+          sendInactive?: boolean;
+        };
         path: {
           /** @description Guardian ID */
           guardianId: number;
@@ -740,6 +853,8 @@ export interface paths {
           institutionId?: number;
           /** @description Case-insensitive search in name or email */
           nameOrEmail?: string;
+          /** @description If false, only active users are returned. If true or omitted, returns all. */
+          sendInactive?: boolean;
           /** @description Page number (1-based) */
           page?: number;
           /** @description Items per page */
@@ -771,10 +886,16 @@ export interface paths {
         };
       };
       responses: {
+        /** @description User reactivated instead of created */
+        200: {
+          content: {
+            "application/json": components["schemas"]["CreateUserResponse"];
+          };
+        };
         /** @description User created successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["User"];
+            "application/json": components["schemas"]["CreateUserResponse"];
           };
         };
         /** @description Invalid input or validation error (missing required fields, invalid email format, or database constraint violation) */
@@ -833,6 +954,38 @@ export interface paths {
           content: never;
         };
         /** @description Forbidden - user lacks permission to delete this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}/reactivate": {
+    /**
+     * Reactivate a user by ID
+     * @description Reactivates a previously deactivated user (isActive = true).
+     * - Admins and coordinators can reactivate users
+     * - Coordinators cannot reactivate admin or coordinator users
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User reactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateUserResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to reactivate this user */
         403: {
           content: never;
         };
@@ -935,7 +1088,11 @@ export interface paths {
     };
   };
   "/users/{id}/tutor-links": {
-    /** Get tutor links for a user */
+    /**
+     * Get tutor links for a user
+     * @description Returns tutor links. Only active links are returned by default,
+     * and guardians must be active to be included.
+     */
     get: {
       parameters: {
         path: {
@@ -1079,6 +1236,18 @@ export interface components {
       ok: boolean;
       message: string;
     };
+    InstitutionDeletionOptionsResponse: {
+      ok: boolean;
+      canHardDelete: boolean;
+    };
+    HardDeleteInstitutionResponse: {
+      ok: boolean;
+      message: string;
+    };
+    ReactivateUserResponse: {
+      ok: boolean;
+      message: string;
+    };
     UserWithInstitution: components["schemas"]["User"] & {
       Institution?: components["schemas"]["Institution"];
     };
@@ -1132,6 +1301,7 @@ export interface components {
       /** Format: date-time */
       updatedAt?: string;
     };
+    /** @description Tutor link with active guardian only. */
     TutorLink: components["schemas"]["GuardianTutor"] & {
       Guardian?: components["schemas"]["User"];
     };
@@ -1285,6 +1455,11 @@ export interface components {
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
     });
+    CreateUserResponse: {
+      ok: boolean;
+      reactivated: boolean;
+      user: components["schemas"]["User"];
+    };
     /** @description UserDetail with optional coordinatorProfitShare field. coordinatorProfitShare is only present when user role is coordinator. */
     UserByIdResponse: components["schemas"]["UserDetail"] & ({
       /** @description Profit share percentage for coordinator users. Only present when user role is coordinator. */
