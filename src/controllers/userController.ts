@@ -250,13 +250,17 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       return res.status(404).json({ ok: false, message: 'User not found' })
     }
 
-    if (userRole === 'coordinator' && user.role === 'admin' || user.role === 'coordinator') {
-      return res.status(403).json({ ok: false, message: 'Coordinators cannot delete admin or coordinator users.' })
+    if (user.role === 'admin') {
+      return res.status(403).json({ ok: false, message: 'Admins cannot be deleted.' })
+    }
+
+    if (user.role === 'coordinator' && userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Only admins can deactivate coordinators.' })
     }
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isActive: false }
+      data: { isActive: false, deactivatedAt: new Date() }
     });
 
     if (user.role === 'guardian') {
@@ -292,13 +296,17 @@ export async function reactivateUser(req: Request, res: Response, next: NextFunc
       return res.status(404).json({ ok: false, message: 'User not found' })
     }
 
+    if (user.role === 'coordinator' && userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Only admins can reactivate coordinators.' })
+    }
+
     if (userRole === 'coordinator' && (user.role === 'admin' || user.role === 'coordinator')) {
       return res.status(403).json({ ok: false, message: 'Coordinators cannot reactivate admin or coordinator users.' })
     }
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isActive: true }
+      data: { isActive: true, deactivatedAt: null }
     })
 
     if (user.role === 'guardian') {

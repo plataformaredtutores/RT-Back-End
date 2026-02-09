@@ -226,6 +226,7 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   isActive          Boolean  @default(true)
+  deactivatedAt     DateTime?
 
   BankAccount       UserBankAccount?
   Institution       Institution?  @relation(fields: [institutionId], references: [id])
@@ -238,6 +239,7 @@ model User {
   @@index([role])
   @@index([institutionId])
   @@index([institutionId, role])
+  @@index([isActive, deactivatedAt])
   coordinatorPayments CoordinatorPayment[]
   coordinatorProfitShares CoordinatorProfitShare[]
 }
