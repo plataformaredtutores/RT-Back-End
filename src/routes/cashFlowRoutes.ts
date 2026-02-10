@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
-    getCashFlowSummary
+    getCashFlowSummary,
+    getCashFlowDetails
 } from '../controllers/cashFlowController';
 
 const router = Router();
@@ -63,5 +64,6 @@ const router = Router();
  *         description: Forbidden
  */
 router.get('/summary', getCashFlowSummary)
+router.get('/details', getCashFlowDetails)
 
 export default router;

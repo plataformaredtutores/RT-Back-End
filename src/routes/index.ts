@@ -15,11 +15,11 @@ export function setRoutes(app: Express) {
   app.get('/health', health)
   app.use('/mail', mailRoutes)
   app.use('/auth', authRoutes)
+  app.use('/cashflow', cashFlowRoutes)
   app.use(requireAuth)
   app.use('/users', userRoutes)
   app.use('/students', authorize(['admin', 'coordinator', 'tutor']), studentRoutes)
   app.use('/institutions', authorize(['admin', "coordinator"]), institutionRoutes)
   app.use('/classes', classRoutes)
   app.use('/fees', authorize(['admin', 'coordinator', 'tutor','guardian']), feeRoutes)
-  app.use('/cashflow', authorize(['admin', 'coordinator']), cashFlowRoutes)
 }
