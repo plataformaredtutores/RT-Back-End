@@ -237,6 +237,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
     next(err)
   }
 }
+
 export async function deleteUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params

@@ -68,6 +68,8 @@ router.patch('/:institutionId/profit-share', editCoordinatorProfitShare)
  *               $ref: '#/components/schemas/CreateCoordinatorPaymentResponse'
  *       400:
  *         description: Invalid input
+ *       404:
+ *         description: Coordinator not found
  *       403:
  *         description: Forbidden
  */

@@ -440,6 +440,21 @@
           "payment"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
       "DeleteUserBlockedResponse": {
         "type": "object",
         "properties": {
@@ -2285,6 +2300,9 @@
           },
           "403": {
             "description": "Forbidden"
+          },
+          "404": {
+            "description": "Coordinator not found"
           }
         }
       }

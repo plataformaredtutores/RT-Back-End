@@ -382,6 +382,10 @@ export interface paths {
         403: {
           content: never;
         };
+        /** @description Coordinator not found */
+        404: {
+          content: never;
+        };
       };
     };
   };
@@ -1296,6 +1300,10 @@ export interface components {
       ok: boolean;
       message: string;
       payment: components["schemas"]["CoordinatorPayment"];
+    };
+    ErrorResponse: {
+      ok: boolean;
+      message: string;
     };
     DeleteUserBlockedResponse: {
       ok: boolean;

@@ -88,6 +88,20 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
       return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
     }
 
+    // Check if the coordinator is active to make the payment, if not, return an error
+    const coordinator = await prisma.user.findUnique({
+      where: { id: parsedCoordinatorId },
+      select: { isActive: true, role: true },
+    })
+
+    if (!coordinator || coordinator.role !== 'coordinator') {
+      return res.status(404).json({ ok: false, message: 'Coordinator not found' });
+    }
+
+    if (!coordinator.isActive) {
+      return res.status(400).json({ ok: false, message: 'Coordinator is inactive' });
+    }
+
     const now = new Date()
     const payment = await prisma.coordinatorPayment.create({
       data: {
