@@ -57,13 +57,12 @@ export async function createUser(req: Request, res: Response, next: NextFunction
 
     const userRole = (req as any).auth?.role;
 
-    /*     
-    if (userRole !== 'admin' || userRole !== 'coordinator') {
+    if (userRole !== 'admin' && userRole !== 'coordinator') {
       return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
     if (userRole === 'coordinator' && (role === 'admin' || role === 'coordinator')) {
       return res.status(403).json({ ok: false, message: 'Coordinators cannot create admin or coordinator users.' })
-    } */
+    }
 
     // Input Validation
 
@@ -102,10 +101,17 @@ export async function createUser(req: Request, res: Response, next: NextFunction
     }
 
     // Condiciones para cada rol
-    if (role !== 'admin' && institutionId == null) {
+    if (role !== 'admin' && institutionId == null && userRole !== 'coordinator') {
       return res.status(400).json({
         ok: false,
         message: 'Non-admin users must be associated with an institution.'
+      })
+    }
+
+    if (role !== 'coordinator' && coordinatorProfitShare != null) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Only coordinator users can have coordinator profit share.'
       })
     }
 

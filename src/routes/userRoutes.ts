@@ -76,11 +76,14 @@ router.get('/', getUsers)
  *     summary: Create a user
  *     description: |
  *       Create a new user in the system.
+ *       - Only admins or coordinators can create users
+ *       - Coordinators cannot create admin or coordinator users
  *       - Admins must provide the institution ID
  *       - Coordinators automatically use their own institution
  *       - Initial password is set to the RUT number without the verifying digit
  *       - Email must be unique (database constraint)
  *       - For coordinators, coordinatorProfitShare defaults to 30% if not provided
+ *       - Only coordinator users can include coordinatorProfitShare
  *       - Phone, address, and chargeEmail are optional
  *     tags: [Users]
  *     requestBody:

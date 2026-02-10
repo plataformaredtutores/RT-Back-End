@@ -3126,7 +3126,7 @@
       },
       "post": {
         "summary": "Create a user",
-        "description": "Create a new user in the system.\n- Admins must provide the institution ID\n- Coordinators automatically use their own institution\n- Initial password is set to the RUT number without the verifying digit\n- Email must be unique (database constraint)\n- For coordinators, coordinatorProfitShare defaults to 30% if not provided\n- Phone, address, and chargeEmail are optional\n",
+        "description": "Create a new user in the system.\n- Only admins or coordinators can create users\n- Coordinators cannot create admin or coordinator users\n- Admins must provide the institution ID\n- Coordinators automatically use their own institution\n- Initial password is set to the RUT number without the verifying digit\n- Email must be unique (database constraint)\n- For coordinators, coordinatorProfitShare defaults to 30% if not provided\n- Only coordinator users can include coordinatorProfitShare\n- Phone, address, and chargeEmail are optional\n",
         "tags": [
           "Users"
         ],
