@@ -357,6 +357,84 @@ export interface paths {
       };
     };
   };
+  "/coordinators/{institutionId}/profit-share": {
+    /**
+     * Edit coordinator profit share
+     * @description Updates the profit share for a coordinator in a specific institution.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          institutionId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditCoordinatorProfitShareInput"];
+        };
+      };
+      responses: {
+        /** @description Coordinator profit share updated */
+        200: {
+          content: {
+            "application/json": components["schemas"]["EditCoordinatorProfitShareResponse"];
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+        /** @description Coordinator profit share not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/coordinators/{institutionId}/payments": {
+    /**
+     * Create a coordinator payment
+     * @description Creates a payment marked as completed for the current month.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          institutionId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateCoordinatorPaymentInput"];
+        };
+      };
+      responses: {
+        /** @description Coordinator payment created */
+        201: {
+          content: {
+            "application/json": components["schemas"]["CreateCoordinatorPaymentResponse"];
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+        /** @description Coordinator not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/fees/{institutionId}": {
     /** Get all active fees from an institution */
     get: {
@@ -842,6 +920,39 @@ export interface paths {
       };
     };
   };
+  "/tutors/guardian-links": {
+    /**
+     * Create a guardian-tutor link
+     * @description Creates a GuardianTutor link.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateGuardianTutorLinkInput"];
+        };
+      };
+      responses: {
+        /** @description Link created */
+        201: {
+          content: {
+            "application/json": components["schemas"]["CreateGuardianTutorLinkResponse"];
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+        /** @description Link already exists */
+        409: {
+          content: never;
+        };
+      };
+    };
+  };
   "/users": {
     /** List users */
     get: {
@@ -859,6 +970,8 @@ export interface paths {
           page?: number;
           /** @description Items per page */
           pageSize?: number;
+          /** @description Include user bank account details */
+          includeBankAccount?: boolean;
         };
       };
       responses: {
@@ -873,10 +986,14 @@ export interface paths {
     /**
      * Create a user
      * @description Create a new user in the system.
+     * - Only admins or coordinators can create users
+     * - Coordinators cannot create admin or coordinator users
      * - Admins must provide the institution ID
      * - Coordinators automatically use their own institution
      * - Initial password is set to the RUT number without the verifying digit
      * - Email must be unique (database constraint)
+     * - For coordinators, coordinatorProfitShare defaults to 30% if not provided
+     * - Only coordinator users can include coordinatorProfitShare
      * - Phone, address, and chargeEmail are optional
      */
     post: {
@@ -886,12 +1003,6 @@ export interface paths {
         };
       };
       responses: {
-        /** @description User reactivated instead of created */
-        200: {
-          content: {
-            "application/json": components["schemas"]["CreateUserResponse"];
-          };
-        };
         /** @description User created successfully */
         201: {
           content: {
@@ -952,6 +1063,12 @@ export interface paths {
         /** @description User deleted successfully (soft delete) */
         204: {
           content: never;
+        };
+        /** @description Cannot delete due to pending payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
+          };
         };
         /** @description Forbidden - user lacks permission to delete this user */
         403: {
@@ -1248,8 +1365,54 @@ export interface components {
       ok: boolean;
       message: string;
     };
-    UserWithInstitution: components["schemas"]["User"] & {
+    EditCoordinatorProfitShareInput: {
+      coordinatorId: number;
+      profitShare: number;
+    };
+    EditCoordinatorProfitShareResponse: {
+      ok: boolean;
+      message: string;
+    };
+    CreateCoordinatorPaymentInput: {
+      coordinatorId: number;
+      amount: number;
+    };
+    CreateCoordinatorPaymentResponse: {
+      ok: boolean;
+      message: string;
+      payment: components["schemas"]["CoordinatorPayment"];
+    };
+    ErrorResponse: {
+      ok: boolean;
+      message: string;
+    };
+    CreateGuardianTutorLinkInput: {
+      guardianId: number;
+      tutorId: number;
+      institutionId: number;
+    };
+    CreateGuardianTutorLinkResponse: {
+      ok: boolean;
+      link: components["schemas"]["GuardianTutor"];
+    };
+    DeleteUserBlockedResponse: {
+      ok: boolean;
+      message: string;
+    };
+    UserWithInstitution: components["schemas"]["User"] & ({
       Institution?: components["schemas"]["Institution"];
+      BankAccount?: components["schemas"]["UserBankAccount"];
+      coordinatorProfitShares?: components["schemas"]["CoordinatorProfitShare"][] | null;
+    });
+    CoordinatorProfitShare: {
+      id: number;
+      coordinatorId: number;
+      institutionId: number;
+      profitShare: number;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
     };
     UserBankAccount: {
       id?: number;
@@ -1266,6 +1429,19 @@ export interface components {
       createdAt?: string;
       /** Format: date-time */
       updatedAt?: string;
+    };
+    CoordinatorPayment: {
+      id: number;
+      coordinatorId: number;
+      institutionId: number;
+      periodYear: number;
+      periodMonth: number;
+      amount: number;
+      status: components["schemas"]["PaymentStatus"];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
     };
     Student: {
       id?: number;
@@ -1454,10 +1630,11 @@ export interface components {
     }]>;
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
+      /** @description Profit share percentage for coordinator users. Defaults to 30 when omitted. */
+      coordinatorProfitShare?: number | null;
     });
     CreateUserResponse: {
       ok: boolean;
-      reactivated: boolean;
       user: components["schemas"]["User"];
     };
     /** @description UserDetail with optional coordinatorProfitShare field. coordinatorProfitShare is only present when user role is coordinator. */

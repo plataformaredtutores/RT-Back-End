@@ -58,6 +58,12 @@ const router = Router()
  *           maximum: 100
  *           default: 10
  *         description: Items per page
+ *       - in: query
+ *         name: includeBankAccount
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Include user bank account details
  *     responses:
  *       200:
  *         description: List of users

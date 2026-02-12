@@ -11,12 +11,14 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
       institutionId = undefined,
       nameOrEmail = undefined,
       page = 1, 
-      pageSize = 10
+      pageSize = 10,
     } = _req.query
 
     const sendInactive = _req.query.sendInactive === undefined
       ? true
       : _req.query.sendInactive === 'true'
+
+    const includeBankAccount = _req.query.includeBankAccount === 'true'
 
     const users = await prisma.user.findMany({
       where: {
@@ -31,10 +33,18 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
       skip: (Number(page) - 1) * Number(pageSize),
       take: Number(pageSize),
       include: {
-        Institution: true
-      }
+        Institution: true,
+        coordinatorProfitShares: role === UserRole.coordinator,
+        BankAccount: includeBankAccount,
+      },
     })
-    res.json(users)
+    
+    const safeUsers = users.map(u => {
+        const { hashedPassword, ...rest } = u
+        return rest
+    })
+    
+    res.json(safeUsers)
   } catch (err) {
     next(err)
   }

@@ -237,10 +237,28 @@ const options: swaggerJSDoc.Options = {
             {
               type: 'object',
               properties: {
-                Institution: { $ref: '#/components/schemas/Institution' }
+                Institution: { $ref: '#/components/schemas/Institution' },
+                BankAccount: { $ref: '#/components/schemas/UserBankAccount', nullable: true },
+                coordinatorProfitShares: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/CoordinatorProfitShare' },
+                  nullable: true
+                }
               }
             }
           ]
+        },
+        CoordinatorProfitShare: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            coordinatorId: { type: 'integer' },
+            institutionId: { type: 'integer' },
+            profitShare: { type: 'number' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          },
+          required: ['id', 'coordinatorId', 'institutionId', 'profitShare']
         },
         UserBankAccount: {
           type: 'object',
