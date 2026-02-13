@@ -215,6 +215,61 @@ export interface paths {
       };
     };
   };
+  "/cashflow/details": {
+    /**
+     * Get cash flow details
+     * @description Returns detailed financial information separated by user role.
+     *
+     * **Logic based on Filtered User Role:**
+     *
+     * For **coordinator**:
+     * - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
+     *
+     * For **tutor**:
+     * - Returns a list of tutors with their total earnings and payment status for the specified period.
+     *
+     * For **guardian**:
+     * - Returns a list of guardians with their total payments and payment status for the specified period.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Start date (must be the first day of the month) */
+          startDate: string;
+          /** @description End date (must be the last day of the month) */
+          endDate: string;
+          /** @description The role to filter the details by (e.g. coordinator, tutor, guardian) */
+          filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
+          /** @description Optional filter by institution ID */
+          institutionId?: number;
+          /** @description Page number for pagination */
+          page?: number;
+          /** @description Number of items per page */
+          pageSize?: number;
+        };
+      };
+      responses: {
+        /** @description Cash flow details */
+        200: {
+          content: {
+            "application/json": {
+                id?: number;
+                name?: string;
+                email?: string;
+              }[];
+          };
+        };
+        /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden (Invalid role or permissions) */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/classes": {
     /**
      * List classes with details

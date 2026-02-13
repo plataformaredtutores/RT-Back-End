@@ -416,4 +416,343 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
         return res.status(400).json({ ok: false, message: 'Forbidden' })
     }
 }
-            
+
+
+export async function getCashFlowDetails(req: Request, res: Response, next: NextFunction){
+    const {
+        startDate,
+        endDate,
+        filteredUserRole,
+        page = 1,
+        pageSize = 10,
+    } = req.query
+
+    const role = (req as any).auth.role as UserRole
+    
+    if (!startDate || !endDate) {
+        return res.status(400).json({ ok: false, message: 'Start date and end date are required' })
+    }
+
+    const start = new Date(startDate as string)
+    const end = new Date(endDate as string)
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ ok: false, message: 'Invalid date format' })
+    }
+
+    if (start.getUTCDate() !== 1) {
+        return res.status(400).json({ ok: false, message: 'Start date must be the first day of the month' })
+    }
+
+    const lastDayOfMonth = new Date(end.getUTCFullYear(), end.getUTCMonth() + 1, 0).getDate()
+    if (end.getUTCDate() !== lastDayOfMonth) {
+        return res.status(400).json({ ok: false, message: 'End date must be the last day of the month' })
+    }
+
+    if (role === UserRole.coordinator && (filteredUserRole === UserRole.coordinator || filteredUserRole === UserRole.admin)) {
+        return res.status(403).json({ message: 'Coordinator cannot view other coordinators or admin details' })
+    }
+    
+    if (filteredUserRole === UserRole.admin) {
+        return res.json({ message: 'Admin details already obtained in the overview' })
+    }
+
+    if (filteredUserRole === UserRole.coordinator) {
+        const institutionId = req.query.institutionId ? Number(req.query.institutionId) : undefined
+
+        const coordinators = await prisma.user.findMany({
+            where: {
+                institutionId,
+                role: UserRole.coordinator
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                Institution: {
+                    select: {
+                        name: true,
+                        id: true
+                    }
+                }
+            },
+            take: pageSize ? Number(pageSize) : undefined,
+            skip: pageSize && page ? (Number(page) - 1) * Number(pageSize) : undefined,
+        })
+
+        const result = []
+
+        for (const coordinator of coordinators) {
+            const institutionId = coordinator.Institution?.id
+            if (!institutionId) continue
+
+            const coordinatorPayments = await prisma.coordinatorPayment.findMany({
+                where: {
+                    coordinatorId: coordinator.id,
+                    period: {
+                        gte: start,
+                        lte: end
+                    }
+                },
+                select: {
+                    amount: true,
+                    status: true,
+                    period: true
+                }
+            })
+
+            const existingPeriods = new Set(
+                coordinatorPayments.map((p) => {
+                    return `${p.period.getUTCFullYear()}-${p.period.getUTCMonth()}`
+                 })
+            )
+
+            const pendingMonths = []
+            const currentIter = new Date(start) 
+            while (currentIter <= end) {
+                const currentYear = currentIter.getUTCFullYear()
+                const currentMonth = currentIter.getUTCMonth()
+                const periodKey = `${currentYear}-${currentMonth}`
+
+                if (!existingPeriods.has(periodKey)) {
+                    const monthStart = new Date(currentIter)
+                    
+                    const monthEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 0, 23, 59, 59, 999))
+
+                    pendingMonths.push({
+                        start: monthStart,
+                        end: monthEnd
+                    })
+                }
+                currentIter.setUTCMonth(currentIter.getUTCMonth() + 1)
+            }
+
+            const coordinatorShares = await prisma.coordinatorProfitShare.findMany({
+                where: {
+                    coordinatorId: coordinator.id,
+                    institutionId,
+                    availableSince: {
+                        lte: end
+                    },
+                    availableUntil: {
+                        gte: start
+                    }
+                },
+                orderBy: {
+                    availableSince: 'asc'
+                }
+            })
+
+            const coordinatorPaymentsResult = []
+
+            for (const month of pendingMonths) {
+                const monthStart = month.start
+                const monthEnd = month.end
+
+                let amount = 0
+
+                const coordinatorSharesForTheMonth = coordinatorShares.filter((s) => {
+                    return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
+                })
+                const periodForEachShare = coordinatorSharesForTheMonth.map((s) => {
+                    const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
+                    const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
+                    return {
+                        shareStart,
+                        shareEnd,
+                    }
+                })
+
+                for (const [index, period] of periodForEachShare.entries()) {
+                    const share = coordinatorSharesForTheMonth[index].profitShare as Decimal
+                    
+                    const guardianPayments = await prisma.classPayment.aggregate({
+                        _sum: {
+                            guardianAmount: true
+                        },
+                        where: {
+                            Class: {
+                                institutionId,
+                                date: {
+                                    gte: new Date(period.shareStart),
+                                    lte: new Date(period.shareEnd)
+                                }
+                            },
+                        }
+                    })
+
+                    const tutorPayments = await prisma.classPayment.aggregate({
+                        _sum: {
+                            tutorAmount: true
+                        },
+                        where: {
+                            Class: {
+                                institutionId,
+                                date: {
+                                    gte: new Date(period.shareStart),
+                                    lte: new Date(period.shareEnd)
+                                }
+                            },
+                        }
+                    })
+
+                    amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100) - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                }
+
+                coordinatorPaymentsResult.push({
+                    amount,
+                    status: 'pending' as PaymentStatus,
+                    period: monthStart
+                })
+            }
+
+            const coordinatorAmountToReceive = coordinatorPaymentsResult.reduce((acc, payment) => {
+                if (payment.status === 'pending') {
+                    return acc + payment.amount
+                } else {
+                    return acc
+                }
+            }, 0)
+    
+            const coordinatorAmountReceived = coordinatorPaymentsResult.reduce((acc, payment) => {
+                if (payment.status === 'completed') {
+                    return acc + payment.amount
+                } else {
+                    return acc
+                }
+            }, 0)
+
+            result.push({
+                coordinator,
+                coordinatorPayments: coordinatorPaymentsResult,
+                amount: coordinatorAmountReceived + coordinatorAmountToReceive
+            })
+        }
+
+        return res.json(result)
+    }
+
+    if (filteredUserRole === UserRole.tutor) {
+        const tutorsAndPayments = await prisma.user.findMany({
+            where: {
+                role: UserRole.tutor,
+                institutionId: req.query.institutionId ? Number(req.query.institutionId) : undefined
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                Institution: {
+                    select: {
+                        name: true,
+                        id: true
+                    }
+                },
+                ClassesAsTutor: {
+                    select: {
+                        ClassPayment: {
+                            where: {
+                                Class: {
+                                    date: {
+                                        gte: new Date(startDate as string),
+                                        lte: new Date(endDate as string)
+                                    }
+                                }
+                            },
+                            select: {
+                                tutorAmount: true,
+                                tutorPaymentStatus: true,
+                            },
+                        }
+                    }
+                }
+            },
+            take: pageSize ? Number(pageSize) : undefined,
+            skip: pageSize && page ? (Number(page) - 1) * Number(pageSize) : undefined,
+        })
+
+        for (const tutor of tutorsAndPayments) {
+            const totalAmount = tutor.ClassesAsTutor.reduce((acc, classAsTutor) => {
+                if (!classAsTutor.ClassPayment) return acc
+                return acc + (classAsTutor.ClassPayment.tutorAmount || 0);
+            }, 0);
+            const status = tutor.ClassesAsTutor.some(classAsTutor => classAsTutor.ClassPayment && classAsTutor.ClassPayment.tutorPaymentStatus === PaymentStatus.pending) ? PaymentStatus.pending : PaymentStatus.completed;
+
+            (tutor as any).totalAmount = totalAmount;
+            (tutor as any).paymentStatus = status;
+        }
+        
+        return res.json(tutorsAndPayments)
+    }
+
+    if (filteredUserRole === UserRole.guardian) {
+        const guardiansAndPayments = await prisma.user.findMany({
+            where: {
+                role: UserRole.guardian,
+                institutionId: req.query.institutionId ? Number(req.query.institutionId) : undefined,
+                Students: {
+                    some: {
+                        Classes: {
+                            some: {
+                                date: {
+                                    gte: new Date(startDate as string),
+                                    lte: new Date(endDate as string)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                Institution: {
+                    select: {
+                        name: true,
+                        id: true
+                    }
+                },
+                Students: {
+                    select: {
+                        Classes: {
+                            where: {
+                                date: {
+                                    gte: new Date(startDate as string),
+                                    lte: new Date(endDate as string)
+                                }
+                            },
+                            select: {     
+                                ClassPayment: {
+                                    select: {
+                                        guardianAmount: true,
+                                        guardianPaymentStatus: true,
+                                        guardianPaymentType: true,
+                                    },
+                                }
+                            }
+                        },
+                    }
+                }
+            },
+            take: pageSize ? Number(pageSize) : undefined,
+            skip: pageSize && page ? (Number(page) - 1) * Number(pageSize) : undefined,
+        })
+
+        for (const guardian of guardiansAndPayments) {
+            const totalAmount = guardian.Students.reduce((acc, student) => {
+                const studentTotal = student.Classes.reduce((classAcc, classItem) => {
+                    if (!classItem.ClassPayment) return classAcc
+                    return classAcc + (classItem.ClassPayment.guardianAmount || 0);
+                }, 0);
+                return acc + studentTotal;
+            }, 0);
+            const status = guardian.Students.some(student => student.Classes.some(classItem => classItem.ClassPayment && classItem.ClassPayment.guardianPaymentStatus === PaymentStatus.pending)) ? PaymentStatus.pending : PaymentStatus.completed;
+
+            (guardian as any).totalAmount = totalAmount;
+            (guardian as any).paymentStatus = status;
+        }
+        
+        return res.json(guardiansAndPayments)
+    }
+}

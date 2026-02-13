@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import argon2 from 'argon2';
-import { AccountType, PaymentStatus, PrismaClient, UserRole } from '@prisma/client';
+import { AccountType, PaymentStatus, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {

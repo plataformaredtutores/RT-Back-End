@@ -53,6 +53,10 @@ const server = app.listen(PORT, () => {
 	console.log(`🚀 Server running on http://localhost:${PORT}!`)
 })
 
+server.on('error', (err) => {
+	console.error('Server error:', err)
+})
+
 const shutdown = (signal: string) => {
 	console.log(`\n${signal} received. Shutting down...`)
 	server.close(() => {

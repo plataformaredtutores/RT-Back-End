@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
     getCashFlowSummary,
+    getCashFlowDetails
 } from '../controllers/cashFlowController';
 
 const router = Router();
@@ -111,5 +112,91 @@ const router = Router();
  *         description: Forbidden (Invalid role or permissions)
  */
 router.get('/summary', getCashFlowSummary)
+
+/**
+ * @openapi
+ * /cashflow/details:
+ *   get:
+ *     summary: Get cash flow details
+ *     tags: [CashFlow]
+ *     description: |
+ *       Returns detailed financial information separated by user role.
+ *       
+ *       **Logic based on Filtered User Role:**
+ *
+ *       For **coordinator**:
+ *       - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
+ * 
+ *       For **tutor**:
+ *       - Returns a list of tutors with their total earnings and payment status for the specified period.
+ *       
+ *       For **guardian**:
+ *       - Returns a list of guardians with their total payments and payment status for the specified period.
+ * 
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date (must be the first day of the month)
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date (must be the last day of the month)
+ *       - in: query
+ *         name: filteredUserRole
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [coordinator, tutor, guardian, admin]
+ *         description: The role to filter the details by (e.g. coordinator, tutor, guardian)
+ *       - in: query
+ *         name: institutionId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Optional filter by institution ID
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: pageSize
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Cash flow details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   # Specific fields based on the role (e.g. coordinatorPayments, totalAmount, paymentStatus)
+ *       400:
+ *         description: Bad Request (Missing dates, invalid formats, or non-matching start/end dates)
+ *       403:
+ *         description: Forbidden (Invalid role or permissions)
+ */
+router.get('/details', getCashFlowDetails)
 
 export default router;
