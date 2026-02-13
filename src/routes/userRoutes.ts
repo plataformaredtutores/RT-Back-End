@@ -3,8 +3,9 @@ import { Router } from 'express'
 import { 
   createUser,
   getUsers,
-  deleteUser,
+  deactivateUser,
   reactivateUser,
+  deleteUser,
   getUserById,
   editUserBankAccount,
   editUserPersonalInformation,
@@ -113,13 +114,13 @@ router.get('/', getUsers)
 router.post('/', createUser)
 /**
  * @openapi
- * /users/{id}:
- *   delete:
- *     summary: Delete a user by ID
+ * /users/deactivate/{id}:
+ *   patch:
+ *     summary: Deactivate a user by ID
  *     description: |
  *       Soft delete a user by marking them as inactive (isActive = false).
- *       - Admins and coordinators can delete users
- *       - Coordinators cannot delete admin or coordinator users
+ *       - Admins and coordinators can deactivate users
+ *       - Coordinators cannot deactivate admin or coordinator users
  *       - Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years
  *       - Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing
  *     tags: [Users]
@@ -131,20 +132,63 @@ router.post('/', createUser)
  *           type: string
  *         description: User ID
  *     responses:
- *       204:
- *         description: User deleted successfully (soft delete)
+ *       200:
+ *         description: User deactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DeactivateUserResponse'
  *       400:
- *         description: Cannot delete due to pending or missing payments
+ *         description: Cannot deactivate due to pending or missing payments
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/DeleteUserBlockedResponse'
  *       403:
+ *         description: Forbidden - user lacks permission to deactivate this user
+ *       404:
+ *         description: User not found
+ */
+router.patch('/deactivate/:id', deactivateUser)
+/**
+ * @openapi
+ * /users/{id}/delete/{role}:
+ *   delete:
+ *     summary: Permanently delete a user by ID
+ *     description: |
+ *       Hard delete a user from the system.
+ *       - Admins can delete any user
+ *       - Coordinators can only delete users in their institution
+ *       - Users with associated classes cannot be deleted (guardian/tutor)
+ *       - Admin users cannot be deleted
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: path
+ *         name: role
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [admin, coordinator, tutor, guardian]
+ *         description: User role
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DeleteUserResponse'
+ *       403:
  *         description: Forbidden - user lacks permission to delete this user
  *       404:
  *         description: User not found
  */
-router.delete('/:id', deleteUser)
+router.delete('/:id/delete/:role', deleteUser)
 /**
  * @openapi
  * /users/{id}/reactivate:

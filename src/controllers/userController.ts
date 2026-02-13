@@ -259,7 +259,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
   }
 }
 
-export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+export async function deactivateUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
 
@@ -727,6 +727,82 @@ export async function getGuardianLinks(req: Request, res: Response, next: NextFu
 
     res.json(guardianLinks)
   } catch (err: PrismaClientKnownRequestError | any) {
+    next(err)
+  }
+}
+
+export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id, role } = req.params
+
+    const userRole = (req as any).auth?.role;
+    const userInstitutionId = (req as any).auth?.iid;
+
+    if (userRole !== 'admin' && userRole !== 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
+    }    
+
+    if (role === 'admin') {
+      return res.status(403).json({ ok: false, message: 'Admins cannot be deleted.' })
+    }
+
+    if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator') {
+      return res.status(400).json({ ok: false, message: 'Invalid role' })
+    }
+
+    if (role === 'guardian') {
+      const hasClasses = await prisma.class.findFirst({
+        where: {
+          Student: {
+            guardianId: Number(id)
+          }
+        },
+        select: { id: true }
+      })
+
+      if (hasClasses) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un usuario con clases asociadas'
+        })
+      }
+    }
+
+    if (role === 'tutor') {
+      const hasClasses = await prisma.class.findFirst({
+        where: {
+          tutorId: Number(id)
+        },
+        select: { id: true }
+      })
+
+      if (hasClasses) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un usuario con clases asociadas'
+        })
+      }
+    }
+
+    if (userRole === 'coordinator') {
+      await prisma.user.delete({
+        where: {
+          id: Number(id),
+          Institution: {
+            is: {
+              id: Number(userInstitutionId)
+            }
+          }
+        }
+      })
+    } else {
+      await prisma.user.delete({
+        where: { id: Number(id) }
+      })
+    }
+
+    res.status(204).send()
+  } catch (err) {
     next(err)
   }
 }

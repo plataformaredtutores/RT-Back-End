@@ -165,6 +165,22 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['ok', 'message'],
         },
+        DeactivateUserResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+          required: ['ok', 'message'],
+        },
+        DeleteUserResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+          required: ['ok', 'message'],
+        },
         EditCoordinatorProfitShareInput: {
           type: 'object',
           properties: {
