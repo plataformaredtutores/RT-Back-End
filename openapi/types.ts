@@ -137,6 +137,139 @@ export interface paths {
       };
     };
   };
+  "/cashflow/summary": {
+    /**
+     * Get cash flow summary
+     * @description Returns a summary of amounts to receive and pay.
+     *
+     * **Logic based on Authenticated User Role:**
+     *
+     * For **admin**:
+     * - Returns global financial summary and admin profit shares.
+     * - \`institutionId\` is optional to filter specific institution class payments.
+     *
+     * For **coordinator**:
+     * - Returns financial summary scoped to their assigned institution and their profit shares.
+     * - Institution ID is automatically inferred from the user credential.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Start date (must be the first day of the month) */
+          startDate: string;
+          /** @description End date (must be the last day of the month) */
+          endDate: string;
+          /** @description Optional filter by institution ID (Only for admin role) */
+          institutionId?: number;
+        };
+      };
+      responses: {
+        /** @description Cash flow summary */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              /** @description Total pending payments from Guardians */
+              amountToReceive?: number;
+              /** @description Total completed payments from Guardians */
+              amountReceived?: number;
+              /** @description Total pending payments to Tutors */
+              amountToPay?: number;
+              /** @description Total completed payments to Tutors */
+              amountPaid?: number;
+              /** @description List of admin profit share payments (only if role=admin) */
+              adminPayments?: ({
+                  amount?: number;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                  /** Format: date-time */
+                  period?: string;
+                })[];
+              /** @description List of coordinator profit share payments (only if role=coordinator) */
+              coordinatorPayments?: ({
+                  amount?: number;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                  /** Format: date-time */
+                  period?: string;
+                })[];
+              /** @description Total pending profit share amount for Admin */
+              adminAmountToReceive?: number;
+              /** @description Total completed profit share amount for Admin */
+              adminAmountReceived?: number;
+              /** @description Total pending profit share amount for Coordinator */
+              coordinatorAmountToReceive?: number;
+              /** @description Total completed profit share amount for Coordinator */
+              coordinatorAmountReceived?: number;
+            };
+          };
+        };
+        /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden (Invalid role or permissions) */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cashflow/details": {
+    /**
+     * Get cash flow details
+     * @description Returns detailed financial information separated by user role.
+     *
+     * **Logic based on Filtered User Role:**
+     *
+     * For **coordinator**:
+     * - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
+     *
+     * For **tutor**:
+     * - Returns a list of tutors with their total earnings and payment status for the specified period.
+     *
+     * For **guardian**:
+     * - Returns a list of guardians with their total payments and payment status for the specified period.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Start date (must be the first day of the month) */
+          startDate: string;
+          /** @description End date (must be the last day of the month) */
+          endDate: string;
+          /** @description The role to filter the details by (e.g. coordinator, tutor, guardian) */
+          filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
+          /** @description Optional filter by institution ID */
+          institutionId?: number;
+          /** @description Page number for pagination */
+          page?: number;
+          /** @description Number of items per page */
+          pageSize?: number;
+        };
+      };
+      responses: {
+        /** @description Cash flow details */
+        200: {
+          content: {
+            "application/json": {
+                id?: number;
+                name?: string;
+                email?: string;
+              }[];
+          };
+        };
+        /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden (Invalid role or permissions) */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/classes": {
     /**
      * List classes with details

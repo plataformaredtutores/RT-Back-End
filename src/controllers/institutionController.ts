@@ -170,18 +170,20 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     const coordinatorPayments = await prisma.coordinatorPayment.findMany({
       where: {
         institutionId,
-        OR: months.map((m) => ({ periodYear: m.year, periodMonth: m.month })),
+          period: {
+            gte: new Date(now.getFullYear(), now.getMonth() - 11, 1),
+            lte: new Date(now.getFullYear(), now.getMonth(), 1),
+          }
       },
       select: {
-        periodYear: true,
-        periodMonth: true,
+        period: true,
         status: true,
       },
     });
 
     const paymentMap = new Map<string, 'pending' | 'completed'>();
     coordinatorPayments.forEach((p) => {
-      paymentMap.set(`${p.periodYear}-${p.periodMonth}`, p.status);
+      paymentMap.set(`${p.period.getFullYear()}-${p.period.getMonth() + 1}`, p.status);
     });
 
     const missingOrPendingCoordinatorPayments = months.some((m) => {

@@ -6,6 +6,7 @@ import mailRoutes from './mailRoutes'
 import authRoutes from './authRoutes'
 import classRoutes from './classRoutes'
 import feeRoutes from './feeRoutes'
+import cashFlowRoutes from './cashFlowRoutes'
 import tutorRoutes from './tutorRoutes'
 import coordinatorRoutes from './coordinatorRoutes'
 import { health } from '../controllers/healthController'
@@ -24,4 +25,5 @@ export function setRoutes(app: Express) {
   app.use('/classes', classRoutes)
   app.use('/fees', authorize(['admin', 'coordinator', 'tutor','guardian']), feeRoutes)
   app.use('/tutors', authorize(['admin', 'coordinator']), tutorRoutes)
+  app.use('/cashflow', cashFlowRoutes)
 }

@@ -61,7 +61,7 @@ prisma-migrate:
 	@if [ -z "$(name)" ]; then echo "Usage: make prisma-migrate name=add_users" && exit 1; fi
 	npx prisma migrate dev --name "$(name)"
 
-.PHONY: prisma-studio
+.PHONY: prisma
 prisma:
 	npx prisma studio
 

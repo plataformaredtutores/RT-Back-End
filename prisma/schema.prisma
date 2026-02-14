@@ -56,24 +56,29 @@ enum PaymentType {
 
 model AdminPayment {
   id            Int      @id @default(autoincrement())
-  periodYear    Int
-  periodMonth   Int
+  period        DateTime
   amount        Int
   status        PaymentStatus @default(pending)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@unique([periodYear, periodMonth])
-  @@index([periodYear, periodMonth])
+  @@unique([period])
+  @@index([period])
+}
+
+model AdminProfitShare {
+  id                 Int      @id @default(autoincrement())
+  profitShare        Decimal  @db.Decimal(5, 2)
+  availableSince     DateTime @default(now())
+  availableUntil     DateTime
 }
 
 model CoordinatorPayment {
   id            Int      @id @default(autoincrement())
   coordinatorId Int
   institutionId Int
-  periodYear    Int
-  periodMonth   Int
+  period        DateTime
   amount        Int
   status        PaymentStatus @default(pending)
   
@@ -83,44 +88,43 @@ model CoordinatorPayment {
   Coordinator   User     @relation(fields: [coordinatorId], references: [id])
   Institution   Institution @relation(fields: [institutionId], references: [id])
 
-  @@unique([institutionId, periodYear, periodMonth])
-  @@index([periodYear, periodMonth])
+  @@unique([institutionId, period])
+  @@index([period])
 }
 
 model CoordinatorProfitShare {
-  id            Int      @id @default(autoincrement())
-  coordinatorId Int
-  institutionId Int
-  profitShare   Decimal  @db.Decimal(5, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 Int      @id @default(autoincrement())
+  coordinatorId      Int
+  institutionId      Int
+  profitShare        Decimal  @db.Decimal(5, 2)
+  availableSince     DateTime @default(now())
+  availableUntil     DateTime
 
   Coordinator   User     @relation(fields: [coordinatorId], references: [id])
   Institution   Institution @relation(fields: [institutionId], references: [id])
   
-  @@unique([coordinatorId, institutionId])
   @@index([institutionId])
   @@index([coordinatorId])
 }
 
 model Class {
-  id            Int        @id @default(autoincrement())
-  date          DateTime
-  subject       ClassSubject
-  modality      ClassModality
-  numberOfStudents Int
-  type          ClassType
-  duration      Int
-  institutionId Int
-  studentId     Int
-  tutorId       Int
-  ClassPayment  ClassPayment?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                Int        @id @default(autoincrement())
+  date              DateTime
+  subject           ClassSubject
+  modality          ClassModality
+  numberOfStudents  Int
+  type              ClassType
+  duration          Int
+  institutionId     Int
+  studentId         Int
+  tutorId           Int
+  ClassPayment      ClassPayment?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-  Student       Student     @relation(fields: [studentId], references: [id])
-  Tutor         User        @relation("TutorClasses", fields: [tutorId], references: [id])
+  Institution       Institution @relation(fields: [institutionId], references: [id])
+  Student           Student     @relation(fields: [studentId], references: [id])
+  Tutor             User        @relation("TutorClasses", fields: [tutorId], references: [id])
   
   @@index([institutionId])
   @@index([tutorId])
@@ -132,7 +136,7 @@ model ClassPayment {
   classId                 Int
   guardianAmount          Int           
   guardianPaymentStatus   PaymentStatus @default(pending)
-  guardianPaymentType             PaymentType   @default(bankTransfer)
+  guardianPaymentType     PaymentType   @default(bankTransfer)
   tutorAmount             Int
   tutorPaymentStatus      PaymentStatus @default(pending)
   createdAt               DateTime      @default(now())
@@ -231,7 +235,7 @@ model User {
   BankAccount       UserBankAccount?
   Institution       Institution?  @relation(fields: [institutionId], references: [id])
 
-  GuardianLinks       GuardianTutor[]  @relation("GuardianTutorGuardian")
+  GuardianLinks     GuardianTutor[]  @relation("GuardianTutorGuardian")
   TutorLinks        GuardianTutor[]  @relation("GuardianTutorTutor")
   Students          Student[]      @relation("GuardianStudents")
   ClassesAsTutor    Class[]        @relation("TutorClasses")

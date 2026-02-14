@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import argon2 from 'argon2';
-import { AccountType, PaymentStatus, PrismaClient, UserRole } from '@prisma/client';
+import { AccountType, PaymentStatus, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
@@ -199,7 +199,9 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         data: {
           coordinatorId: newUser.id,
           institutionId: finalInstitutionId,
-          profitShare: resolvedProfitShare
+          profitShare: resolvedProfitShare,
+          availableSince: new Date(),
+          availableUntil: new Date(new Date().getFullYear()+237, new Date().getMonth(), 0)
         }
       })
     }
@@ -428,10 +430,7 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
     if (user.role === 'coordinator' && user.institutionId) {
       const profit = await prisma.coordinatorProfitShare.findUnique({
         where: {
-          coordinatorId_institutionId: {
-            coordinatorId: Number(user.id),
-            institutionId: Number(user.institutionId)
-          }
+          id: user.id
         },
         select: {
           profitShare: true

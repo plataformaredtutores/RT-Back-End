@@ -43,27 +43,39 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
       return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` });
     }
 
-    try {
-      await prisma.coordinatorProfitShare.update({
+    await prisma.coordinatorProfitShare.updateMany({
+      where: {
+      coordinatorId: parsedCoordinatorId,
+      institutionId: parsedInstitutionId,
+      availableUntil: {
+        equals: await prisma.coordinatorProfitShare.findFirst({
         where: {
-          coordinatorId_institutionId: {
-            coordinatorId: parsedCoordinatorId,
-            institutionId: parsedInstitutionId,
-          },
+          coordinatorId: parsedCoordinatorId,
+          institutionId: parsedInstitutionId,
         },
-        data: {
-          profitShare,
+        orderBy: {
+          availableUntil: 'desc',
         },
-      })
-    } catch (error: any) {
-      if (error.code === 'P2025') {
-        return res.status(404).json({
-          ok: false,
-          message: 'Coordinator profit share not found for this institution.',
-        })
-      }
-      throw error
-    }
+        select: { availableUntil: true },
+        }).then(res => res?.availableUntil),
+      },
+      },
+      data: {
+      availableUntil: new Date(), // Set available until to now to expire the current profit share
+      },
+    })
+
+    // The profit to create is mean to last forever, but, it can be edited by creating a new one, and updating the previous one to expire when the new one is created, so, we set the available until to a far future date, but, we also need to set it to the end of the current month to avoid issues with the cash flow summary that is calculated month by month.
+
+    await prisma.coordinatorProfitShare.create({
+      data: {
+        coordinatorId: parsedCoordinatorId,
+        institutionId: parsedInstitutionId,
+        profitShare,
+        availableSince: new Date(),
+        availableUntil: new Date(new Date().getFullYear()+237, new Date().getMonth(), 0) // Set available until the end of the current month
+      },
+    })
 
     res.status(200).json({ ok: true, message: 'Coordinator profit share updated successfully' });
   } catch (err) {
@@ -111,15 +123,13 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
       return res.status(400).json({ ok: false, message: 'Coordinator is inactive' });
     }
 
-    const now = new Date()
     const payment = await prisma.coordinatorPayment.create({
       data: {
         institutionId: parsedInstitutionId,
         coordinatorId: parsedCoordinatorId,
         amount,
         status: 'completed',
-        periodYear: now.getFullYear(),
-        periodMonth: now.getMonth() + 1,
+        period: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Set the period to the first day of the current month
       },
     })
 
