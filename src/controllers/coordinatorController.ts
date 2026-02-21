@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
+import { PaymentStatus } from '@prisma/client';
 
 // Edit CoordinatorProfitShare
 export async function editCoordinatorProfitShare(req: Request, res: Response, next: NextFunction) {
@@ -30,17 +31,38 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
     const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
       where: {
         institutionId: parsedInstitutionId,
-        coordinatorId: { not: parsedCoordinatorId },
+        coordinatorId: {
+          not: parsedCoordinatorId,
+        },
+        availableUntil: {
+          gt: new Date(), // Only consider active profit shares
+        },
       },
       _sum: {
         profitShare: true,
       },
     })
+
+    // The admin has variable profit share.
+    const adminProfitShare = await prisma.adminProfitShare.findFirst({
+      where: {
+        availableUntil: {
+          gt: new Date(), // Only consider active profit share
+        },
+      },
+      orderBy: {
+        availableUntil: 'desc',
+      },
+      select: {
+        profitShare: true,
+      },
+    })
+
     
-    const totalCurrentProfitShare = 40 + Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0)
+    const totalCurrentProfitShare = Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) + Number(adminProfitShare?.profitShare || 0)
 
     if (totalCurrentProfitShare + profitShare > 100) {
-      return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` });
+      return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
     }
 
     await prisma.coordinatorProfitShare.updateMany({
@@ -128,7 +150,7 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
         institutionId: parsedInstitutionId,
         coordinatorId: parsedCoordinatorId,
         amount,
-        status: 'completed',
+        status: PaymentStatus.completed,
         period: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Set the period to the first day of the current month
       },
     })

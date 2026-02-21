@@ -110,6 +110,46 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       }
     }
 
+    // Before creating the coordinator user, we must check if the profit share to asign would exceed the 100% limit for the institution. We consider the profit share of the admin (if exists) and the profit share of the other coordinators of the institution (if exists).
+
+    const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
+      where: {
+        institutionId,
+        coordinatorId: {
+          not: institutionId
+        },
+        availableUntil: {
+          gt: new Date(), // Only consider active profit shares
+        },
+      },
+      _sum: {
+        profitShare: true,
+      },
+    })
+    
+    // The admin has variable profit share.
+    const adminProfitShare = await prisma.adminProfitShare.findFirst({
+      where: {
+        availableUntil: {
+          gt: new Date(), // Only consider active profit share
+        },
+      },
+      orderBy: {
+        availableUntil: 'desc',
+      },
+      select: {
+        profitShare: true,
+      },
+    })
+
+    const totalCurrentProfitShare = Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) + Number(adminProfitShare?.profitShare || 0)
+
+    if (totalCurrentProfitShare + coordinatorProfitShare > 100) {
+      return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
+    }
+
+
+
     // Condiciones para cada rol
     if (role !== 'admin' && institutionId == null && userRole !== 'coordinator') {
       return res.status(400).json({
@@ -188,12 +228,6 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         where: { institutionId: finalInstitutionId },
         _sum: { profitShare: true }
       })
-
-      const totalCurrentProfitShare = 40 + Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0)
-
-      if (totalCurrentProfitShare + resolvedProfitShare > 100) {
-        resolvedProfitShare = 0
-      }
 
       await prisma.coordinatorProfitShare.create({
         data: {
