@@ -95,9 +95,13 @@ export async function login(req: Request, res: Response) {
   const { email, password } = req.body as { email: string; password: string }
 
   const user = await prisma.user.findUnique({
-    where: { email, isActive: true },
-    select: { id: true, hashedPassword: true, role: true, email: true, name: true, institutionId: true },
+    where: { email },
+    select: { id: true, hashedPassword: true, role: true, email: true, name: true, institutionId: true, isActive: true },
   })
+  
+  if (user &&!user?.isActive) {
+    return res.status(403).json({ ok: false, message: 'Account is inactive. Please contact support.' })
+  }
   if (!user) return res.status(401).json({ ok: false, message: 'Invalid credentials' })
 
   const pepper = (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, '')
