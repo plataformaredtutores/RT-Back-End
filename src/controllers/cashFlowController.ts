@@ -34,6 +34,7 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
     const end = new Date(Date.UTC(endParsed.year, endParsed.month, 0, 23, 59, 59, 999))
 
     if (role === 'admin') {
+        const institutionId = req.query.institutionId ? Number(req.query.institutionId) : undefined
         const adminPayments = await prisma.adminPayment.findMany({
             where: {
                 period: {
@@ -108,6 +109,8 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             }
         })
 
+        console.log('[CashFlow] AdminProfitShares used for calculation:', JSON.stringify(adminShares, null, 2))
+
         for (const month of pendingMonths) {
             const monthStart = month.start
             const monthEnd = month.end
@@ -146,6 +149,7 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                     },
                     where: {
                         Class: {
+                            institutionId,
                             date: {
                                 gte: new Date(period.shareStart),
                                 lte: new Date(period.shareEnd)
@@ -160,6 +164,7 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                     },
                     where: {
                         Class: {
+                            institutionId,
                             date: {
                                 gte: new Date(period.shareStart),
                                 lte: new Date(period.shareEnd)
@@ -178,8 +183,123 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             })
         }
 
+        if (institutionId) {
+            const adminPaymentsByInstitution = [] as Array<{
+                amount: number
+                status: PaymentStatus
+                period: Date
+            }>
+
+            const currentIterAll = new Date(start)
+            while (currentIterAll <= end) {
+                const currentYear = currentIterAll.getUTCFullYear()
+                const currentMonth = currentIterAll.getUTCMonth()
+                const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1))
+                const monthEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 0, 23, 59, 59, 999))
+
+                let amount = 0
+                const adminSharesForTheMonth = adminShares.filter((s) => {
+                    return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
+                })
+                const periodForEachShare = adminSharesForTheMonth.map((s) => {
+                    const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
+                    const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
+                    return { shareStart, shareEnd }
+                })
+
+                for (const [index, period] of periodForEachShare.entries()) {
+                    const share = adminSharesForTheMonth[index].profitShare as Decimal
+                    const guardianPayments = await prisma.classPayment.aggregate({
+                        _sum: { guardianAmount: true },
+                        where: {
+                            Class: {
+                                institutionId,
+                                date: {
+                                    gte: new Date(period.shareStart),
+                                    lte: new Date(period.shareEnd)
+                                }
+                            }
+                        }
+                    })
+
+                    const tutorPayments = await prisma.classPayment.aggregate({
+                        _sum: { tutorAmount: true },
+                        where: {
+                            Class: {
+                                institutionId,
+                                date: {
+                                    gte: new Date(period.shareStart),
+                                    lte: new Date(period.shareEnd)
+                                }
+                            }
+                        }
+                    })
+
+                    amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
+                    amount -= (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                }
+
+                adminPaymentsByInstitution.push({
+                    amount,
+                    status: 'pending' as PaymentStatus,
+                    period: monthStart
+                })
+
+                currentIterAll.setUTCMonth(currentIterAll.getUTCMonth() + 1)
+            }
+
+            const payments = await prisma.classPayment.groupBy({
+                by: ['guardianPaymentStatus', 'tutorPaymentStatus'],
+                _sum: {
+                    guardianAmount: true,
+                    tutorAmount: true
+                },
+                where: {
+                    Class: {
+                        institutionId,
+                        date: {
+                            gte: start,
+                            lte: end
+                        }
+                    }
+                }
+            })
+
+            let amountToReceive = 0
+            let amountReceived = 0
+            let amountToPay = 0
+            let amountPaid = 0
+
+            payments.forEach(payment => {
+                if (payment.guardianPaymentStatus === PaymentStatus.pending) {
+                    amountToReceive += payment._sum.guardianAmount || 0
+                } else if (payment.guardianPaymentStatus === PaymentStatus.completed) {
+                    amountReceived += payment._sum.guardianAmount || 0
+                }
+
+                if (payment.tutorPaymentStatus === PaymentStatus.pending) {
+                    amountToPay += payment._sum.tutorAmount || 0
+                } else if (payment.tutorPaymentStatus === PaymentStatus.completed) {
+                    amountPaid += payment._sum.tutorAmount || 0
+                }
+            })
+
+            const adminAmountToReceive = adminPaymentsByInstitution.reduce((acc, payment) => acc + payment.amount, 0)
+
+            const response = {
+                adminPayments: adminPaymentsByInstitution,
+                amountToReceive,
+                amountReceived,
+                amountToPay,
+                amountPaid,
+                adminAmountToReceive,
+                adminAmountReceived: 0
+            }
+            console.log('[CashFlow Summary - Admin (institution)]', JSON.stringify(response, null, 2))
+            return res.json(response)
+        }
+
         // Finally, we can sum the amounts for each month and return the result.
-        const { institutionId } = req.query
 
         const payments = await prisma.classPayment.groupBy({
             by: ['guardianPaymentStatus', 'tutorPaymentStatus'],
@@ -233,7 +353,9 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             }
         }, 0)
 
-        return res.json({ adminPayments, amountToReceive, amountReceived, amountToPay, amountPaid, adminAmountToReceive, adminAmountReceived })
+        const response = { adminPayments, amountToReceive, amountReceived, amountToPay, amountPaid, adminAmountToReceive, adminAmountReceived }
+        console.log('[CashFlow Summary - Admin]', JSON.stringify(response, null, 2))
+        return res.json(response)
     } else if (role === 'coordinator') {
         // For the coordinator, the logic is basically the same, but we need to filter the payments by the institution of the coordinator, and we also need to calculate the share for the coordinator, that is stored in the CoordinatorProfitShare relation.
         
@@ -413,7 +535,9 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             }
         }, 0)
 
-        return res.json({ coordinatorPayments: coordinatorPaymentsResult, amountToReceive, amountReceived, amountToPay, amountPaid, coordinatorAmountToReceive, coordinatorAmountReceived })
+        const response = { coordinatorPayments: coordinatorPaymentsResult, amountToReceive, amountReceived, amountToPay, amountPaid, coordinatorAmountToReceive, coordinatorAmountReceived }
+        console.log('[CashFlow Summary - Coordinator]', JSON.stringify(response, null, 2))
+        return res.json(response)
     } else {
         return res.status(400).json({ ok: false, message: 'Forbidden' })
     }
@@ -624,6 +748,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             })
         }
 
+        console.log('[CashFlow Details - Coordinators]', JSON.stringify(result, null, 2))
         return res.json(result)
     }
 
@@ -677,6 +802,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             (tutor as any).paymentStatus = status;
         }
         
+        console.log('[CashFlow Details - Tutors]', JSON.stringify(tutorsAndPayments, null, 2))
         return res.json(tutorsAndPayments)
     }
 
@@ -748,6 +874,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             (guardian as any).paymentStatus = status;
         }
         
+        console.log('[CashFlow Details - Guardians]', JSON.stringify(guardiansAndPayments, null, 2))
         return res.json(guardiansAndPayments)
     }
 }

@@ -126,6 +126,43 @@
         }
       }
     },
+    "/admin/profit-share": {
+      "patch": {
+        "summary": "Edit admin profit share",
+        "description": "Deactivates the current admin profit share and creates a new one. Validates that for every institution the new admin share plus the active coordinator shares does not exceed 100%. Both operations run inside a database transaction.\n",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditAdminProfitShareInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin profit share updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditAdminProfitShareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or combined shares exceed 100%"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
         "summary": "User login",
@@ -2625,6 +2662,55 @@
         "required": [
           "ok",
           "message"
+        ]
+      },
+      "EditAdminProfitShareInput": {
+        "type": "object",
+        "properties": {
+          "profitShare": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "New admin profit share percentage (0-100)"
+          }
+        },
+        "required": [
+          "profitShare"
+        ]
+      },
+      "EditAdminProfitShareResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "profitShare": {
+                "type": "number"
+              },
+              "availableSince": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "availableUntil": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "message",
+          "data"
         ]
       },
       "EditCoordinatorProfitShareInput": {

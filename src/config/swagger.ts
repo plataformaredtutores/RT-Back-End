@@ -273,6 +273,35 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['ok', 'message'],
         },
+        EditAdminProfitShareInput: {
+          type: 'object',
+          properties: {
+            profitShare: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              description: 'New admin profit share percentage (0-100)',
+            },
+          },
+          required: ['profitShare'],
+        },
+        EditAdminProfitShareResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                profitShare: { type: 'number' },
+                availableSince: { type: 'string', format: 'date-time' },
+                availableUntil: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+          required: ['ok', 'message', 'data'],
+        },
         EditCoordinatorProfitShareInput: {
           type: 'object',
           properties: {

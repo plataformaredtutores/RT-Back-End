@@ -86,6 +86,35 @@ export interface paths {
       };
     };
   };
+  "/admin/profit-share": {
+    /**
+     * Edit admin profit share
+     * @description Deactivates the current admin profit share and creates a new one. Validates that for every institution the new admin share plus the active coordinator shares does not exceed 100%. Both operations run inside a database transaction.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditAdminProfitShareInput"];
+        };
+      };
+      responses: {
+        /** @description Admin profit share updated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["EditAdminProfitShareResponse"];
+          };
+        };
+        /** @description Invalid input or combined shares exceed 100% */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/auth/login": {
     /** User login */
     post: {
@@ -1510,6 +1539,22 @@ export interface components {
     DeleteUserResponse: {
       ok: boolean;
       message: string;
+    };
+    EditAdminProfitShareInput: {
+      /** @description New admin profit share percentage (0-100) */
+      profitShare: number;
+    };
+    EditAdminProfitShareResponse: {
+      ok: boolean;
+      message: string;
+      data: {
+        id?: number;
+        profitShare?: number;
+        /** Format: date-time */
+        availableSince?: string;
+        /** Format: date-time */
+        availableUntil?: string;
+      };
     };
     EditCoordinatorProfitShareInput: {
       coordinatorId: number;
