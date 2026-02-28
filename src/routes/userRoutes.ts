@@ -114,7 +114,7 @@ router.get('/', getUsers)
 router.post('/', createUser)
 /**
  * @openapi
- * /users/deactivate/{id}:
+ * /users/deactivate/{id}/{role}:
  *   patch:
  *     summary: Deactivate a user by ID
  *     description: |
@@ -131,6 +131,13 @@ router.post('/', createUser)
  *         schema:
  *           type: string
  *         description: User ID
+ *       - in: path
+ *         name: role
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [admin, coordinator, tutor, guardian]
+ *         description: User role
  *     responses:
  *       200:
  *         description: User deactivated successfully
@@ -149,7 +156,7 @@ router.post('/', createUser)
  *       404:
  *         description: User not found
  */
-router.patch('/deactivate/:id', deactivateUser)
+router.patch('/deactivate/:id/:role', deactivateUser)
 /**
  * @openapi
  * /users/{id}/delete/{role}:
@@ -191,7 +198,7 @@ router.patch('/deactivate/:id', deactivateUser)
 router.delete('/:id/delete/:role', deleteUser)
 /**
  * @openapi
- * /users/{id}/reactivate:
+ * /users/{id}/reactivate/{role}:
  *   patch:
  *     summary: Reactivate a user by ID
  *     description: |
@@ -206,6 +213,13 @@ router.delete('/:id/delete/:role', deleteUser)
  *         schema:
  *           type: string
  *         description: User ID
+ *       - in: path
+ *         name: role
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [admin, coordinator, tutor, guardian]
+ *         description: User role
  *     responses:
  *       200:
  *         description: User reactivated successfully
@@ -218,7 +232,7 @@ router.delete('/:id/delete/:role', deleteUser)
  *       404:
  *         description: User not found
  */
-router.patch('/:id/reactivate', reactivateUser)
+router.patch('/:id/reactivate/:role', reactivateUser)
 /**
  * @openapi
  * /users/{id}:

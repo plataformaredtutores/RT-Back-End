@@ -10,6 +10,82 @@ type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> &
 type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
 
 export interface paths {
+  "/users/deactivate/{id}/{role}": {
+    /**
+     * Deactivate a user by ID
+     * @description Soft delete a user by marking them as inactive (isActive = false).
+     * - Admins and coordinators can deactivate users
+     * - Coordinators cannot deactivate admin or coordinator users
+     * - Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years
+     * - Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
+        };
+      };
+      responses: {
+        /** @description User deactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeactivateUserResponse"];
+          };
+        };
+        /** @description Cannot deactivate due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to deactivate this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}/reactivate/{role}": {
+    /**
+     * Reactivate a user by ID
+     * @description Reactivates a previously deactivated user (isActive = true).
+     * - Admins and coordinators can reactivate users
+     * - Coordinators cannot reactivate admin or coordinator users
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
+        };
+      };
+      responses: {
+        /** @description User reactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateUserResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to reactivate this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/auth/login": {
     /** User login */
     post: {
@@ -1107,46 +1183,6 @@ export interface paths {
       };
     };
   };
-  "/users/deactivate/{id}": {
-    /**
-     * Deactivate a user by ID
-     * @description Soft delete a user by marking them as inactive (isActive = false).
-     * - Admins and coordinators can deactivate users
-     * - Coordinators cannot deactivate admin or coordinator users
-     * - Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years
-     * - Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description User ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description User deactivated successfully */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DeactivateUserResponse"];
-          };
-        };
-        /** @description Cannot deactivate due to pending or missing payments */
-        400: {
-          content: {
-            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
-          };
-        };
-        /** @description Forbidden - user lacks permission to deactivate this user */
-        403: {
-          content: never;
-        };
-        /** @description User not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
   "/users/{id}/delete/{role}": {
     /**
      * Permanently delete a user by ID
@@ -1173,38 +1209,6 @@ export interface paths {
           };
         };
         /** @description Forbidden - user lacks permission to delete this user */
-        403: {
-          content: never;
-        };
-        /** @description User not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/reactivate": {
-    /**
-     * Reactivate a user by ID
-     * @description Reactivates a previously deactivated user (isActive = true).
-     * - Admins and coordinators can reactivate users
-     * - Coordinators cannot reactivate admin or coordinator users
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description User ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description User reactivated successfully */
-        200: {
-          content: {
-            "application/json": components["schemas"]["ReactivateUserResponse"];
-          };
-        };
-        /** @description Forbidden - user lacks permission to reactivate this user */
         403: {
           content: never;
         };

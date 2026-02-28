@@ -297,7 +297,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
 
 export async function deactivateUser(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params
+    const { id, role } = req.params
 
     const userRole = (req as any).auth?.role;
 
@@ -305,27 +305,26 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
       return res.status(403).json({ ok: false, message: 'Forbidden' })
     } */
     
-    const userId = Number(id)
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-
-    if (!user) {
-      return res.status(404).json({ ok: false, message: 'User not found' })
-    }
-
-    if (user.role === 'admin') {
+    if (role === 'admin') {
       return res.status(403).json({ ok: false, message: 'Admins cannot be deactivated.' })
     }
 
-    if (user.role === 'coordinator' && userRole !== 'admin') {
+    if (role === 'coordinator' && userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Only admins can deactivate coordinators.' })
     }
+
+    if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator') {
+      return res.status(400).json({ ok: false, message: 'Invalid role' })
+    }
+
+    const userId = Number(id)
 
     const now = new Date()
     const twoYearsAgo = new Date(now)
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
 
     // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (apoderado)
-    if (user.role === 'guardian') {
+    if (role === 'guardian') {
       const pendingPayment = await prisma.classPayment.findFirst({
         where: {
           guardianPaymentStatus: PaymentStatus.pending,
@@ -350,7 +349,7 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
     }
 
     // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (tutor)
-    if (user.role === 'tutor') {
+    if (role === 'tutor') {
       const pendingPayment = await prisma.classPayment.findFirst({
         where: {
           tutorPaymentStatus: PaymentStatus.pending,
@@ -374,7 +373,7 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
 
     // Coordinador: no debe tener pagos pendientes o inexistentes en los ultimos 24 meses,
     // excluyendo el mes actual.
-    if (user.role === 'coordinator') {
+    if (role === 'coordinator') {
       const periodsToCheck: Array<{
         periodYear: number
         periodMonth: number
@@ -432,14 +431,14 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
       data: { isActive: false, deactivatedAt: new Date() }
     });
 
-    if (user.role === 'guardian') {
+    if (role === 'guardian') {
       await prisma.guardianTutor.updateMany({
         where: { guardianId: userId, active: true },
         data: { active: false }
       })
     }
 
-    if (user.role === 'tutor') {
+    if (role === 'tutor') {
       await prisma.guardianTutor.updateMany({
         where: { tutorId: userId, active: true },
         data: { active: false }
@@ -454,38 +453,37 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
 
 export async function reactivateUser(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params
+    const { id, role } = req.params
 
     const userRole = (req as any).auth?.role;
 
-    const userId = Number(id)
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-
-    if (!user) {
-      return res.status(404).json({ ok: false, message: 'User not found' })
-    }
-
-    if (user.role === 'coordinator' && userRole !== 'admin') {
+    if (role === 'coordinator' && userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Only admins can reactivate coordinators.' })
     }
 
-    if (userRole === 'coordinator' && (user.role === 'admin' || user.role === 'coordinator')) {
+    if (userRole === 'coordinator' && (role === 'admin' || role === 'coordinator')) {
       return res.status(403).json({ ok: false, message: 'Coordinators cannot reactivate admin or coordinator users.' })
     }
+
+    if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator' && role !== 'admin') {
+      return res.status(400).json({ ok: false, message: 'Invalid role' })
+    }
+
+    const userId = Number(id)
 
     await prisma.user.update({
       where: { id: userId },
       data: { isActive: true, deactivatedAt: null }
     })
 
-    if (user.role === 'guardian') {
+    if (role === 'guardian') {
       await prisma.guardianTutor.updateMany({
         where: { guardianId: userId, active: false },
         data: { active: true }
       })
     }
 
-    if (user.role === 'tutor') {
+    if (role === 'tutor') {
       await prisma.guardianTutor.updateMany({
         where: { tutorId: userId, active: false },
         data: { active: true }
