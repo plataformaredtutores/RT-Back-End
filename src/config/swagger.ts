@@ -10,6 +10,92 @@ const options: swaggerJSDoc.Options = {
     servers: [
       { url: `http://localhost:${process.env.PORT || 3000}` }
     ],
+    paths: {
+      '/users/deactivate/{id}/{role}': {
+        patch: {
+          summary: 'Deactivate a user by ID',
+          description: 'Soft delete a user by marking them as inactive (isActive = false).',
+          tags: ['Users'],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'string' },
+              description: 'User ID'
+            },
+            {
+              in: 'path',
+              name: 'role',
+              required: true,
+              schema: {
+                type: 'string',
+                enum: ['admin', 'coordinator', 'tutor', 'guardian']
+              },
+              description: 'User role'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'User deactivated successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/DeactivateUserResponse' }
+                }
+              }
+            },
+            400: {
+              description: 'Cannot deactivate due to pending or missing payments',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/DeleteUserBlockedResponse' }
+                }
+              }
+            },
+            403: { description: 'Forbidden - user lacks permission to deactivate this user' },
+            404: { description: 'User not found' }
+          }
+        }
+      },
+      '/users/{id}/reactivate/{role}': {
+        patch: {
+          summary: 'Reactivate a user by ID',
+          description: 'Reactivates a previously deactivated user (isActive = true).',
+          tags: ['Users'],
+          parameters: [
+            {
+              in: 'path',
+              name: 'id',
+              required: true,
+              schema: { type: 'string' },
+              description: 'User ID'
+            },
+            {
+              in: 'path',
+              name: 'role',
+              required: true,
+              schema: {
+                type: 'string',
+                enum: ['admin', 'coordinator', 'tutor', 'guardian']
+              },
+              description: 'User role'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'User reactivated successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ReactivateUserResponse' }
+                }
+              }
+            },
+            403: { description: 'Forbidden - user lacks permission to reactivate this user' },
+            404: { description: 'User not found' }
+          }
+        }
+      }
+    },
     components: {
       schemas: {
         UserLoginRequest: {
