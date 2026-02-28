@@ -376,6 +376,36 @@
           "message"
         ]
       },
+      "DeactivateUserResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
+      "DeleteUserResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
       "EditCoordinatorProfitShareInput": {
         "type": "object",
         "properties": {
@@ -3550,49 +3580,10 @@
         }
       }
     },
-    "/users/{id}": {
-      "delete": {
-        "summary": "Delete a user by ID",
-        "description": "Soft delete a user by marking them as inactive (isActive = false).\n- Admins and coordinators can delete users\n- Coordinators cannot delete admin or coordinator users\n",
-        "tags": [
-          "Users"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "User ID"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "User deleted successfully (soft delete)"
-          },
-          "400": {
-            "description": "Cannot delete due to pending payments",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteUserBlockedResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - user lacks permission to delete this user"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      },
-      "get": {
-        "summary": "Get a user by ID",
-        "description": "Returns user details.\n- For guardians/tutors, only active students are returned\n",
+    "/users/deactivate/{id}": {
+      "patch": {
+        "summary": "Deactivate a user by ID",
+        "description": "Soft delete a user by marking them as inactive (isActive = false).\n- Admins and coordinators can deactivate users\n- Coordinators cannot deactivate admin or coordinator users\n- Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years\n- Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing\n",
         "tags": [
           "Users"
         ],
@@ -3609,14 +3600,80 @@
         ],
         "responses": {
           "200": {
-            "description": "User found",
+            "description": "User deactivated successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserByIdResponse"
+                  "$ref": "#/components/schemas/DeactivateUserResponse"
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cannot deactivate due to pending or missing payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserBlockedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user lacks permission to deactivate this user"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/users/{id}/delete/{role}": {
+      "delete": {
+        "summary": "Permanently delete a user by ID",
+        "description": "Hard delete a user from the system.\n- Admins can delete any user\n- Coordinators can only delete users in their institution\n- Users with associated classes cannot be deleted (guardian/tutor)\n- Admin users cannot be deleted\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "coordinator",
+                "tutor",
+                "guardian"
+              ]
+            },
+            "description": "User role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user lacks permission to delete this user"
           },
           "404": {
             "description": "User not found"
@@ -3655,6 +3712,41 @@
           },
           "403": {
             "description": "Forbidden - user lacks permission to reactivate this user"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Get a user by ID",
+        "description": "Returns user details.\n- For guardians/tutors, only active students are returned\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserByIdResponse"
+                }
+              }
+            }
           },
           "404": {
             "description": "User not found"

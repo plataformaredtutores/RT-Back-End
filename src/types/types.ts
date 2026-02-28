@@ -924,6 +924,8 @@ export interface paths {
           page?: number;
           /** @description Items per page */
           pageSize?: number;
+          /** @description Include user bank account details */
+          includeBankAccount?: boolean;
         };
       };
       responses: {
@@ -972,13 +974,16 @@ export interface paths {
       };
     };
   };
-  "/users/{id}": {
+  "/users/deactivate/{id}": {
     /**
-     * Get a user by ID
-     * @description Returns user details.
-     * - For guardians/tutors, only active students are returned
+     * Deactivate a user by ID
+     * @description Soft delete a user by marking them as inactive (isActive = false).
+     * - Admins and coordinators can deactivate users
+     * - Coordinators cannot deactivate admin or coordinator users
+     * - Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years
+     * - Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing
      */
-    get: {
+    patch: {
       parameters: {
         path: {
           /** @description User ID */
@@ -986,11 +991,21 @@ export interface paths {
         };
       };
       responses: {
-        /** @description User found */
+        /** @description User deactivated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["UserByIdResponse"];
+            "application/json": components["schemas"]["DeactivateUserResponse"];
           };
+        };
+        /** @description Cannot deactivate due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to deactivate this user */
+        403: {
+          content: never;
         };
         /** @description User not found */
         404: {
@@ -998,28 +1013,30 @@ export interface paths {
         };
       };
     };
+  };
+  "/users/{id}/delete/{role}": {
     /**
-     * Delete a user by ID
-     * @description Soft delete a user by marking them as inactive (isActive = false).
-     * - Admins and coordinators can delete users
-     * - Coordinators cannot delete admin or coordinator users
+     * Permanently delete a user by ID
+     * @description Hard delete a user from the system.
+     * - Admins can delete any user
+     * - Coordinators can only delete users in their institution
+     * - Users with associated classes cannot be deleted (guardian/tutor)
+     * - Admin users cannot be deleted
      */
     delete: {
       parameters: {
         path: {
           /** @description User ID */
           id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
         };
       };
       responses: {
-        /** @description User deleted successfully (soft delete) */
-        204: {
-          content: never;
-        };
-        /** @description Cannot delete due to pending payments */
-        400: {
+        /** @description User deleted successfully */
+        200: {
           content: {
-            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
+            "application/json": components["schemas"]["DeleteUserResponse"];
           };
         };
         /** @description Forbidden - user lacks permission to delete this user */
@@ -1057,6 +1074,33 @@ export interface paths {
         /** @description Forbidden - user lacks permission to reactivate this user */
         403: {
           content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}": {
+    /**
+     * Get a user by ID
+     * @description Returns user details.
+     * - For guardians/tutors, only active students are returned
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User found */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserByIdResponse"];
+          };
         };
         /** @description User not found */
         404: {
@@ -1317,6 +1361,14 @@ export interface components {
       ok: boolean;
       message: string;
     };
+    DeactivateUserResponse: {
+      ok: boolean;
+      message: string;
+    };
+    DeleteUserResponse: {
+      ok: boolean;
+      message: string;
+    };
     EditCoordinatorProfitShareInput: {
       coordinatorId: number;
       profitShare: number;
@@ -1351,8 +1403,20 @@ export interface components {
       ok: boolean;
       message: string;
     };
-    UserWithInstitution: components["schemas"]["User"] & {
+    UserWithInstitution: components["schemas"]["User"] & ({
       Institution?: components["schemas"]["Institution"];
+      BankAccount?: components["schemas"]["UserBankAccount"];
+      coordinatorProfitShares?: components["schemas"]["CoordinatorProfitShare"][] | null;
+    });
+    CoordinatorProfitShare: {
+      id: number;
+      coordinatorId: number;
+      institutionId: number;
+      profitShare: number;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
     };
     UserBankAccount: {
       id?: number;

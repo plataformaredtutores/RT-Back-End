@@ -295,7 +295,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
   }
 }
 
-export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+export async function deactivateUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params
 
@@ -320,12 +320,19 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       return res.status(403).json({ ok: false, message: 'Only admins can deactivate coordinators.' })
     }
 
-    // Solo eliminar si no hay pagos pendientes (apoderado)
+    const now = new Date()
+    const twoYearsAgo = new Date(now)
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
+
+    // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (apoderado)
     if (user.role === 'guardian') {
       const pendingPayment = await prisma.classPayment.findFirst({
         where: {
           guardianPaymentStatus: PaymentStatus.pending,
           Class: {
+            date: {
+              gte: twoYearsAgo
+            },
             Student: {
               guardianId: userId
             }
@@ -338,6 +345,73 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
         return res.status(400).json({
           ok: false,
           message: 'No se puede eliminar un usuario con pagos pendientes'
+        })
+      }
+    }
+
+    // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (tutor)
+    if (user.role === 'tutor') {
+      const pendingPayment = await prisma.classPayment.findFirst({
+        where: {
+          tutorPaymentStatus: PaymentStatus.pending,
+          Class: {
+            date: {
+              gte: twoYearsAgo
+            },
+            tutorId: userId
+          }
+        },
+        select: { id: true }
+      })
+
+      if (pendingPayment) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un tutor con pagos pendientes'
+        })
+      }
+    }
+
+    // Coordinador: no debe tener pagos pendientes o inexistentes en los ultimos 12 meses,
+    // excluyendo el mes actual.
+    if (user.role === 'coordinator') {
+      const periodsToCheck: Array<{ periodYear: number; periodMonth: number }> = []
+      for (let i = 1; i <= 12; i += 1) {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - i)
+        periodsToCheck.push({
+          periodYear: d.getFullYear(),
+          periodMonth: d.getMonth() + 1
+        })
+      }
+
+      const payments = await prisma.coordinatorPayment.findMany({
+        where: {
+          coordinatorId: userId,
+          OR: periodsToCheck
+        },
+        select: {
+          periodYear: true,
+          periodMonth: true,
+          status: true
+        }
+      })
+
+      const paymentMap = new Map<string, PaymentStatus>()
+      payments.forEach((payment) => {
+        paymentMap.set(`${payment.periodYear}-${payment.periodMonth}`, payment.status)
+      })
+
+      const hasMissingOrPending = periodsToCheck.some((period) => {
+        const key = `${period.periodYear}-${period.periodMonth}`
+        const status = paymentMap.get(key)
+        return !status || status === PaymentStatus.pending
+      })
+
+      if (hasMissingOrPending) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un coordinador con pagos pendientes'
         })
       }
     }
@@ -686,6 +760,82 @@ export async function getGuardianLinks(req: Request, res: Response, next: NextFu
 
     res.json(guardianLinks)
   } catch (err: PrismaClientKnownRequestError | any) {
+    next(err)
+  }
+}
+
+export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id, role } = req.params
+
+    const userRole = (req as any).auth?.role;
+    const userInstitutionId = (req as any).auth?.iid;
+
+    if (userRole !== 'admin' && userRole !== 'coordinator') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
+    }    
+
+    if (role === 'admin') {
+      return res.status(403).json({ ok: false, message: 'Admins cannot be deleted.' })
+    }
+
+    if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator') {
+      return res.status(400).json({ ok: false, message: 'Invalid role' })
+    }
+
+    if (role === 'guardian') {
+      const hasClasses = await prisma.class.findFirst({
+        where: {
+          Student: {
+            guardianId: Number(id)
+          }
+        },
+        select: { id: true }
+      })
+
+      if (hasClasses) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un usuario con clases asociadas'
+        })
+      }
+    }
+
+    if (role === 'tutor') {
+      const hasClasses = await prisma.class.findFirst({
+        where: {
+          tutorId: Number(id)
+        },
+        select: { id: true }
+      })
+
+      if (hasClasses) {
+        return res.status(400).json({
+          ok: false,
+          message: 'No se puede eliminar un usuario con clases asociadas'
+        })
+      }
+    }
+
+    if (userRole === 'coordinator') {
+      await prisma.user.delete({
+        where: {
+          id: Number(id),
+          Institution: {
+            is: {
+              id: Number(userInstitutionId)
+            }
+          }
+        }
+      })
+    } else {
+      await prisma.user.delete({
+        where: { id: Number(id) }
+      })
+    }
+
+    res.status(204).send()
+  } catch (err) {
     next(err)
   }
 }
