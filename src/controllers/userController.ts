@@ -343,7 +343,7 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
       if (pendingPayment) {
         return res.status(400).json({
           ok: false,
-          message: 'No se puede desactivar un usuario con pagos pendientes'
+          message: 'No se puede desactivar un apoderado con pagos pendientes'
         })
       }
     }
