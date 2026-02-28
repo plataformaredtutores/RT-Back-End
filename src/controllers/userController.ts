@@ -826,22 +826,32 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       }
     }
     // TO DO: Revisar criterio de eliminacion
-    if (userRole === 'coordinator') {
-      await prisma.user.delete({
-        where: {
-          id: Number(id),
-          Institution: {
-            is: {
-              id: Number(userInstitutionId)
+    await prisma.$transaction(async (tx) => {
+      if (userRole === 'coordinator') {
+        const scopedUser = await tx.user.findFirst({
+          where: {
+            id: Number(id),
+            Institution: {
+              is: {
+                id: Number(userInstitutionId)
+              }
             }
-          }
+          },
+          select: { id: true }
+        })
+
+        if (!scopedUser) {
+          return res.status(404).json({ ok: false, message: 'User not found' })
         }
-      })
-    } else {
-      await prisma.user.delete({
+      }
+
+      await tx.userBankAccount.deleteMany({ where: { userId: Number(id) } })
+      await tx.refreshToken.deleteMany({ where: { userId: Number(id) } })
+
+      await tx.user.delete({
         where: { id: Number(id) }
       })
-    }
+    })
 
     res.status(204).send()
   } catch (err) {
