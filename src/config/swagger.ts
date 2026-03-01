@@ -98,6 +98,12 @@ const options: swaggerJSDoc.Options = {
     },
     components: {
       schemas: {
+        MonthYear: {
+          type: 'string',
+          pattern: '^(0[1-9]|1[0-2])-(\\d{4})$',
+          example: '02-2026',
+          description: 'Month and year in MM-YYYY format'
+        },
         UserLoginRequest: {
           type: 'object',
           properties: {
@@ -266,6 +272,44 @@ const options: swaggerJSDoc.Options = {
             message: { type: 'string' },
           },
           required: ['ok', 'message'],
+        },
+        EditAdminProfitShareInput: {
+          type: 'object',
+          description: 'Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC).',
+          properties: {
+            profitShare: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              description: 'New admin profit share percentage (0-100)',
+            },
+          },
+          required: ['profitShare'],
+        },
+        EditAdminProfitShareResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                profitShare: { type: 'number' },
+                availableSince: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'Effective start timestamp (next day at 00:00:00.000 UTC).'
+                },
+                availableUntil: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'Effective end timestamp (far-future while active).'
+                },
+              },
+            },
+          },
+          required: ['ok', 'message', 'data'],
         },
         EditCoordinatorProfitShareInput: {
           type: 'object',

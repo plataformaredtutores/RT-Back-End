@@ -9,6 +9,7 @@ import feeRoutes from './feeRoutes'
 import cashFlowRoutes from './cashFlowRoutes'
 import tutorRoutes from './tutorRoutes'
 import coordinatorRoutes from './coordinatorRoutes'
+import adminRoutes from './adminRoutes'
 import { health } from '../controllers/healthController'
 import { requireAuth } from '../middlewares/auth'
 import { authorize } from '../middlewares/authorize'
@@ -26,4 +27,5 @@ export function setRoutes(app: Express) {
   app.use('/fees', authorize(['admin', 'coordinator', 'tutor','guardian']), feeRoutes)
   app.use('/tutors', authorize(['admin', 'coordinator']), tutorRoutes)
   app.use('/cashflow', cashFlowRoutes)
+  app.use('/admin', authorize(['admin']), adminRoutes)
 }

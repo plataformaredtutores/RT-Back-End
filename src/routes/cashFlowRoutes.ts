@@ -29,16 +29,14 @@ const router = Router();
  *         name: startDate
  *         required: true
  *         schema:
- *           type: string
- *           format: date-time
- *         description: Start date (must be the first day of the month)
+ *           $ref: '#/components/schemas/MonthYear'
+ *         description: Start month (MM-YYYY)
  *       - in: query
  *         name: endDate
  *         required: true
  *         schema:
- *           type: string
- *           format: date-time
- *         description: End date (must be the last day of the month)
+ *           $ref: '#/components/schemas/MonthYear'
+ *         description: End month (MM-YYYY)
  *       - in: query
  *         name: institutionId
  *         schema:
@@ -138,16 +136,14 @@ router.get('/summary', getCashFlowSummary)
  *         name: startDate
  *         required: true
  *         schema:
- *           type: string
- *           format: date-time
- *         description: Start date (must be the first day of the month)
+ *           $ref: '#/components/schemas/MonthYear'
+ *         description: Start month (MM-YYYY)
  *       - in: query
  *         name: endDate
  *         required: true
  *         schema:
- *           type: string
- *           format: date-time
- *         description: End date (must be the last day of the month)
+ *           $ref: '#/components/schemas/MonthYear'
+ *         description: End month (MM-YYYY)
  *       - in: query
  *         name: filteredUserRole
  *         required: false

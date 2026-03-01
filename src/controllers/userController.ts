@@ -788,6 +788,13 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       return res.status(403).json({ ok: false, message: 'Admins cannot be deleted.' })
     }
 
+    if (role === 'coordinator' && userRole === 'coordinator') {
+      return res.status(403).json({
+        ok: false,
+        message: 'Only admins can delete coordinators.'
+      })
+    }
+
     if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator') {
       return res.status(400).json({ ok: false, message: 'Invalid role' })
     }

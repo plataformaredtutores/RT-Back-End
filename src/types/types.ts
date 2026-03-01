@@ -86,6 +86,35 @@ export interface paths {
       };
     };
   };
+  "/admin/profit-share": {
+    /**
+     * Edit admin profit share
+     * @description Deactivates the current admin profit share and creates a new one. The current share remains active until today 23:59:59.999 UTC, and the new share becomes active tomorrow at 00:00:00.000 UTC. Validates that for every institution the new admin share plus the active coordinator shares (at the new effective timestamp) does not exceed 100%. Both operations run inside a database transaction.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditAdminProfitShareInput"];
+        };
+      };
+      responses: {
+        /** @description Admin profit share updated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["EditAdminProfitShareResponse"];
+          };
+        };
+        /** @description Invalid input or combined shares exceed 100% */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/auth/login": {
     /** User login */
     post: {
@@ -231,10 +260,10 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          /** @description Start date (must be the first day of the month) */
-          startDate: string;
-          /** @description End date (must be the last day of the month) */
-          endDate: string;
+          /** @description Start month (MM-YYYY) */
+          startDate: components["schemas"]["MonthYear"];
+          /** @description End month (MM-YYYY) */
+          endDate: components["schemas"]["MonthYear"];
           /** @description Optional filter by institution ID (Only for admin role) */
           institutionId?: number;
         };
@@ -310,10 +339,10 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          /** @description Start date (must be the first day of the month) */
-          startDate: string;
-          /** @description End date (must be the last day of the month) */
-          endDate: string;
+          /** @description Start month (MM-YYYY) */
+          startDate: components["schemas"]["MonthYear"];
+          /** @description End month (MM-YYYY) */
+          endDate: components["schemas"]["MonthYear"];
           /** @description The role to filter the details by (e.g. coordinator, tutor, guardian) */
           filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
           /** @description Optional filter by institution ID */
@@ -1393,6 +1422,11 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /**
+     * @description Month and year in MM-YYYY format
+     * @example 02-2026
+     */
+    MonthYear: string;
     UserLoginRequest: {
       /** Format: email */
       email: string;
@@ -1505,6 +1539,29 @@ export interface components {
     DeleteUserResponse: {
       ok: boolean;
       message: string;
+    };
+    /** @description Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC). */
+    EditAdminProfitShareInput: {
+      /** @description New admin profit share percentage (0-100) */
+      profitShare: number;
+    };
+    EditAdminProfitShareResponse: {
+      ok: boolean;
+      message: string;
+      data: {
+        id?: number;
+        profitShare?: number;
+        /**
+         * Format: date-time
+         * @description Effective start timestamp (next day at 00:00:00.000 UTC).
+         */
+        availableSince?: string;
+        /**
+         * Format: date-time
+         * @description Effective end timestamp (far-future while active).
+         */
+        availableUntil?: string;
+      };
     };
     EditCoordinatorProfitShareInput: {
       coordinatorId: number;
