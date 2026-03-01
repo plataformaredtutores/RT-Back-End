@@ -890,11 +890,11 @@
     },
     "/classes/class-payments/{classPaymentId}/status": {
       "patch": {
-        "summary": "Update class payment status",
+        "summary": "Update class payment fields",
         "tags": [
           "Classes"
         ],
-        "description": "Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.\nProvide at least one of the two fields.\n",
+        "description": "Updates guardianPaymentStatus, tutorPaymentStatus and/or guardianPaymentType.\nAt least one field must be provided.\n",
         "parameters": [
           {
             "in": "path",
@@ -917,14 +917,10 @@
         },
         "responses": {
           "200": {
-            "description": "Updated ClassPayment",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClassPayment"
-                }
-              }
-            }
+            "description": "Updated ClassPayment"
+          },
+          "400": {
+            "description": "At least one field must be provided"
           },
           "403": {
             "description": "Forbidden"
@@ -3648,46 +3644,21 @@
         ]
       },
       "UpdateClassPaymentStatusInput": {
-        "description": "Provide at least one of guardianPaymentStatus or tutorPaymentStatus.",
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "guardianPaymentStatus": {
-                "$ref": "#/components/schemas/PaymentStatus"
-              }
-            },
-            "required": [
-              "guardianPaymentStatus"
-            ]
+        "description": "Provide at least one field to update.",
+        "type": "object",
+        "properties": {
+          "guardianPaymentStatus": {
+            "$ref": "#/components/schemas/PaymentStatus"
           },
-          {
-            "type": "object",
-            "properties": {
-              "tutorPaymentStatus": {
-                "$ref": "#/components/schemas/PaymentStatus"
-              }
-            },
-            "required": [
-              "tutorPaymentStatus"
-            ]
+          "tutorPaymentStatus": {
+            "$ref": "#/components/schemas/PaymentStatus"
           },
-          {
-            "type": "object",
-            "properties": {
-              "guardianPaymentStatus": {
-                "$ref": "#/components/schemas/PaymentStatus"
-              },
-              "tutorPaymentStatus": {
-                "$ref": "#/components/schemas/PaymentStatus"
-              }
-            },
-            "required": [
-              "guardianPaymentStatus",
-              "tutorPaymentStatus"
-            ]
+          "guardianPaymentType": {
+            "$ref": "#/components/schemas/PaymentType"
           }
-        ]
+        },
+        "additionalProperties": false,
+        "minProperties": 1
       },
       "CreateUserWithBankAccountInput": {
         "allOf": [

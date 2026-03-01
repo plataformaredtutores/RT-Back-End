@@ -703,22 +703,37 @@ export async function deleteClass(req: Request, res: Response, next: NextFunctio
   }
 }
 
-export async function updateClassPaymentStatus(req: Request, res: Response, next: NextFunction) {
+export async function updateClassPaymentStatus(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const { classPaymentId } = req.params
-    const { 
+
+    const {
       guardianPaymentStatus,
-      tutorPaymentStatus
+      tutorPaymentStatus,
+      guardianPaymentType,
     } = req.body
 
+    const data: any = {}
+
+    if (guardianPaymentStatus !== undefined) {
+      data.guardianPaymentStatus = guardianPaymentStatus
+    }
+
+    if (tutorPaymentStatus !== undefined) {
+      data.tutorPaymentStatus = tutorPaymentStatus
+    }
+
+    if (guardianPaymentType !== undefined) {
+      data.guardianPaymentType = guardianPaymentType
+    }
+
     const updatedClassPayment = await prisma.classPayment.update({
-      where: {
-        id: Number(classPaymentId)
-      },
-      data: {
-        guardianPaymentStatus,
-        tutorPaymentStatus
-      }
+      where: { id: Number(classPaymentId) },
+      data
     })
 
     res.json(updatedClassPayment)

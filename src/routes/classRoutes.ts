@@ -204,11 +204,11 @@ router.delete('/:classId', deleteClass)
  * @openapi
  * /classes/class-payments/{classPaymentId}/status:
  *   patch:
- *     summary: Update class payment status
+ *     summary: Update class payment fields
  *     tags: [Classes]
  *     description: |
- *       Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.
- *       Provide at least one of the two fields.
+ *       Updates guardianPaymentStatus, tutorPaymentStatus and/or guardianPaymentType.
+ *       At least one field must be provided.
  *     parameters:
  *       - in: path
  *         name: classPaymentId
@@ -224,10 +224,8 @@ router.delete('/:classId', deleteClass)
  *     responses:
  *       200:
  *         description: Updated ClassPayment
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ClassPayment'
+ *       400:
+ *         description: At least one field must be provided
  *       403:
  *         description: Forbidden
  */
