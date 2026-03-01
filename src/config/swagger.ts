@@ -275,6 +275,7 @@ const options: swaggerJSDoc.Options = {
         },
         EditAdminProfitShareInput: {
           type: 'object',
+          description: 'Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC).',
           properties: {
             profitShare: {
               type: 'number',
@@ -295,8 +296,16 @@ const options: swaggerJSDoc.Options = {
               properties: {
                 id: { type: 'integer' },
                 profitShare: { type: 'number' },
-                availableSince: { type: 'string', format: 'date-time' },
-                availableUntil: { type: 'string', format: 'date-time' },
+                availableSince: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'Effective start timestamp (next day at 00:00:00.000 UTC).'
+                },
+                availableUntil: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'Effective end timestamp (far-future while active).'
+                },
               },
             },
           },

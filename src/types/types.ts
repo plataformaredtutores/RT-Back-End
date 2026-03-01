@@ -89,7 +89,7 @@ export interface paths {
   "/admin/profit-share": {
     /**
      * Edit admin profit share
-     * @description Deactivates the current admin profit share and creates a new one. Validates that for every institution the new admin share plus the active coordinator shares does not exceed 100%. Both operations run inside a database transaction.
+     * @description Deactivates the current admin profit share and creates a new one. The current share remains active until today 23:59:59.999 UTC, and the new share becomes active tomorrow at 00:00:00.000 UTC. Validates that for every institution the new admin share plus the active coordinator shares (at the new effective timestamp) does not exceed 100%. Both operations run inside a database transaction.
      */
     patch: {
       requestBody: {
@@ -1540,6 +1540,7 @@ export interface components {
       ok: boolean;
       message: string;
     };
+    /** @description Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC). */
     EditAdminProfitShareInput: {
       /** @description New admin profit share percentage (0-100) */
       profitShare: number;
@@ -1550,9 +1551,15 @@ export interface components {
       data: {
         id?: number;
         profitShare?: number;
-        /** Format: date-time */
+        /**
+         * Format: date-time
+         * @description Effective start timestamp (next day at 00:00:00.000 UTC).
+         */
         availableSince?: string;
-        /** Format: date-time */
+        /**
+         * Format: date-time
+         * @description Effective end timestamp (far-future while active).
+         */
         availableUntil?: string;
       };
     };

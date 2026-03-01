@@ -52,16 +52,17 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
       }
     }
 
-    // Use a transaction to deactivate the current profit share and create the new one
+    // Use a transaction to deactivate the current active share and create the new one
     const newAdminProfitShare = await prisma.$transaction(async (tx) => {
-      // Find the single currently active admin profit share
+      // Find the single active share at the new effective timestamp
       const currentActive = await tx.adminProfitShare.findFirst({
         where: {
-          availableUntil: { gt: now }
+          availableSince: { lte: nextDayStartUtc },
+          availableUntil: { gte: nextDayStartUtc }
         }
       });
 
-      // Deactivate it at the end of today, so current day keeps the current percentage
+      // Deactivate it at end of today so today keeps current percentage
       if (currentActive) {
         await tx.adminProfitShare.update({
           where: { id: currentActive.id },

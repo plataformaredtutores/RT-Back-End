@@ -10,8 +10,11 @@ const router = Router()
  *     summary: Edit admin profit share
  *     description: >
  *       Deactivates the current admin profit share and creates a new one.
+ *       The current share remains active until today 23:59:59.999 UTC,
+ *       and the new share becomes active tomorrow at 00:00:00.000 UTC.
  *       Validates that for every institution the new admin share plus the active
- *       coordinator shares does not exceed 100%. Both operations run inside a
+ *       coordinator shares (at the new effective timestamp) does not exceed 100%.
+ *       Both operations run inside a
  *       database transaction.
  *     tags: [Admin]
  *     requestBody:
