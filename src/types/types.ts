@@ -520,9 +520,9 @@ export interface paths {
   };
   "/classes/class-payments/{classPaymentId}/status": {
     /**
-     * Update class payment status
-     * @description Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.
-     * Provide at least one of the two fields.
+     * Update class payment fields
+     * @description Updates guardianPaymentStatus, tutorPaymentStatus and/or guardianPaymentType.
+     * At least one field must be provided.
      */
     patch: {
       parameters: {
@@ -538,9 +538,11 @@ export interface paths {
       responses: {
         /** @description Updated ClassPayment */
         200: {
-          content: {
-            "application/json": components["schemas"]["ClassPayment"];
-          };
+          content: never;
+        };
+        /** @description At least one field must be provided */
+        400: {
+          content: never;
         };
         /** @description Forbidden */
         403: {
@@ -1817,15 +1819,12 @@ export interface components {
       Student: components["schemas"]["StudentWithGuardianSummary"];
       Institution: components["schemas"]["InstitutionSummary"];
     };
-    /** @description Provide at least one of guardianPaymentStatus or tutorPaymentStatus. */
-    UpdateClassPaymentStatusInput: OneOf<[{
-      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
-    }, {
-      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
-    }, {
-      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
-      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
-    }]>;
+    /** @description Provide at least one field to update. */
+    UpdateClassPaymentStatusInput: {
+      guardianPaymentStatus?: components["schemas"]["PaymentStatus"];
+      tutorPaymentStatus?: components["schemas"]["PaymentStatus"];
+      guardianPaymentType?: components["schemas"]["PaymentType"];
+    };
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
       /** @description Profit share percentage for coordinator users. Defaults to 30 when omitted. */

@@ -819,31 +819,15 @@ const options: swaggerJSDoc.Options = {
         },
 
         UpdateClassPaymentStatusInput: {
-          description: 'Provide at least one of guardianPaymentStatus or tutorPaymentStatus.',
-          oneOf: [
-            {
-              type: 'object',
-              properties: {
-                guardianPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
-              },
-              required: ['guardianPaymentStatus']
-            },
-            {
-              type: 'object',
-              properties: {
-                tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
-              },
-              required: ['tutorPaymentStatus']
-            },
-            {
-              type: 'object',
-              properties: {
-                guardianPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
-                tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
-              },
-              required: ['guardianPaymentStatus', 'tutorPaymentStatus']
-            }
-          ]
+          description: 'Provide at least one field to update.',
+          type: 'object',
+          properties: {
+            guardianPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
+            tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
+            guardianPaymentType: { $ref: '#/components/schemas/PaymentType' }
+          },
+          additionalProperties: false,
+          minProperties: 1
         },
         CreateUserWithBankAccountInput: {
           allOf: [
