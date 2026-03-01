@@ -873,7 +873,7 @@ const options: swaggerJSDoc.Options = {
           required: ['ok', 'user']
         },
         UserByIdResponse: {
-          description: 'UserDetail with optional coordinatorProfitShare field. coordinatorProfitShare is only present when user role is coordinator.',
+          description: 'UserDetail with optional profit share fields. coordinatorProfitShare is only present when user role is coordinator. adminProfitShare is only present when user role is admin.',
           allOf: [
             { $ref: '#/components/schemas/UserDetail' },
             {
@@ -883,6 +883,11 @@ const options: swaggerJSDoc.Options = {
                   type: 'number', 
                   nullable: true,
                   description: 'Profit share percentage for coordinator users. Only present when user role is coordinator.'
+                },
+                adminProfitShare: {
+                  type: 'number',
+                  nullable: true,
+                  description: 'Current active profit share percentage for admin users. Only present when user role is admin.'
                 }
               }
             }

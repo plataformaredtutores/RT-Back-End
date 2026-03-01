@@ -538,7 +538,7 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const response = { ...user } as typeof user & { coordinatorProfitShare?: number }
+    const response = { ...user } as typeof user & { coordinatorProfitShare?: number; adminProfitShare?: number }
     // Only return active students for guardians and tutors
     if (user.role === 'guardian' || user.role === 'tutor') {
       response.Students = (response.Students ?? []).filter((s: any) => s?.isActive !== false)
@@ -555,6 +555,26 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
       })
       if (profit) {
         response.coordinatorProfitShare = Number(profit.profitShare)
+      }
+    }
+
+    if (user.role === 'admin') {
+      const now = new Date()
+      const profit = await prisma.adminProfitShare.findFirst({
+        where: {
+          availableSince: {
+            lte: now
+          },
+          availableUntil: {
+            gte: now
+          }
+        },
+        select: {
+          profitShare: true
+        }
+      })
+      if (profit) {
+        response.adminProfitShare = Number(profit.profitShare)
       }
     }
 

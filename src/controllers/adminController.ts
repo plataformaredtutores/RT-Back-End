@@ -47,7 +47,7 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
       if (coordinatorTotal + profitShare > 100) {
         return res.status(400).json({
           ok: false,
-          message: `The new admin profit share (${profitShare}%) combined with the current coordinator profit shares (${coordinatorTotal}%) exceeds 100% for institution "${institution.name}"`
+          message: `El porcentaje excede el 100% con la institución "${institution.name}"`
         });
       }
     }
