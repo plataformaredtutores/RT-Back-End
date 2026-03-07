@@ -10,6 +10,111 @@ type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> &
 type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
 
 export interface paths {
+  "/users/deactivate/{id}/{role}": {
+    /**
+     * Deactivate a user by ID
+     * @description Soft delete a user by marking them as inactive (isActive = false).
+     * - Admins and coordinators can deactivate users
+     * - Coordinators cannot deactivate admin or coordinator users
+     * - Guardians/tutors: cannot deactivate if there are pending payments in the last 2 years
+     * - Coordinators: cannot deactivate if any of the last 12 months (excluding current) are pending or missing
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
+        };
+      };
+      responses: {
+        /** @description User deactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeactivateUserResponse"];
+          };
+        };
+        /** @description Cannot deactivate due to pending or missing payments */
+        400: {
+          content: {
+            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to deactivate this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/users/{id}/reactivate/{role}": {
+    /**
+     * Reactivate a user by ID
+     * @description Reactivates a previously deactivated user (isActive = true).
+     * - Admins and coordinators can reactivate users
+     * - Coordinators cannot reactivate admin or coordinator users
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
+        };
+      };
+      responses: {
+        /** @description User reactivated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["ReactivateUserResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to reactivate this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/admin/profit-share": {
+    /**
+     * Edit admin profit share
+     * @description Deactivates the current admin profit share and creates a new one. The current share remains active until today 23:59:59.999 UTC, and the new share becomes active tomorrow at 00:00:00.000 UTC. Validates that for every institution the new admin share plus the active coordinator shares (at the new effective timestamp) does not exceed 100%. Both operations run inside a database transaction.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["EditAdminProfitShareInput"];
+        };
+      };
+      responses: {
+        /** @description Admin profit share updated successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["EditAdminProfitShareResponse"];
+          };
+        };
+        /** @description Invalid input or combined shares exceed 100% */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/auth/login": {
     /** User login */
     post: {
@@ -155,10 +260,10 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          /** @description Start date (must be the first day of the month) */
-          startDate: string;
-          /** @description End date (must be the last day of the month) */
-          endDate: string;
+          /** @description Start month (MM-YYYY) */
+          startDate: components["schemas"]["MonthYear"];
+          /** @description End month (MM-YYYY) */
+          endDate: components["schemas"]["MonthYear"];
           /** @description Optional filter by institution ID (Only for admin role) */
           institutionId?: number;
         };
@@ -219,29 +324,63 @@ export interface paths {
     /**
      * Get cash flow details
      * @description Returns detailed financial information separated by user role.
+     * Results are ordered alphabetically by name.
      *
-     * **Logic based on Filtered User Role:**
+     * **Logic based on `filteredUserRole`:**
      *
      * For **coordinator**:
-     * - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
+     * - Returns a list of coordinators with their calculated profit shares and total amount for the specified period.
+     * - Use `paymentStatus` to filter:
+     *   - `pending` — only coordinators with at least one pending payment.
+     *   - `completed` — only coordinators where all payments are completed.
+     *   - *(omit)* — all coordinators regardless of status.
      *
      * For **tutor**:
-     * - Returns a list of tutors with their total earnings and payment status for the specified period.
+     * - Returns a list of tutors with their class earnings for the specified period.
+     * - Use `paymentStatus` to filter classes by tutor payment status (`pending` or `completed`).
+     * - Each tutor entry includes a computed `totalAmount` and overall `paymentStatus`.
      *
      * For **guardian**:
-     * - Returns a list of guardians with their total payments and payment status for the specified period.
+     * - Returns a list of guardians with their total class payments for the specified period.
+     * - Use `filteredGuardianPaymentStatus` to filter:
+     *   - `pending` — only pending (bank transfer) payments.
+     *   - `bankTransfer` — completed bank-transfer payments and all pending ones.
+     *   - `card` — only completed card payments.
+     *   - `completed` — all completed payments regardless of type.
+     *   - *(omit)* — all guardians.
+     * - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
+     *   (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
+     *
+     * For **admin**:
+     * - Admin details are already included in the `/cashflow/summary` response.
+     *   This endpoint returns a message redirecting to the summary.
      */
     get: {
       parameters: {
         query: {
-          /** @description Start date (must be the first day of the month) */
-          startDate: string;
-          /** @description End date (must be the last day of the month) */
-          endDate: string;
-          /** @description The role to filter the details by (e.g. coordinator, tutor, guardian) */
+          /** @description Start month (MM-YYYY) */
+          startDate: components["schemas"]["MonthYear"];
+          /** @description End month (MM-YYYY) */
+          endDate: components["schemas"]["MonthYear"];
+          /** @description The role to filter the details by */
           filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
-          /** @description Optional filter by institution ID */
+          /** @description Optional filter by institution ID (admin only) */
           institutionId?: number;
+          /**
+           * @description Filter by payment status. Applies when `filteredUserRole` is `coordinator` or `tutor`.
+           * - `coordinator`: `pending` returns coordinators with at least one pending payment;
+           *   `completed` returns coordinators where all payments are completed.
+           * - `tutor`: filters class payments included for each tutor by tutor payment status.
+           */
+          paymentStatus?: "pending" | "completed";
+          /**
+           * @description Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
+           * - `pending` — pending payments (always bank transfer).
+           * - `bankTransfer` — completed bank-transfer payments plus all pending ones.
+           * - `card` — completed card payments only.
+           * - `completed` — all completed payments regardless of type.
+           */
+          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "completed";
           /** @description Page number for pagination */
           page?: number;
           /** @description Number of items per page */
@@ -249,21 +388,74 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Cash flow details */
+        /** @description Cash flow details (shape varies by `filteredUserRole`) */
         200: {
           content: {
-            "application/json": {
+            "application/json": OneOf<[({
+                coordinator?: {
+                  id?: number;
+                  name?: string;
+                  email?: string;
+                  Institution?: {
+                    id?: number;
+                    name?: string;
+                  };
+                };
+                coordinatorPayments?: ({
+                    amount?: number;
+                    /** @enum {string} */
+                    status?: "pending" | "completed";
+                    /** Format: date-time */
+                    period?: string;
+                  })[];
+                /** @description Total profit share amount (pending + completed) for the period */
+                amount?: number;
+              })[], ({
                 id?: number;
                 name?: string;
                 email?: string;
-              }[];
+                Institution?: {
+                  id?: number;
+                  name?: string;
+                };
+                /** @description Sum of tutor earnings for the period */
+                totalAmount?: number;
+                /**
+                 * @description Overall payment status (pending if any class payment is pending)
+                 * @enum {string}
+                 */
+                paymentStatus?: "pending" | "completed";
+              })[], ({
+                id?: number;
+                name?: string;
+                email?: string;
+                Institution?: {
+                  id?: number;
+                  name?: string;
+                };
+                /** @description Sum of guardian payments for the period */
+                totalAmount?: number;
+                /**
+                 * @description Overall payment status (pending if any class payment is pending)
+                 * @enum {string}
+                 */
+                paymentStatus?: "pending" | "completed";
+                /**
+                 * @description Payment type derived from completed payments.
+                 * `card` or `bankTransfer` if all completed payments share the same type;
+                 * `null` when types are mixed or there are no completed payments.
+                 *
+                 * @enum {string|null}
+                 */
+                paymentType?: "card" | "bankTransfer" | null;
+              })[]]>;
           };
         };
-        /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
+        /** @description Bad Request (Missing dates or invalid date format) */
         400: {
           content: never;
         };
-        /** @description Forbidden (Invalid role or permissions) */
+        /** @description Forbidden (Coordinator attempting to view coordinator or admin details) */
         403: {
           content: never;
         };
@@ -415,9 +607,9 @@ export interface paths {
   };
   "/classes/class-payments/{classPaymentId}/status": {
     /**
-     * Update class payment status
-     * @description Updates guardianPaymentStatus and/or tutorPaymentStatus for a ClassPayment.
-     * Provide at least one of the two fields.
+     * Update class payment fields
+     * @description Updates guardianPaymentStatus, tutorPaymentStatus and/or guardianPaymentType.
+     * At least one field must be provided.
      */
     patch: {
       parameters: {
@@ -433,9 +625,11 @@ export interface paths {
       responses: {
         /** @description Updated ClassPayment */
         200: {
-          content: {
-            "application/json": components["schemas"]["ClassPayment"];
-          };
+          content: never;
+        };
+        /** @description At least one field must be provided */
+        400: {
+          content: never;
         };
         /** @description Forbidden */
         403: {
@@ -1107,6 +1301,42 @@ export interface paths {
       };
     };
   };
+  "/users/{id}/delete/{role}": {
+    /**
+     * Permanently delete a user by ID
+     * @description Hard delete a user from the system.
+     * - Admins can delete any user
+     * - Coordinators can only delete users in their institution
+     * - Users with associated classes cannot be deleted (guardian/tutor)
+     * - Admin users cannot be deleted
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description User ID */
+          id: string;
+          /** @description User role */
+          role: "admin" | "coordinator" | "tutor" | "guardian";
+        };
+      };
+      responses: {
+        /** @description User deleted successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeleteUserResponse"];
+          };
+        };
+        /** @description Forbidden - user lacks permission to delete this user */
+        403: {
+          content: never;
+        };
+        /** @description User not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/users/{id}": {
     /**
      * Get a user by ID
@@ -1126,72 +1356,6 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["UserByIdResponse"];
           };
-        };
-        /** @description User not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a user by ID
-     * @description Soft delete a user by marking them as inactive (isActive = false).
-     * - Admins and coordinators can delete users
-     * - Coordinators cannot delete admin or coordinator users
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description User ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description User deleted successfully (soft delete) */
-        204: {
-          content: never;
-        };
-        /** @description Cannot delete due to pending payments */
-        400: {
-          content: {
-            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
-          };
-        };
-        /** @description Forbidden - user lacks permission to delete this user */
-        403: {
-          content: never;
-        };
-        /** @description User not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/reactivate": {
-    /**
-     * Reactivate a user by ID
-     * @description Reactivates a previously deactivated user (isActive = true).
-     * - Admins and coordinators can reactivate users
-     * - Coordinators cannot reactivate admin or coordinator users
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description User ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description User reactivated successfully */
-        200: {
-          content: {
-            "application/json": components["schemas"]["ReactivateUserResponse"];
-          };
-        };
-        /** @description Forbidden - user lacks permission to reactivate this user */
-        403: {
-          content: never;
         };
         /** @description User not found */
         404: {
@@ -1347,6 +1511,11 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /**
+     * @description Month and year in MM-YYYY format
+     * @example 02-2026
+     */
+    MonthYear: string;
     UserLoginRequest: {
       /** Format: email */
       email: string;
@@ -1451,6 +1620,37 @@ export interface components {
     ReactivateUserResponse: {
       ok: boolean;
       message: string;
+    };
+    DeactivateUserResponse: {
+      ok: boolean;
+      message: string;
+    };
+    DeleteUserResponse: {
+      ok: boolean;
+      message: string;
+    };
+    /** @description Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC). */
+    EditAdminProfitShareInput: {
+      /** @description New admin profit share percentage (0-100) */
+      profitShare: number;
+    };
+    EditAdminProfitShareResponse: {
+      ok: boolean;
+      message: string;
+      data: {
+        id?: number;
+        profitShare?: number;
+        /**
+         * Format: date-time
+         * @description Effective start timestamp (next day at 00:00:00.000 UTC).
+         */
+        availableSince?: string;
+        /**
+         * Format: date-time
+         * @description Effective end timestamp (far-future while active).
+         */
+        availableUntil?: string;
+      };
     };
     EditCoordinatorProfitShareInput: {
       coordinatorId: number;
@@ -1706,15 +1906,12 @@ export interface components {
       Student: components["schemas"]["StudentWithGuardianSummary"];
       Institution: components["schemas"]["InstitutionSummary"];
     };
-    /** @description Provide at least one of guardianPaymentStatus or tutorPaymentStatus. */
-    UpdateClassPaymentStatusInput: OneOf<[{
-      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
-    }, {
-      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
-    }, {
-      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
-      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
-    }]>;
+    /** @description Provide at least one field to update. */
+    UpdateClassPaymentStatusInput: {
+      guardianPaymentStatus?: components["schemas"]["PaymentStatus"];
+      tutorPaymentStatus?: components["schemas"]["PaymentStatus"];
+      guardianPaymentType?: components["schemas"]["PaymentType"];
+    };
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
       /** @description Profit share percentage for coordinator users. Defaults to 30 when omitted. */
@@ -1724,10 +1921,12 @@ export interface components {
       ok: boolean;
       user: components["schemas"]["User"];
     };
-    /** @description UserDetail with optional coordinatorProfitShare field. coordinatorProfitShare is only present when user role is coordinator. */
+    /** @description UserDetail with optional profit share fields. coordinatorProfitShare is only present when user role is coordinator. adminProfitShare is only present when user role is admin. */
     UserByIdResponse: components["schemas"]["UserDetail"] & ({
       /** @description Profit share percentage for coordinator users. Only present when user role is coordinator. */
       coordinatorProfitShare?: number | null;
+      /** @description Current active profit share percentage for admin users. Only present when user role is admin. */
+      adminProfitShare?: number | null;
     });
     EditUserPersonalInformationInput: {
       name: string;

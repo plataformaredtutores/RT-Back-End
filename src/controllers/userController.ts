@@ -148,8 +148,6 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
     }
 
-
-
     // Condiciones para cada rol
     if (role !== 'admin' && institutionId == null && userRole !== 'coordinator') {
       return res.status(400).json({
@@ -211,7 +209,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       data: {
         role,
         name,
-        email,
+        email: email.toLowerCase(),
         rut,
         phone,
         address,
@@ -222,18 +220,11 @@ export async function createUser(req: Request, res: Response, next: NextFunction
     })
 
     if (role === 'coordinator') {
-      let resolvedProfitShare = coordinatorProfitShare ? Number(coordinatorProfitShare) : 30
-
-      const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
-        where: { institutionId: finalInstitutionId },
-        _sum: { profitShare: true }
-      })
-
       await prisma.coordinatorProfitShare.create({
         data: {
           coordinatorId: newUser.id,
           institutionId: finalInstitutionId,
-          profitShare: resolvedProfitShare,
+          profitShare: coordinatorProfitShare ? Number(coordinatorProfitShare) : 0,
           availableSince: new Date(),
           availableUntil: new Date(new Date().getFullYear()+237, new Date().getMonth(), 0)
         }
@@ -874,6 +865,8 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
 
       await tx.userBankAccount.deleteMany({ where: { userId: Number(id) } })
       await tx.refreshToken.deleteMany({ where: { userId: Number(id) } })
+      await tx.guardianTutor.deleteMany({ where: { guardianId: Number(id) } })
+      await tx.guardianTutor.deleteMany({ where: { tutorId: Number(id) } })
 
       await tx.user.delete({
         where: { id: Number(id) }

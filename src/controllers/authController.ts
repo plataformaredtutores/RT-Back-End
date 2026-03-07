@@ -95,7 +95,7 @@ export async function login(req: Request, res: Response) {
   const { email, password } = req.body as { email: string; password: string }
 
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: email.toLowerCase() },
     select: { id: true, hashedPassword: true, role: true, email: true, name: true, institutionId: true, isActive: true },
   })
   
