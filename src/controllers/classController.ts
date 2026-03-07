@@ -741,3 +741,37 @@ export async function updateClassPaymentStatus(
     next(err)
   }
 }
+
+export async function updateClassesPaymentStatusByClassesIds(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const classIds = req.body.classPaymentIds as number[]
+    const { guardianPaymentStatus, tutorPaymentStatus } = req.body
+
+    const data: any = {}
+
+    if (guardianPaymentStatus !== undefined) {
+      data.guardianPaymentStatus = guardianPaymentStatus
+    }
+
+    if (tutorPaymentStatus !== undefined) {
+      data.tutorPaymentStatus = tutorPaymentStatus
+    }
+
+    const updatedClassPayments = await prisma.classPayment.updateMany({
+      where: {
+        classId: {
+          in: classIds
+        }
+      },
+      data
+    })
+
+    res.json(updatedClassPayments)
+  } catch (err) {
+    next(err)
+  }
+}

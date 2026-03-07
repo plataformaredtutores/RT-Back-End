@@ -4,6 +4,9 @@
  */
 
 
+/** WithRequired type helpers */
+type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
+
 /** OneOf type helpers */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
@@ -105,6 +108,89 @@ export interface paths {
           };
         };
         /** @description Invalid input or combined shares exceed 100% */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/admin/payments": {
+    /**
+     * Record admin payments
+     * @description Creates one or more admin profit-share payment records.
+     * Each entry requires an `amount` and a `period` (first day of the target month).
+     * All records are created inside a single database transaction.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+              /** @description Payment amount */
+              amount: number;
+              /**
+               * Format: date-time
+               * @description First day of the billing month (UTC)
+               */
+              period: string;
+            }[];
+        };
+      };
+      responses: {
+        /** @description Payments recorded successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+              data?: ({
+                  id?: number;
+                  amount?: number;
+                  /** Format: date-time */
+                  period?: string;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                })[];
+            };
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/admin/payments/{paymentId}": {
+    /**
+     * Delete an admin payment
+     * @description Permanently deletes the admin payment record with the given ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description ID of the admin payment to delete */
+          paymentId: number;
+        };
+      };
+      responses: {
+        /** @description Payment deleted successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid payment ID */
         400: {
           content: never;
         };
@@ -638,6 +724,53 @@ export interface paths {
       };
     };
   };
+  "/classes/class-payments/bulk-status": {
+    /**
+     * Bulk-update class payment statuses
+     * @description Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple
+     * ClassPayment records in a single call, identified by their `classPaymentIds`.
+     * At least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description List of class IDs whose payments will be updated */
+            classPaymentIds: number[];
+            /**
+             * @description New guardian payment status to apply
+             * @enum {string}
+             */
+            guardianPaymentStatus?: "pending" | "completed";
+            /**
+             * @description New tutor payment status to apply
+             * @enum {string}
+             */
+            tutorPaymentStatus?: "pending" | "completed";
+          };
+        };
+      };
+      responses: {
+        /** @description Number of records updated */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Number of ClassPayment records affected */
+              count?: number;
+            };
+          };
+        };
+        /** @description Missing or invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/coordinators/{institutionId}/profit-share": {
     /**
      * Edit coordinator profit share
@@ -679,8 +812,11 @@ export interface paths {
   };
   "/coordinators/{institutionId}/payments": {
     /**
-     * Create a coordinator payment
-     * @description Creates a payment marked as completed for the current month.
+     * Record coordinator payments
+     * @description Creates one or more coordinator profit-share payment records, all marked as `completed`.
+     * `coordinatorId` must be included in the request body alongside the payments array.
+     * All records are created inside a single database transaction.
+     * The coordinator must exist, have the `coordinator` role, and be active.
      */
     post: {
       parameters: {
@@ -691,17 +827,41 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateCoordinatorPaymentInput"];
+          "application/json": WithRequired<{
+            /** @description ID of the coordinator receiving the payments */
+            coordinatorId: number;
+          } & {
+              /** @description Payment amount */
+              amount: number;
+              /**
+               * Format: date-time
+               * @description First day of the billing month (UTC)
+               */
+              period: string;
+            }[], "coordinatorId">;
         };
       };
       responses: {
-        /** @description Coordinator payment created */
+        /** @description Coordinator payments created successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateCoordinatorPaymentResponse"];
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+              payments?: ({
+                  id?: number;
+                  coordinatorId?: number;
+                  institutionId?: number;
+                  amount?: number;
+                  /** Format: date-time */
+                  period?: string;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                })[];
+            };
           };
         };
-        /** @description Invalid input */
+        /** @description Invalid input or coordinator is inactive */
         400: {
           content: never;
         };
@@ -711,6 +871,41 @@ export interface paths {
         };
         /** @description Coordinator not found */
         404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/coordinators/{institutionId}/payments/{paymentId}": {
+    /**
+     * Delete a coordinator payment
+     * @description Permanently deletes the coordinator payment record with the given ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Institution ID */
+          institutionId: number;
+          /** @description ID of the coordinator payment to delete */
+          paymentId: number;
+        };
+      };
+      responses: {
+        /** @description Payment deleted successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid payment ID */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
           content: never;
         };
       };

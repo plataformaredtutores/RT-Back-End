@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { editCoordinatorProfitShare, makeCoordinatorPayment } from '../controllers/coordinatorController'
+import { editCoordinatorProfitShare, makeCoordinatorPayment, deleteCoordinatorPayment } from '../controllers/coordinatorController'
 
 const router = Router()
 
@@ -43,8 +43,12 @@ router.patch('/:institutionId/profit-share', editCoordinatorProfitShare)
  * @openapi
  * /coordinators/{institutionId}/payments:
  *   post:
- *     summary: Create a coordinator payment
- *     description: Creates a payment marked as completed for the current month.
+ *     summary: Record coordinator payments
+ *     description: |
+ *       Creates one or more coordinator profit-share payment records, all marked as `completed`.
+ *       `coordinatorId` must be included in the request body alongside the payments array.
+ *       All records are created inside a single database transaction.
+ *       The coordinator must exist, have the `coordinator` role, and be active.
  *     tags: [Coordinators]
  *     parameters:
  *       - in: path
@@ -58,22 +62,103 @@ router.patch('/:institutionId/profit-share', editCoordinatorProfitShare)
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/CreateCoordinatorPaymentInput'
+ *             type: object
+ *             required: [coordinatorId]
+ *             properties:
+ *               coordinatorId:
+ *                 type: integer
+ *                 description: ID of the coordinator receiving the payments
+ *             allOf:
+ *               - type: array
+ *                 items:
+ *                   type: object
+ *                   required: [amount, period]
+ *                   properties:
+ *                     amount:
+ *                       type: number
+ *                       description: Payment amount
+ *                     period:
+ *                       type: string
+ *                       format: date-time
+ *                       description: First day of the billing month (UTC)
  *     responses:
  *       201:
- *         description: Coordinator payment created
+ *         description: Coordinator payments created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/CreateCoordinatorPaymentResponse'
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 payments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       coordinatorId:
+ *                         type: integer
+ *                       institutionId:
+ *                         type: integer
+ *                       amount:
+ *                         type: number
+ *                       period:
+ *                         type: string
+ *                         format: date-time
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, completed]
  *       400:
- *         description: Invalid input
+ *         description: Invalid input or coordinator is inactive
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Coordinator not found
+ */
+router.post('/:institutionId/payments', makeCoordinatorPayment)
+
+/**
+ * @openapi
+ * /coordinators/{institutionId}/payments/{paymentId}:
+ *   delete:
+ *     summary: Delete a coordinator payment
+ *     description: Permanently deletes the coordinator payment record with the given ID.
+ *     tags: [Coordinators]
+ *     parameters:
+ *       - in: path
+ *         name: institutionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Institution ID
+ *       - in: path
+ *         name: paymentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the coordinator payment to delete
+ *     responses:
+ *       200:
+ *         description: Payment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid payment ID
  *       403:
  *         description: Forbidden
  */
-router.post('/:institutionId/payments', makeCoordinatorPayment)
+router.delete('/:institutionId/payments/:paymentId', deleteCoordinatorPayment)
 
 export default router
 

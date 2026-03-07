@@ -163,6 +163,140 @@
         }
       }
     },
+    "/admin/payments": {
+      "post": {
+        "summary": "Record admin payments",
+        "description": "Creates one or more admin profit-share payment records.\nEach entry requires an `amount` and a `period` (first day of the target month).\nAll records are created inside a single database transaction.\n",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "amount",
+                    "period"
+                  ],
+                  "properties": {
+                    "amount": {
+                      "type": "number",
+                      "description": "Payment amount"
+                    },
+                    "period": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "First day of the billing month (UTC)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payments recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "period": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "completed"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/payments/{paymentId}": {
+      "delete": {
+        "summary": "Delete an admin payment",
+        "description": "Permanently deletes the admin payment record with the given ID.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID of the admin payment to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payment ID"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
         "summary": "User login",
@@ -1094,6 +1228,77 @@
         }
       }
     },
+    "/classes/class-payments/bulk-status": {
+      "patch": {
+        "summary": "Bulk-update class payment statuses",
+        "tags": [
+          "Classes"
+        ],
+        "description": "Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple\nClassPayment records in a single call, identified by their `classPaymentIds`.\nAt least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "classPaymentIds"
+                ],
+                "properties": {
+                  "classPaymentIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "List of class IDs whose payments will be updated"
+                  },
+                  "guardianPaymentStatus": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "completed"
+                    ],
+                    "description": "New guardian payment status to apply"
+                  },
+                  "tutorPaymentStatus": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "completed"
+                    ],
+                    "description": "New tutor payment status to apply"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Number of records updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of ClassPayment records affected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid input"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/coordinators/{institutionId}/profit-share": {
       "patch": {
         "summary": "Edit coordinator profit share",
@@ -1147,8 +1352,8 @@
     },
     "/coordinators/{institutionId}/payments": {
       "post": {
-        "summary": "Create a coordinator payment",
-        "description": "Creates a payment marked as completed for the current month.",
+        "summary": "Record coordinator payments",
+        "description": "Creates one or more coordinator profit-share payment records, all marked as `completed`.\n`coordinatorId` must be included in the request body alongside the payments array.\nAll records are created inside a single database transaction.\nThe coordinator must exist, have the `coordinator` role, and be active.\n",
         "tags": [
           "Coordinators"
         ],
@@ -1168,30 +1373,156 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCoordinatorPaymentInput"
+                "type": "object",
+                "required": [
+                  "coordinatorId"
+                ],
+                "properties": {
+                  "coordinatorId": {
+                    "type": "integer",
+                    "description": "ID of the coordinator receiving the payments"
+                  }
+                },
+                "allOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "amount",
+                        "period"
+                      ],
+                      "properties": {
+                        "amount": {
+                          "type": "number",
+                          "description": "Payment amount"
+                        },
+                        "period": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "First day of the billing month (UTC)"
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Coordinator payment created",
+            "description": "Coordinator payments created successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateCoordinatorPaymentResponse"
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "coordinatorId": {
+                            "type": "integer"
+                          },
+                          "institutionId": {
+                            "type": "integer"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "period": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "completed"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid input"
+            "description": "Invalid input or coordinator is inactive"
           },
           "403": {
             "description": "Forbidden"
           },
           "404": {
             "description": "Coordinator not found"
+          }
+        }
+      }
+    },
+    "/coordinators/{institutionId}/payments/{paymentId}": {
+      "delete": {
+        "summary": "Delete a coordinator payment",
+        "description": "Permanently deletes the coordinator payment record with the given ID.",
+        "tags": [
+          "Coordinators"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "institutionId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Institution ID"
+          },
+          {
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID of the coordinator payment to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payment ID"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }

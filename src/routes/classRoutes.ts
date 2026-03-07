@@ -4,7 +4,8 @@ import {
   getClassesCashFlowSummary,
   getClassesDetails,
   deleteClass,
-  updateClassPaymentStatus
+  updateClassPaymentStatus,
+  updateClassesPaymentStatusByClassesIds
 } from "../controllers/classController"
 
 const router = Router()
@@ -231,6 +232,53 @@ router.delete('/:classId', deleteClass)
  */
 router.patch('/class-payments/:classPaymentId/status', updateClassPaymentStatus)
 
-
+/**
+ * @openapi
+ * /classes/class-payments/bulk-status:
+ *   patch:
+ *     summary: Bulk-update class payment statuses
+ *     tags: [Classes]
+ *     description: |
+ *       Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple
+ *       ClassPayment records in a single call, identified by their `classPaymentIds`.
+ *       At least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [classPaymentIds]
+ *             properties:
+ *               classPaymentIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: List of class IDs whose payments will be updated
+ *               guardianPaymentStatus:
+ *                 type: string
+ *                 enum: [pending, completed]
+ *                 description: New guardian payment status to apply
+ *               tutorPaymentStatus:
+ *                 type: string
+ *                 enum: [pending, completed]
+ *                 description: New tutor payment status to apply
+ *     responses:
+ *       200:
+ *         description: Number of records updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   description: Number of ClassPayment records affected
+ *       400:
+ *         description: Missing or invalid input
+ *       403:
+ *         description: Forbidden
+ */
+router.patch('/class-payments/bulk-status', updateClassesPaymentStatusByClassesIds)
 
 export default router
