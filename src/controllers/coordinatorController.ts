@@ -109,16 +109,15 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
 export async function makeCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
   try {
     const { institutionId } = req.params;
-    const { coordinatorId, amount } = req.body;
+    const coordinatorId = req.body.coordinatorId;
+    const amounts = req.body as { amount: number, period: Date }[];
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    if (typeof amount !== 'number' || amount <= 0) {
-      return res.status(400).json({ ok: false, message: 'Amount must be a positive number' });
-    }
+
 
     const parsedInstitutionId = Number(institutionId)
     const parsedCoordinatorId = Number(coordinatorId)
@@ -145,20 +144,50 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
       return res.status(400).json({ ok: false, message: 'Coordinator is inactive' });
     }
 
-    const payment = await prisma.coordinatorPayment.create({
-      data: {
-        institutionId: parsedInstitutionId,
-        coordinatorId: parsedCoordinatorId,
-        amount,
-        status: PaymentStatus.completed,
-        period: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Set the period to the first day of the current month
-      },
-    })
+    const payments = await prisma.$transaction(async (tx) => {
+      const createdPayments = [];
+      for (const { amount, period } of amounts) {
+        const payment = await tx.coordinatorPayment.create({
+          data: {
+            coordinatorId: parsedCoordinatorId,
+            institutionId: parsedInstitutionId,
+            amount,
+            period,
+            status: PaymentStatus.completed
+          }
+        });
+        createdPayments.push(payment);
+      }
+      return createdPayments;
+    });
 
-    res.status(201).json({ ok: true, message: 'Coordinator payment created successfully', payment });
+    res.status(201).json({ ok: true, message: 'Coordinator payment created successfully', payments  });
   } catch (err) {
     next(err);
   }
 }
 
-// TO DO: Cehck if there is a need for remove coordinator payment or change it to pending
+export async function deleteCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { paymentId } = req.params;
+    const userRole = (req as any).auth?.role;
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+    const parsedPaymentId = Number(paymentId)
+
+    if (!Number.isFinite(parsedPaymentId)) {
+      return res.status(400).json({ ok: false, message: 'Payment ID is required' });
+    }
+
+    await prisma.coordinatorPayment.delete({
+      where: { id: parsedPaymentId },
+    })
+
+    res.status(200).json({ ok: true, message: 'Coordinator payment deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+}

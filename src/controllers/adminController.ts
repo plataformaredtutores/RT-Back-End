@@ -85,3 +85,59 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
     next(error);
   }
 }
+
+export async function makeAdminPayment(req: Request, res: Response, next: NextFunction) {
+  try {
+    const amounts = req.body as { amount: number, period: Date }[];
+
+    const userRole = (req as any).auth?.role;
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+
+    const payments = await prisma.$transaction(async (tx) => {
+      const createdPayments = [];
+      for (const { amount, period } of amounts) {
+        const payment = await tx.adminPayment.create({
+          data: {
+            amount,
+            period
+          }
+        });
+        createdPayments.push(payment);
+      }
+      return createdPayments;
+    });
+
+    res.json({ ok: true, message: 'Admin payment recorded successfully', data: payments });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAdminPayment(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { paymentId } = req.params;
+    const userRole = (req as any).auth?.role;
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({ ok: false, message: 'Forbidden' });
+    }
+
+    const parsedPaymentId = Number(paymentId);
+
+    if (!Number.isFinite(parsedPaymentId)) {
+      return res.status(400).json({ ok: false, message: 'Payment ID is required' });
+    }
+
+    await prisma.adminPayment.delete({
+      where: { id: parsedPaymentId }
+    });
+
+    res.json({ ok: true, message: 'Admin payment deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+}

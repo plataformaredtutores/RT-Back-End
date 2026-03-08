@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma"
 import { Request, Response, NextFunction } from "express"
-import { UserRole, PaymentStatus } from "@prisma/client"
+import { UserRole, PaymentStatus, PaymentType } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/library"
 
 function parseMonthYear(value: unknown) {
@@ -120,9 +120,9 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             // At this point, we can have multiple adminShare, for example, in the relation AdminProfitShare, we have 
             // | id | profitShare | availableSince | availableUntil 
             // |----|-------------|----------------|----------------|
-            // | 1  | 40          | 2026-01-12     | 2300-01-01     |
-            // | 2  | 20          | 2025-12-12     | 2026-01-12     |
-            // | 3  | 30          | 2020-02-12     | 2025-12-12     |
+            // | 1  | 40          | 2026-01     | 2300-01     |
+            // | 2  | 20          | 2025-12     | 2026-01     |
+            // | 3  | 30          | 2020-02     | 2025-12     |
 
             // As we can see, the share for december 2025, that is a pending month, is 20% from the begin of december 
             // to 12 of december, and 30% from 12 of december to the end of december. 
@@ -578,6 +578,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
 
     if (filteredUserRole === UserRole.coordinator) {
         const institutionId = req.query.institutionId ? Number(req.query.institutionId) : undefined
+        const paymentStatus = req.query.paymentStatus as PaymentStatus | undefined
 
         const coordinators = await prisma.user.findMany({
             where: {
@@ -741,18 +742,39 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                 }
             }, 0)
 
-            result.push({
-                coordinator,
+            // If the filter by paymentStatus is applied:
+            // - if paymentStatus is pending, we add the coordinators that have at least one pending payment
+            // - if paymentStatus is completed, we only add the coordinators that have all the payments completed
+            if (paymentStatus === PaymentStatus.pending) {
+                if (coordinatorPaymentsResult.some(payment => payment.status === PaymentStatus.pending)) {
+                    result.push({
+                        coordinator,
+                        coordinatorPayments: coordinatorPaymentsResult,
+                        amount: coordinatorAmountReceived + coordinatorAmountToReceive
+                    })
+                }
+            } else if (paymentStatus === PaymentStatus.completed) {
+                if (coordinatorPaymentsResult.every(payment => payment.status === PaymentStatus.completed)) {
+                    result.push({
+                        coordinator,
+                        coordinatorPayments: coordinatorPaymentsResult,
+                        amount: coordinatorAmountReceived + coordinatorAmountToReceive
+                    })
+                }
+            } else {
+                result.push({
+                    coordinator,
                 coordinatorPayments: coordinatorPaymentsResult,
-                amount: coordinatorAmountReceived + coordinatorAmountToReceive
-            })
+                    amount: coordinatorAmountReceived + coordinatorAmountToReceive
+                })
+            }
         }
 
-        console.log('[CashFlow Details - Coordinators]', JSON.stringify(result, null, 2))
         return res.json(result)
     }
 
     if (filteredUserRole === UserRole.tutor) {
+        const { paymentStatus } = req.query
         const tutorsAndPayments = await prisma.user.findMany({
             where: {
                 role: UserRole.tutor,
@@ -776,7 +798,10 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                                     date: {
                                         gte: start,
                                         lte: end
-                                    }
+                                    },
+                                    ClassPayment: paymentStatus ? {
+                                        tutorPaymentStatus: paymentStatus as PaymentStatus
+                                    } : undefined
                                 }
                             },
                             select: {
@@ -786,6 +811,9 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                         }
                     }
                 }
+            },
+            orderBy: {
+                name: 'asc'
             },
             take: pageSize ? Number(pageSize) : undefined,
             skip: pageSize && page ? (Number(page) - 1) * Number(pageSize) : undefined,
@@ -807,6 +835,32 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
     }
 
     if (filteredUserRole === UserRole.guardian) {
+        const { filteredGuardianPaymentStatus } = req.query
+
+        // if we filter the paymentType as BankTransfer or Card, we need also only show the payments in PaymentStatus completed
+        // thats beceause the pending payments al always marked as bankTransfer
+        // Options
+        // - filterGuardianPaymentStatus = pending => show only the pending payments, that are always bankTransfer
+        // - filterGuardianPaymentStatus = bankTransfer => show only the completed payments with bankTransfer type, and the pending payments, that are always bankTransfer
+        // - filterGuardianPaymentStatus = card => show only the completed payments with card type
+        // - filterGuardianPaymentStatus = completed => show all the payments with completed status, independtly of the type, no guardian with a pending payment will be shown, 
+        let guardianPaymentType: PaymentType | undefined = undefined
+        let guardianPaymentStatus: PaymentStatus | undefined = undefined
+
+        if (filteredGuardianPaymentStatus === 'pending') {
+            guardianPaymentStatus = PaymentStatus.pending
+            guardianPaymentType = PaymentType.bankTransfer
+        } else if (filteredGuardianPaymentStatus === 'bankTransfer') {
+            guardianPaymentStatus = PaymentStatus.completed
+            guardianPaymentType = PaymentType.bankTransfer
+        } else if (filteredGuardianPaymentStatus === 'card') {
+            guardianPaymentStatus = PaymentStatus.completed
+            guardianPaymentType = PaymentType.card
+        } else if (filteredGuardianPaymentStatus === 'completed') {
+            guardianPaymentStatus = PaymentStatus.completed
+            guardianPaymentType = undefined
+        }
+
         const guardiansAndPayments = await prisma.user.findMany({
             where: {
                 role: UserRole.guardian,
@@ -818,11 +872,69 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                                 date: {
                                     gte: start,
                                     lte: end
+                                },
+                                ClassPayment: {
+                                    guardianPaymentStatus,
+                                    guardianPaymentType
+                                },
+                            },
+                        }
+                    },
+                },
+                // Strictly exclude guardians that have any payment not matching the filter:
+                // - completed: no pending payments allowed
+                // - card:      no pending, no bankTransfer payments allowed
+                // - bankTransfer: no card payments allowed (pending are always bankTransfer, so they are fine)
+                ...(filteredGuardianPaymentStatus === 'completed' ? {
+                    NOT: {
+                        Students: {
+                            some: {
+                                Classes: {
+                                    some: {
+                                        date: { gte: start, lte: end },
+                                        ClassPayment: { guardianPaymentStatus: PaymentStatus.pending }
+                                    }
                                 }
                             }
                         }
                     }
-                }
+                } : filteredGuardianPaymentStatus === 'card' ? {
+                    NOT: {
+                        Students: {
+                            some: {
+                                Classes: {
+                                    some: {
+                                        date: { gte: start, lte: end },
+                                        ClassPayment: {
+                                            OR: [
+                                                { guardianPaymentStatus: PaymentStatus.pending },
+                                                { guardianPaymentType: PaymentType.bankTransfer }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } : filteredGuardianPaymentStatus === 'bankTransfer' ? {
+                    NOT: {
+                        Students: {
+                            some: {
+                                Classes: {
+                                    some: {
+                                        date: { gte: start, lte: end },
+                                        ClassPayment: {
+                                            OR: [
+                                                { guardianPaymentStatus: PaymentStatus.pending },
+                                                { guardianPaymentType: PaymentType.card }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } : {})
             },
             select: {
                 id: true,
@@ -856,6 +968,9 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                     }
                 }
             },
+            orderBy: {
+                name: 'asc'
+            },
             take: pageSize ? Number(pageSize) : undefined,
             skip: pageSize && page ? (Number(page) - 1) * Number(pageSize) : undefined,
         })
@@ -869,9 +984,29 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                 return acc + studentTotal;
             }, 0);
             const status = guardian.Students.some(student => student.Classes.some(classItem => classItem.ClassPayment && classItem.ClassPayment.guardianPaymentStatus === PaymentStatus.pending)) ? PaymentStatus.pending : PaymentStatus.completed;
+            
+            // if the payment status is completed, means that all the payments from that guardian are done,
+            // but, we have to mark if all the payments are completed with card, or with bank transfer, or if they are mixed, to show that in the details, so we can filter by that in the frontend
+            const paymentTypes = new Set<string>();
+            guardian.Students.forEach(student => {
+                student.Classes.forEach(classItem => {
+                    if (classItem.ClassPayment && classItem.ClassPayment.guardianPaymentStatus === PaymentStatus.completed) {
+                        paymentTypes.add(classItem.ClassPayment.guardianPaymentType || '');
+                    }
+                });
+            });
+
+            if (paymentTypes.size === 1) {
+                guardianPaymentType = paymentTypes.has(PaymentType.card) ? PaymentType.card : PaymentType.bankTransfer;
+            } else if (paymentTypes.size > 1) {
+                guardianPaymentType = undefined; // mixed types
+            } else {
+                guardianPaymentType = undefined; // no completed payments
+            }
 
             (guardian as any).totalAmount = totalAmount;
             (guardian as any).paymentStatus = status;
+            (guardian as any).paymentType = guardianPaymentType;
         }
         
         console.log('[CashFlow Details - Guardians]', JSON.stringify(guardiansAndPayments, null, 2))

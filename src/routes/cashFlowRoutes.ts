@@ -119,18 +119,37 @@ router.get('/summary', getCashFlowSummary)
  *     tags: [CashFlow]
  *     description: |
  *       Returns detailed financial information separated by user role.
- *       
- *       **Logic based on Filtered User Role:**
+ *       Results are ordered alphabetically by name.
+ *
+ *       **Logic based on `filteredUserRole`:**
  *
  *       For **coordinator**:
- *       - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
- * 
+ *       - Returns a list of coordinators with their calculated profit shares and total amount for the specified period.
+ *       - Use `paymentStatus` to filter:
+ *         - `pending` — only coordinators with at least one pending payment.
+ *         - `completed` — only coordinators where all payments are completed.
+ *         - *(omit)* — all coordinators regardless of status.
+ *
  *       For **tutor**:
- *       - Returns a list of tutors with their total earnings and payment status for the specified period.
- *       
+ *       - Returns a list of tutors with their class earnings for the specified period.
+ *       - Use `paymentStatus` to filter classes by tutor payment status (`pending` or `completed`).
+ *       - Each tutor entry includes a computed `totalAmount` and overall `paymentStatus`.
+ *
  *       For **guardian**:
- *       - Returns a list of guardians with their total payments and payment status for the specified period.
- * 
+ *       - Returns a list of guardians with their total class payments for the specified period.
+ *       - Use `filteredGuardianPaymentStatus` to filter:
+ *         - `pending` — only pending (bank transfer) payments.
+ *         - `bankTransfer` — completed bank-transfer payments and all pending ones.
+ *         - `card` — only completed card payments.
+ *         - `completed` — all completed payments regardless of type.
+ *         - *(omit)* — all guardians.
+ *       - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
+ *         (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
+ *
+ *       For **admin**:
+ *       - Admin details are already included in the `/cashflow/summary` response.
+ *         This endpoint returns a message redirecting to the summary.
+ *
  *     parameters:
  *       - in: query
  *         name: startDate
@@ -150,13 +169,36 @@ router.get('/summary', getCashFlowSummary)
  *         schema:
  *           type: string
  *           enum: [coordinator, tutor, guardian, admin]
- *         description: The role to filter the details by (e.g. coordinator, tutor, guardian)
+ *         description: The role to filter the details by
  *       - in: query
  *         name: institutionId
  *         required: false
  *         schema:
  *           type: integer
- *         description: Optional filter by institution ID
+ *         description: Optional filter by institution ID (admin only)
+ *       - in: query
+ *         name: paymentStatus
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [pending, completed]
+ *         description: |
+ *           Filter by payment status. Applies when `filteredUserRole` is `coordinator` or `tutor`.
+ *           - `coordinator`: `pending` returns coordinators with at least one pending payment;
+ *             `completed` returns coordinators where all payments are completed.
+ *           - `tutor`: filters class payments included for each tutor by tutor payment status.
+ *       - in: query
+ *         name: filteredGuardianPaymentStatus
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [pending, bankTransfer, card, completed]
+ *         description: |
+ *           Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
+ *           - `pending` — pending payments (always bank transfer).
+ *           - `bankTransfer` — completed bank-transfer payments plus all pending ones.
+ *           - `card` — completed card payments only.
+ *           - `completed` — all completed payments regardless of type.
  *       - in: query
  *         name: page
  *         required: false
@@ -173,25 +215,110 @@ router.get('/summary', getCashFlowSummary)
  *         description: Number of items per page
  *     responses:
  *       200:
- *         description: Cash flow details
+ *         description: Cash flow details (shape varies by `filteredUserRole`)
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   name:
- *                     type: string
- *                   email:
- *                     type: string
- *                   # Specific fields based on the role (e.g. coordinatorPayments, totalAmount, paymentStatus)
+ *               oneOf:
+ *                 - description: Response when filteredUserRole=coordinator
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       coordinator:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           Institution:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: integer
+ *                               name:
+ *                                 type: string
+ *                       coordinatorPayments:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             amount:
+ *                               type: number
+ *                             status:
+ *                               type: string
+ *                               enum: [pending, completed]
+ *                             period:
+ *                               type: string
+ *                               format: date-time
+ *                       amount:
+ *                         type: number
+ *                         description: Total profit share amount (pending + completed) for the period
+ *                 - description: Response when filteredUserRole=tutor
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       Institution:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                       totalAmount:
+ *                         type: number
+ *                         description: Sum of tutor earnings for the period
+ *                       paymentStatus:
+ *                         type: string
+ *                         enum: [pending, completed]
+ *                         description: Overall payment status (pending if any class payment is pending)
+ *                 - description: Response when filteredUserRole=guardian
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       Institution:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                       totalAmount:
+ *                         type: number
+ *                         description: Sum of guardian payments for the period
+ *                       paymentStatus:
+ *                         type: string
+ *                         enum: [pending, completed]
+ *                         description: Overall payment status (pending if any class payment is pending)
+ *                       paymentType:
+ *                         type: string
+ *                         nullable: true
+ *                         enum: [card, bankTransfer]
+ *                         description: |
+ *                           Payment type derived from completed payments.
+ *                           `card` or `bankTransfer` if all completed payments share the same type;
+ *                           `null` when types are mixed or there are no completed payments.
  *       400:
- *         description: Bad Request (Missing dates, invalid formats, or non-matching start/end dates)
+ *         description: Bad Request (Missing dates or invalid date format)
  *       403:
- *         description: Forbidden (Invalid role or permissions)
+ *         description: Forbidden (Coordinator attempting to view coordinator or admin details)
  */
 router.get('/details', getCashFlowDetails)
 
