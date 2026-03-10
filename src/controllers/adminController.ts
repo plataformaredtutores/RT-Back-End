@@ -15,12 +15,11 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
       return res.status(400).json({ ok: false, message: 'Profit share must be a number between 0 and 100' });
     }
 
-    // New admin share becomes active on the next day at 00:00:00.000 UTC.
-    // Current admin share remains active through today (until 23:59:59.999 UTC).
+    // Profit shares are aligned to month boundaries: a new share always starts on the 1st of
+    // the current month and the previous one is capped at the last millisecond of the previous month.
     const now = new Date();
-    const todayStartUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const todayEndUtc = new Date(todayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
-    const nextDayStartUtc = new Date(todayStartUtc.getTime() + 24 * 60 * 60 * 1000);
+    const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const prevMonthEnd = new Date(thisMonthStart.getTime() - 1);
 
     const institutions = await prisma.institution.findMany({
       select: {
@@ -30,12 +29,12 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
     });
 
     for (const institution of institutions) {
-      // Sum coordinator profit shares active at the new admin share effective timestamp
+      // Sum coordinator profit shares active at the start of the current month
       const activeCoordinatorShares = await prisma.coordinatorProfitShare.findMany({
         where: {
           institutionId: institution.id,
-          availableSince: { lte: nextDayStartUtc },
-          availableUntil: { gte: nextDayStartUtc }
+          availableSince: { lte: thisMonthStart },
+          availableUntil: { gte: thisMonthStart }
         }
       });
 
@@ -52,29 +51,36 @@ export async function editAdminProfitShare(req: Request, res: Response, next: Ne
       }
     }
 
-    // Use a transaction to deactivate the current active share and create the new one
+    // Use a transaction to rotate the active share aligned to month boundaries
     const newAdminProfitShare = await prisma.$transaction(async (tx) => {
-      // Find the single active share at the new effective timestamp
-      const currentActive = await tx.adminProfitShare.findFirst({
+      // If a share already starts this month (repeated edit within same month), delete it so it
+      // can be cleanly replaced — prevents stacking multiple shares in the same month.
+      const thisMonthShare = await tx.adminProfitShare.findFirst({
+        where: { availableSince: { gte: thisMonthStart } }
+      });
+      if (thisMonthShare) {
+        await tx.adminProfitShare.delete({ where: { id: thisMonthShare.id } });
+      }
+
+      // Cap the previously active share at the last moment of the previous month
+      const previousShare = await tx.adminProfitShare.findFirst({
         where: {
-          availableSince: { lte: nextDayStartUtc },
-          availableUntil: { gte: nextDayStartUtc }
+          availableSince: { lt: thisMonthStart },
+          availableUntil: { gte: thisMonthStart }
         }
       });
-
-      // Deactivate it at end of today so today keeps current percentage
-      if (currentActive) {
+      if (previousShare) {
         await tx.adminProfitShare.update({
-          where: { id: currentActive.id },
-          data: { availableUntil: todayEndUtc }
+          where: { id: previousShare.id },
+          data: { availableUntil: prevMonthEnd }
         });
       }
 
-      // Create the new admin profit share effective from tomorrow at 00:00:00.000 UTC
+      // Create the new share effective from the 1st of the current month
       return tx.adminProfitShare.create({
         data: {
           profitShare,
-          availableSince: nextDayStartUtc,
+          availableSince: thisMonthStart,
           availableUntil: new Date('2099-12-31T23:59:59.999Z')
         }
       });
@@ -96,6 +102,16 @@ export async function makeAdminPayment(req: Request, res: Response, next: NextFu
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
+    const now = new Date();
+    for (const { period } of amounts) {
+      const periodDate = new Date(period);
+      if (
+        periodDate.getUTCFullYear() === now.getUTCFullYear() &&
+        periodDate.getUTCMonth() === now.getUTCMonth()
+      ) {
+        return res.status(400).json({ ok: false, message: 'Cannot register a payment for the current month as it has not ended yet' });
+      }
+    }
 
     const payments = await prisma.$transaction(async (tx) => {
       const createdPayments = [];
@@ -103,7 +119,8 @@ export async function makeAdminPayment(req: Request, res: Response, next: NextFu
         const payment = await tx.adminPayment.create({
           data: {
             amount,
-            period
+            period,
+            status: 'completed'
           }
         });
         createdPayments.push(payment);
@@ -125,12 +142,6 @@ export async function deleteAdminPayment(req: Request, res: Response, next: Next
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
-    const parsedPaymentId = Number(period);
-
-    if (!Number.isFinite(parsedPaymentId)) {
-      return res.status(400).json({ ok: false, message: 'Invalid payment ID' });
-    }
-
     // The period is at the start of the month, so we can delete by period without worrying about timezones
 
     await prisma.adminPayment.delete({
