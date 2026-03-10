@@ -165,16 +165,18 @@ export interface paths {
       };
     };
   };
-  "/admin/payments/{paymentId}": {
+  "/admin/payments/{period}": {
     /**
-     * Delete an admin payment
-     * @description Permanently deletes the admin payment record with the given ID.
+     * Delete an admin payment by period
+     * @description Permanently deletes the admin payment record matching the given billing period.
+     * The `period` must be the ISO 8601 date-time string of the first day of the month
+     * (e.g. `2026-01-01T00:00:00.000Z`).
      */
     delete: {
       parameters: {
         path: {
-          /** @description ID of the admin payment to delete */
-          paymentId: number;
+          /** @description First day of the billing month (UTC) of the payment to delete */
+          period: string;
         };
       };
       responses: {
@@ -187,7 +189,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid payment ID */
+        /** @description Invalid period value */
         400: {
           content: never;
         };
@@ -877,18 +879,19 @@ export interface paths {
       };
     };
   };
-  "/coordinators/{institutionId}/payments/{paymentId}": {
+  "/coordinators/{coordinatorId}/payments/{period}": {
     /**
      * Delete a coordinator payment
-     * @description Permanently deletes the coordinator payment record with the given ID.
+     * @description Permanently deletes a coordinator payment record identified by its
+     * numeric payment ID (`period` path param) scoped to the given `coordinatorId`.
      */
     delete: {
       parameters: {
         path: {
-          /** @description Institution ID */
-          institutionId: number;
-          /** @description ID of the coordinator payment to delete */
-          paymentId: number;
+          /** @description ID of the coordinator who owns the payment */
+          coordinatorId: number;
+          /** @description Numeric ID of the coordinator payment record to delete */
+          period: number;
         };
       };
       responses: {

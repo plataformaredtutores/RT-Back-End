@@ -100,18 +100,23 @@ router.post('/payments', makeAdminPayment)
 
 /**
  * @openapi
- * /admin/payments/{paymentId}:
+ * /admin/payments/{period}:
  *   delete:
- *     summary: Delete an admin payment
- *     description: Permanently deletes the admin payment record with the given ID.
+ *     summary: Delete an admin payment by period
+ *     description: |
+ *       Permanently deletes the admin payment record matching the given billing period.
+ *       The `period` must be the ISO 8601 date-time string of the first day of the month
+ *       (e.g. `2026-01-01T00:00:00.000Z`).
  *     tags: [Admin]
  *     parameters:
  *       - in: path
- *         name: paymentId
+ *         name: period
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID of the admin payment to delete
+ *           type: string
+ *           format: date-time
+ *           example: '2026-01-01T00:00:00.000Z'
+ *         description: First day of the billing month (UTC) of the payment to delete
  *     responses:
  *       200:
  *         description: Payment deleted successfully
@@ -125,10 +130,10 @@ router.post('/payments', makeAdminPayment)
  *                 message:
  *                   type: string
  *       400:
- *         description: Invalid payment ID
+ *         description: Invalid period value
  *       403:
  *         description: Forbidden
  */
-router.delete('/payments/:paymentId', deleteAdminPayment)
+router.delete('/payments/:period', deleteAdminPayment)
 
 export default router

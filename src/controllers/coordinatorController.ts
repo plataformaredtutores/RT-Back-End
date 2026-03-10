@@ -169,21 +169,21 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
 
 export async function deleteCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
   try {
-    const { paymentId } = req.params;
+    const { period, coordinatorId } = req.params;
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    const parsedPaymentId = Number(paymentId)
+    const parsedPaymentId = Number(period);
 
     if (!Number.isFinite(parsedPaymentId)) {
-      return res.status(400).json({ ok: false, message: 'Payment ID is required' });
+      return res.status(400).json({ ok: false, message: 'Invalid payment ID' });
     }
 
     await prisma.coordinatorPayment.delete({
-      where: { id: parsedPaymentId },
+      where: { id: parsedPaymentId, coordinatorId: Number(coordinatorId) },
     })
 
     res.status(200).json({ ok: true, message: 'Coordinator payment deleted successfully' });

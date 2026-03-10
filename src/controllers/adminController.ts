@@ -119,21 +119,22 @@ export async function makeAdminPayment(req: Request, res: Response, next: NextFu
 
 export async function deleteAdminPayment(req: Request, res: Response, next: NextFunction) {
   try {
-    const { paymentId } = req.params;
+    const { period } = req.params;
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
-
-    const parsedPaymentId = Number(paymentId);
+    const parsedPaymentId = Number(period);
 
     if (!Number.isFinite(parsedPaymentId)) {
-      return res.status(400).json({ ok: false, message: 'Payment ID is required' });
+      return res.status(400).json({ ok: false, message: 'Invalid payment ID' });
     }
 
+    // The period is at the start of the month, so we can delete by period without worrying about timezones
+
     await prisma.adminPayment.delete({
-      where: { id: parsedPaymentId }
+      where: { period: new Date(period) }
     });
 
     res.json({ ok: true, message: 'Admin payment deleted successfully' });
