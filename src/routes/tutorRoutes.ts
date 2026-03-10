@@ -36,11 +36,12 @@ router.post('/guardian-links', createGuardianTutorLink)
  * @openapi
  * /tutors/{tutorId}/payments:
  *   patch:
- *     summary: Update tutor payment status for a period
+ *     summary: Update tutor payment status for a date range
  *     description: |
  *       Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the
- *       given tutor whose class falls within the calendar month indicated by `period`.
- *       `period` can be any date within the target month (e.g. `2026-02-01`).
+ *       given tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).
+ *       The range is expanded to full months: `periodStart` is treated as the first moment of
+ *       its month and `periodEnd` as the last moment of its month.
  *     tags: [Tutors]
  *     parameters:
  *       - in: path
@@ -55,13 +56,18 @@ router.post('/guardian-links', createGuardianTutorLink)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [period, status]
+ *             required: [periodStart, periodEnd, status]
  *             properties:
- *               period:
+ *               periodStart:
+ *                 type: string
+ *                 format: date
+ *                 example: '2026-01-01'
+ *                 description: Any date within the first month of the range (UTC)
+ *               periodEnd:
  *                 type: string
  *                 format: date
  *                 example: '2026-02-01'
- *                 description: Any date within the target month (UTC)
+ *                 description: Any date within the last month of the range (UTC)
  *               status:
  *                 type: string
  *                 enum: [pending, completed]

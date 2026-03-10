@@ -55,7 +55,7 @@ export async function createGuardianTutorLink(req: Request, res: Response, next:
 export async function editTutorPaymentsFromPeriod(req: Request, res: Response, next: NextFunction) {
   try {
     const { tutorId } = req.params;
-    const { period, status } = req.body;
+    const { periodStart, periodEnd, status } = req.body;
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin' && userRole !== 'coordinator') {
@@ -68,21 +68,20 @@ export async function editTutorPaymentsFromPeriod(req: Request, res: Response, n
         return res.status(400).json({ ok: false, message: 'Tutor ID is required' })
     }
 
-    // A period represents the month for the payments
-    // For example, if the period is 2024-01-01, it means that we want to edit the payments from 01-01-2024 to 31-01-2024 (first to last moment of the month)
-    const periodDate = new Date(period);
-    if (isNaN(periodDate.getTime())) {
-        return res.status(400).json({ ok: false, message: 'Invalid period format' })
-     }
+    const startDate = new Date(periodStart);
+    const endDate = new Date(periodEnd);
 
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ ok: false, message: 'Invalid periodStart or periodEnd format' });
+    }
 
     const updatedPayments = await prisma.classPayment.updateMany({
       where: {
         Class: {
           tutorId: parsedTutorId,
           date: {
-            gte: new Date(Date.UTC(periodDate.getUTCFullYear(), periodDate.getUTCMonth(), 1)),
-            lt: new Date(Date.UTC(periodDate.getUTCFullYear(), periodDate.getUTCMonth() + 1, 1)),
+            gte: new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1)),
+            lt: new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth() + 1, 1)),
           },
         },
       },

@@ -2324,8 +2324,8 @@
     },
     "/tutors/{tutorId}/payments": {
       "patch": {
-        "summary": "Update tutor payment status for a period",
-        "description": "Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the\ngiven tutor whose class falls within the calendar month indicated by `period`.\n`period` can be any date within the target month (e.g. `2026-02-01`).\n",
+        "summary": "Update tutor payment status for a date range",
+        "description": "Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the\ngiven tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).\nThe range is expanded to full months: `periodStart` is treated as the first moment of\nits month and `periodEnd` as the last moment of its month.\n",
         "tags": [
           "Tutors"
         ],
@@ -2347,15 +2347,22 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "period",
+                  "periodStart",
+                  "periodEnd",
                   "status"
                 ],
                 "properties": {
-                  "period": {
+                  "periodStart": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-01-01",
+                    "description": "Any date within the first month of the range (UTC)"
+                  },
+                  "periodEnd": {
                     "type": "string",
                     "format": "date",
                     "example": "2026-02-01",
-                    "description": "Any date within the target month (UTC)"
+                    "description": "Any date within the last month of the range (UTC)"
                   },
                   "status": {
                     "type": "string",
