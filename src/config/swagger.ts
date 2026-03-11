@@ -829,6 +829,43 @@ const options: swaggerJSDoc.Options = {
           additionalProperties: false,
           minProperties: 1
         },
+        BulkUpdateGuardianClassPaymentStatusInput: {
+          type: 'object',
+          description: 'Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed.',
+          properties: {
+            guardianPaymentStatus: {
+              type: 'string',
+              enum: ['pending', 'card', 'bankTransfer'],
+              description: 'Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.'
+            },
+            periodStart: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Optional lower bound for the class date filter.'
+            },
+            periodEnd: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Optional upper bound for the class date filter.'
+            },
+            guardianId: {
+              type: 'integer',
+              description: 'Guardian whose class payments will be updated.'
+            }
+          },
+          required: ['guardianPaymentStatus', 'guardianId'],
+          additionalProperties: false
+        },
+        BulkUpdateClassPaymentsResponse: {
+          type: 'object',
+          properties: {
+            count: {
+              type: 'integer',
+              description: 'Number of ClassPayment records affected.'
+            }
+          },
+          required: ['count']
+        },
         CreateUserWithBankAccountInput: {
           allOf: [
             { $ref: '#/components/schemas/UserInput' },

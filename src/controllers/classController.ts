@@ -1,4 +1,4 @@
-import { UserRole, PaymentStatus } from "@prisma/client"
+import { UserRole, PaymentStatus, PaymentType } from "@prisma/client"
 import { Request, Response, NextFunction } from "express"
 import prisma from "../lib/prisma"
 import { calculateFeeAmount } from "./utils"
@@ -742,29 +742,35 @@ export async function updateClassPaymentStatus(
   }
 }
 
-export async function updateClassesPaymentStatusByClassesIds(
+export async function updateGuardianClassPaymentStatusByGuardianId(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const classIds = req.body.classPaymentIds as number[]
-    const { guardianPaymentStatus, tutorPaymentStatus } = req.body
+    const { guardianPaymentStatus, periodStart, periodEnd, guardianId } = req.body
 
     const data: any = {}
 
-    if (guardianPaymentStatus !== undefined) {
+    if (guardianPaymentStatus === PaymentStatus.pending) {
       data.guardianPaymentStatus = guardianPaymentStatus
     }
 
-    if (tutorPaymentStatus !== undefined) {
-      data.tutorPaymentStatus = tutorPaymentStatus
+    if (guardianPaymentStatus === PaymentType.bankTransfer || guardianPaymentStatus === PaymentType.card) {
+      data.guardianPaymentType = guardianPaymentStatus
+      data.guardianPaymentStatus = PaymentStatus.completed
     }
 
     const updatedClassPayments = await prisma.classPayment.updateMany({
       where: {
-        classId: {
-          in: classIds
+        Class: {
+          date: {
+            gte: periodStart ? new Date(periodStart) : undefined,
+            lte: periodEnd ? new Date(periodEnd) : undefined,
+          },
+          Student: {
+            guardianId: guardianId ? Number(guardianId) : undefined
+          }
         }
       },
       data

@@ -727,38 +727,26 @@ export interface paths {
   };
   "/classes/class-payments/bulk-status": {
     /**
-     * Bulk-update class payment statuses
-     * @description Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple
-     * ClassPayment records in a single call, identified by their `classPaymentIds`.
-     * At least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.
+     * Bulk-update guardian class payments by guardian and period
+     * @description Updates guardian-side class payments for all classes that belong to a
+     * specific guardian, optionally filtered by class date range.
+     *
+     * Behavior:
+     * - `guardianPaymentStatus = pending`: sets `guardianPaymentStatus` to `pending`
+     * - `guardianPaymentStatus = card | bankTransfer`: sets `guardianPaymentType`
+     *   and marks `guardianPaymentStatus` as `completed`
      */
     patch: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @description List of class IDs whose payments will be updated */
-            classPaymentIds: number[];
-            /**
-             * @description New guardian payment status to apply
-             * @enum {string}
-             */
-            guardianPaymentStatus?: "pending" | "completed";
-            /**
-             * @description New tutor payment status to apply
-             * @enum {string}
-             */
-            tutorPaymentStatus?: "pending" | "completed";
-          };
+          "application/json": components["schemas"]["BulkUpdateGuardianClassPaymentStatusInput"];
         };
       };
       responses: {
         /** @description Number of records updated */
         200: {
           content: {
-            "application/json": {
-              /** @description Number of ClassPayment records affected */
-              count?: number;
-            };
+            "application/json": components["schemas"]["BulkUpdateClassPaymentsResponse"];
           };
         };
         /** @description Missing or invalid input */
@@ -2170,6 +2158,30 @@ export interface components {
       guardianPaymentStatus?: components["schemas"]["PaymentStatus"];
       tutorPaymentStatus?: components["schemas"]["PaymentStatus"];
       guardianPaymentType?: components["schemas"]["PaymentType"];
+    };
+    /** @description Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed. */
+    BulkUpdateGuardianClassPaymentStatusInput: {
+      /**
+       * @description Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.
+       * @enum {string}
+       */
+      guardianPaymentStatus: "pending" | "card" | "bankTransfer";
+      /**
+       * Format: date-time
+       * @description Optional lower bound for the class date filter.
+       */
+      periodStart?: string;
+      /**
+       * Format: date-time
+       * @description Optional upper bound for the class date filter.
+       */
+      periodEnd?: string;
+      /** @description Guardian whose class payments will be updated. */
+      guardianId: number;
+    };
+    BulkUpdateClassPaymentsResponse: {
+      /** @description Number of ClassPayment records affected. */
+      count: number;
     };
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;

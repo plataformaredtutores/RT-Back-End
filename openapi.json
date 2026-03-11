@@ -1233,45 +1233,17 @@
     },
     "/classes/class-payments/bulk-status": {
       "patch": {
-        "summary": "Bulk-update class payment statuses",
+        "summary": "Bulk-update guardian class payments by guardian and period",
         "tags": [
           "Classes"
         ],
-        "description": "Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple\nClassPayment records in a single call, identified by their `classPaymentIds`.\nAt least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.\n",
+        "description": "Updates guardian-side class payments for all classes that belong to a\nspecific guardian, optionally filtered by class date range.\n\nBehavior:\n- `guardianPaymentStatus = pending`: sets `guardianPaymentStatus` to `pending`\n- `guardianPaymentStatus = card | bankTransfer`: sets `guardianPaymentType`\n  and marks `guardianPaymentStatus` as `completed`\n",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "classPaymentIds"
-                ],
-                "properties": {
-                  "classPaymentIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "List of class IDs whose payments will be updated"
-                  },
-                  "guardianPaymentStatus": {
-                    "type": "string",
-                    "enum": [
-                      "pending",
-                      "completed"
-                    ],
-                    "description": "New guardian payment status to apply"
-                  },
-                  "tutorPaymentStatus": {
-                    "type": "string",
-                    "enum": [
-                      "pending",
-                      "completed"
-                    ],
-                    "description": "New tutor payment status to apply"
-                  }
-                }
+                "$ref": "#/components/schemas/BulkUpdateGuardianClassPaymentStatusInput"
               }
             }
           }
@@ -1282,13 +1254,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "count": {
-                      "type": "integer",
-                      "description": "Number of ClassPayment records affected"
-                    }
-                  }
+                  "$ref": "#/components/schemas/BulkUpdateClassPaymentsResponse"
                 }
               }
             }
@@ -4243,6 +4209,52 @@
         },
         "additionalProperties": false,
         "minProperties": 1
+      },
+      "BulkUpdateGuardianClassPaymentStatusInput": {
+        "type": "object",
+        "description": "Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed.",
+        "properties": {
+          "guardianPaymentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "card",
+              "bankTransfer"
+            ],
+            "description": "Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment."
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional lower bound for the class date filter."
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional upper bound for the class date filter."
+          },
+          "guardianId": {
+            "type": "integer",
+            "description": "Guardian whose class payments will be updated."
+          }
+        },
+        "required": [
+          "guardianPaymentStatus",
+          "guardianId"
+        ],
+        "additionalProperties": false
+      },
+      "BulkUpdateClassPaymentsResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of ClassPayment records affected."
+          }
+        },
+        "required": [
+          "count"
+        ]
       },
       "CreateUserWithBankAccountInput": {
         "allOf": [

@@ -5,7 +5,7 @@ import {
   getClassesDetails,
   deleteClass,
   updateClassPaymentStatus,
-  updateClassesPaymentStatusByClassesIds
+  updateGuardianClassPaymentStatusByGuardianId
 } from "../controllers/classController"
 
 const router = Router()
@@ -236,49 +236,34 @@ router.patch('/class-payments/:classPaymentId/status', updateClassPaymentStatus)
  * @openapi
  * /classes/class-payments/bulk-status:
  *   patch:
- *     summary: Bulk-update class payment statuses
+ *     summary: Bulk-update guardian class payments by guardian and period
  *     tags: [Classes]
  *     description: |
- *       Updates `guardianPaymentStatus` and/or `tutorPaymentStatus` for multiple
- *       ClassPayment records in a single call, identified by their `classPaymentIds`.
- *       At least one of `guardianPaymentStatus` or `tutorPaymentStatus` must be provided.
+ *       Updates guardian-side class payments for all classes that belong to a
+ *       specific guardian, optionally filtered by class date range.
+ *
+ *       Behavior:
+ *       - `guardianPaymentStatus = pending`: sets `guardianPaymentStatus` to `pending`
+ *       - `guardianPaymentStatus = card | bankTransfer`: sets `guardianPaymentType`
+ *         and marks `guardianPaymentStatus` as `completed`
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [classPaymentIds]
- *             properties:
- *               classPaymentIds:
- *                 type: array
- *                 items:
- *                   type: integer
- *                 description: List of class IDs whose payments will be updated
- *               guardianPaymentStatus:
- *                 type: string
- *                 enum: [pending, completed]
- *                 description: New guardian payment status to apply
- *               tutorPaymentStatus:
- *                 type: string
- *                 enum: [pending, completed]
- *                 description: New tutor payment status to apply
+ *             $ref: '#/components/schemas/BulkUpdateGuardianClassPaymentStatusInput'
  *     responses:
  *       200:
  *         description: Number of records updated
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 count:
- *                   type: integer
- *                   description: Number of ClassPayment records affected
+ *               $ref: '#/components/schemas/BulkUpdateClassPaymentsResponse'
  *       400:
  *         description: Missing or invalid input
  *       403:
  *         description: Forbidden
  */
-router.patch('/class-payments/bulk-status', updateClassesPaymentStatusByClassesIds)
+router.patch('/class-payments/bulk-status', updateGuardianClassPaymentStatusByGuardianId)
 
 export default router
