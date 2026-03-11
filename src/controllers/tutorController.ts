@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PaymentStatus } from '@prisma/client';
 
 export async function createGuardianTutorLink(req: Request, res: Response, next: NextFunction) {
     try {
@@ -51,3 +52,46 @@ export async function createGuardianTutorLink(req: Request, res: Response, next:
     }
 }
 
+export async function editTutorPaymentsFromPeriod(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { tutorId } = req.params;
+    const { periodStart, periodEnd, status } = req.body;
+    const userRole = (req as any).auth?.role;
+
+    if (userRole !== 'admin' && userRole !== 'coordinator') {
+        return res.status(403).json({ ok: false, message: 'Forbidden' })
+    }
+
+    const parsedTutorId = Number(tutorId)
+    
+    if (!Number.isFinite(parsedTutorId)) {
+        return res.status(400).json({ ok: false, message: 'Tutor ID is required' })
+    }
+
+    const startDate = new Date(periodStart);
+    const endDate = new Date(periodEnd);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ ok: false, message: 'Invalid periodStart or periodEnd format' });
+    }
+
+    const updatedPayments = await prisma.classPayment.updateMany({
+      where: {
+        Class: {
+          tutorId: parsedTutorId,
+          date: {
+            gte: new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1)),
+            lt: new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth() + 1, 1)),
+          },
+        },
+      },
+      data: {
+        tutorPaymentStatus: status,
+      },
+    });
+
+    res.status(200).json({ ok: true, updated: updatedPayments.count });
+  } catch (err) {
+    next(err)
+  }
+}

@@ -251,22 +251,24 @@
         }
       }
     },
-    "/admin/payments/{paymentId}": {
+    "/admin/payments/{period}": {
       "delete": {
-        "summary": "Delete an admin payment",
-        "description": "Permanently deletes the admin payment record with the given ID.",
+        "summary": "Delete an admin payment by period",
+        "description": "Permanently deletes the admin payment record matching the given billing period.\nThe `period` must be the ISO 8601 date-time string of the first day of the month\n(e.g. `2026-01-01T00:00:00.000Z`).\n",
         "tags": [
           "Admin"
         ],
         "parameters": [
           {
             "in": "path",
-            "name": "paymentId",
+            "name": "period",
             "required": true,
             "schema": {
-              "type": "integer"
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-01-01T00:00:00.000Z"
             },
-            "description": "ID of the admin payment to delete"
+            "description": "First day of the billing month (UTC) of the payment to delete"
           }
         ],
         "responses": {
@@ -289,7 +291,7 @@
             }
           },
           "400": {
-            "description": "Invalid payment ID"
+            "description": "Invalid period value"
           },
           "403": {
             "description": "Forbidden"
@@ -690,7 +692,7 @@
         "tags": [
           "CashFlow"
         ],
-        "description": "Returns detailed financial information separated by user role.\nResults are ordered alphabetically by name.\n\n**Logic based on `filteredUserRole`:**\n\nFor **coordinator**:\n- Returns a list of coordinators with their calculated profit shares and total amount for the specified period.\n- Use `paymentStatus` to filter:\n  - `pending` — only coordinators with at least one pending payment.\n  - `completed` — only coordinators where all payments are completed.\n  - *(omit)* — all coordinators regardless of status.\n\nFor **tutor**:\n- Returns a list of tutors with their class earnings for the specified period.\n- Use `paymentStatus` to filter classes by tutor payment status (`pending` or `completed`).\n- Each tutor entry includes a computed `totalAmount` and overall `paymentStatus`.\n\nFor **guardian**:\n- Returns a list of guardians with their total class payments for the specified period.\n- Use `filteredGuardianPaymentStatus` to filter:\n  - `pending` — only pending (bank transfer) payments.\n  - `bankTransfer` — completed bank-transfer payments and all pending ones.\n  - `card` — only completed card payments.\n  - `completed` — all completed payments regardless of type.\n  - *(omit)* — all guardians.\n- Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`\n  (`card`, `bankTransfer`, or `null` when mixed / no completed payments).\n\nFor **admin**:\n- Admin details are already included in the `/cashflow/summary` response.\n  This endpoint returns a message redirecting to the summary.\n",
+        "description": "Returns detailed financial information separated by user role.\nResults are ordered alphabetically by name.\n\n**Logic based on `filteredUserRole`:**\n\nFor **coordinator**:\n- Returns a list of coordinators with their calculated profit shares and total amount for the specified period.\n- Use `paymentStatus` to filter:\n  - `pending` — only coordinators with at least one pending payment.\n  - `completed` — only coordinators where all payments are completed.\n  - *(omit)* — all coordinators regardless of status.\n\nFor **tutor**:\n- Returns a list of tutors with their class earnings for the specified period.\n- Use `paymentStatus` to filter classes by tutor payment status (`pending` or `completed`).\n- Each tutor entry includes a computed `totalAmount` and overall `paymentStatus`.\n\nFor **guardian**:\n- Returns a list of guardians with their total class payments for the specified period.\n- Use `filteredGuardianPaymentStatus` to filter:\n  - `pending` — only guardians with pending (bank transfer) payments.\n  - `bankTransfer` — only guardians whose payments are all completed via bank transfer (no pending, no card).\n  - `card` — only guardians whose payments are all completed via card (no pending, no bank transfer).\n  - `card-transfer` — guardians who have completed payments of **both** card and bank transfer types, with no pending payments.\n  - `completed` — all guardians with all payments completed, regardless of type.\n  - *(omit)* — all guardians.\n- Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`\n  (`card`, `bankTransfer`, or `null` when mixed / no completed payments).\n\nFor **admin**:\n- Admin details are already included in the `/cashflow/summary` response.\n  This endpoint returns a message redirecting to the summary.\n",
         "parameters": [
           {
             "in": "query",
@@ -757,10 +759,11 @@
                 "pending",
                 "bankTransfer",
                 "card",
+                "card-transfer",
                 "completed"
               ]
             },
-            "description": "Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.\n- `pending` — pending payments (always bank transfer).\n- `bankTransfer` — completed bank-transfer payments plus all pending ones.\n- `card` — completed card payments only.\n- `completed` — all completed payments regardless of type.\n"
+            "description": "Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.\n- `pending` — guardians with pending (bank transfer) payments.\n- `bankTransfer` — guardians with all completed payments via bank transfer only (no card, no pending).\n- `card` — guardians with all completed payments via card only (no bank transfer, no pending).\n- `card-transfer` — guardians with both card and bank transfer completed payments, and no pending payments.\n- `completed` — guardians with all payments completed, regardless of type.\n"
           },
           {
             "in": "query",
@@ -1375,17 +1378,17 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "coordinatorId"
+                  "coordinatorId",
+                  "payments"
                 ],
                 "properties": {
                   "coordinatorId": {
                     "type": "integer",
                     "description": "ID of the coordinator receiving the payments"
-                  }
-                },
-                "allOf": [
-                  {
+                  },
+                  "payments": {
                     "type": "array",
+                    "description": "One or more payment periods to record",
                     "items": {
                       "type": "object",
                       "required": [
@@ -1405,7 +1408,7 @@
                       }
                     }
                   }
-                ]
+                }
               }
             }
           }
@@ -1472,31 +1475,31 @@
         }
       }
     },
-    "/coordinators/{institutionId}/payments/{paymentId}": {
+    "/coordinators/{coordinatorId}/payments/{period}": {
       "delete": {
         "summary": "Delete a coordinator payment",
-        "description": "Permanently deletes the coordinator payment record with the given ID.",
+        "description": "Permanently deletes a coordinator payment record identified by its\nnumeric payment ID (`period` path param) scoped to the given `coordinatorId`.\n",
         "tags": [
           "Coordinators"
         ],
         "parameters": [
           {
             "in": "path",
-            "name": "institutionId",
+            "name": "coordinatorId",
             "required": true,
             "schema": {
               "type": "integer"
             },
-            "description": "Institution ID"
+            "description": "ID of the coordinator who owns the payment"
           },
           {
             "in": "path",
-            "name": "paymentId",
+            "name": "period",
             "required": true,
             "schema": {
               "type": "integer"
             },
-            "description": "ID of the coordinator payment to delete"
+            "description": "Numeric ID of the coordinator payment record to delete"
           }
         ],
         "responses": {
@@ -2315,6 +2318,90 @@
           },
           "409": {
             "description": "Link already exists"
+          }
+        }
+      }
+    },
+    "/tutors/{tutorId}/payments": {
+      "patch": {
+        "summary": "Update tutor payment status for a date range",
+        "description": "Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the\ngiven tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).\nThe range is expanded to full months: `periodStart` is treated as the first moment of\nits month and `periodEnd` as the last moment of its month.\n",
+        "tags": [
+          "Tutors"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tutorId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID of the tutor"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "periodStart",
+                  "periodEnd",
+                  "status"
+                ],
+                "properties": {
+                  "periodStart": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-01-01",
+                    "description": "Any date within the first month of the range (UTC)"
+                  },
+                  "periodEnd": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-02-01",
+                    "description": "Any date within the last month of the range (UTC)"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "completed"
+                    ],
+                    "description": "New payment status to apply"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payments updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "updated": {
+                      "type": "integer",
+                      "description": "Number of payment records updated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tutor ID or period format"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }

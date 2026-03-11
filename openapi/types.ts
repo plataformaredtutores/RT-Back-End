@@ -4,9 +4,6 @@
  */
 
 
-/** WithRequired type helpers */
-type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
-
 /** OneOf type helpers */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
@@ -168,16 +165,18 @@ export interface paths {
       };
     };
   };
-  "/admin/payments/{paymentId}": {
+  "/admin/payments/{period}": {
     /**
-     * Delete an admin payment
-     * @description Permanently deletes the admin payment record with the given ID.
+     * Delete an admin payment by period
+     * @description Permanently deletes the admin payment record matching the given billing period.
+     * The `period` must be the ISO 8601 date-time string of the first day of the month
+     * (e.g. `2026-01-01T00:00:00.000Z`).
      */
     delete: {
       parameters: {
         path: {
-          /** @description ID of the admin payment to delete */
-          paymentId: number;
+          /** @description First day of the billing month (UTC) of the payment to delete */
+          period: string;
         };
       };
       responses: {
@@ -190,7 +189,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid payment ID */
+        /** @description Invalid period value */
         400: {
           content: never;
         };
@@ -429,10 +428,11 @@ export interface paths {
      * For **guardian**:
      * - Returns a list of guardians with their total class payments for the specified period.
      * - Use `filteredGuardianPaymentStatus` to filter:
-     *   - `pending` — only pending (bank transfer) payments.
-     *   - `bankTransfer` — completed bank-transfer payments and all pending ones.
-     *   - `card` — only completed card payments.
-     *   - `completed` — all completed payments regardless of type.
+     *   - `pending` — only guardians with pending (bank transfer) payments.
+     *   - `bankTransfer` — only guardians whose payments are all completed via bank transfer (no pending, no card).
+     *   - `card` — only guardians whose payments are all completed via card (no pending, no bank transfer).
+     *   - `card-transfer` — guardians who have completed payments of **both** card and bank transfer types, with no pending payments.
+     *   - `completed` — all guardians with all payments completed, regardless of type.
      *   - *(omit)* — all guardians.
      * - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
      *   (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
@@ -461,12 +461,13 @@ export interface paths {
           paymentStatus?: "pending" | "completed";
           /**
            * @description Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
-           * - `pending` — pending payments (always bank transfer).
-           * - `bankTransfer` — completed bank-transfer payments plus all pending ones.
-           * - `card` — completed card payments only.
-           * - `completed` — all completed payments regardless of type.
+           * - `pending` — guardians with pending (bank transfer) payments.
+           * - `bankTransfer` — guardians with all completed payments via bank transfer only (no card, no pending).
+           * - `card` — guardians with all completed payments via card only (no bank transfer, no pending).
+           * - `card-transfer` — guardians with both card and bank transfer completed payments, and no pending payments.
+           * - `completed` — guardians with all payments completed, regardless of type.
            */
-          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "completed";
+          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed";
           /** @description Page number for pagination */
           page?: number;
           /** @description Number of items per page */
@@ -827,18 +828,20 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": WithRequired<{
+          "application/json": {
             /** @description ID of the coordinator receiving the payments */
             coordinatorId: number;
-          } & {
-              /** @description Payment amount */
-              amount: number;
-              /**
-               * Format: date-time
-               * @description First day of the billing month (UTC)
-               */
-              period: string;
-            }[], "coordinatorId">;
+            /** @description One or more payment periods to record */
+            payments: {
+                /** @description Payment amount */
+                amount: number;
+                /**
+                 * Format: date-time
+                 * @description First day of the billing month (UTC)
+                 */
+                period: string;
+              }[];
+          };
         };
       };
       responses: {
@@ -876,18 +879,19 @@ export interface paths {
       };
     };
   };
-  "/coordinators/{institutionId}/payments/{paymentId}": {
+  "/coordinators/{coordinatorId}/payments/{period}": {
     /**
      * Delete a coordinator payment
-     * @description Permanently deletes the coordinator payment record with the given ID.
+     * @description Permanently deletes a coordinator payment record identified by its
+     * numeric payment ID (`period` path param) scoped to the given `coordinatorId`.
      */
     delete: {
       parameters: {
         path: {
-          /** @description Institution ID */
-          institutionId: number;
-          /** @description ID of the coordinator payment to delete */
-          paymentId: number;
+          /** @description ID of the coordinator who owns the payment */
+          coordinatorId: number;
+          /** @description Numeric ID of the coordinator payment record to delete */
+          period: number;
         };
       };
       responses: {
@@ -1424,6 +1428,66 @@ export interface paths {
         };
         /** @description Link already exists */
         409: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/tutors/{tutorId}/payments": {
+    /**
+     * Update tutor payment status for a date range
+     * @description Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the
+     * given tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).
+     * The range is expanded to full months: `periodStart` is treated as the first moment of
+     * its month and `periodEnd` as the last moment of its month.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description ID of the tutor */
+          tutorId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date
+             * @description Any date within the first month of the range (UTC)
+             * @example 2026-01-01
+             */
+            periodStart: string;
+            /**
+             * Format: date
+             * @description Any date within the last month of the range (UTC)
+             * @example 2026-02-01
+             */
+            periodEnd: string;
+            /**
+             * @description New payment status to apply
+             * @enum {string}
+             */
+            status: "pending" | "completed";
+          };
+        };
+      };
+      responses: {
+        /** @description Payments updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              /** @description Number of payment records updated */
+              updated?: number;
+            };
+          };
+        };
+        /** @description Invalid tutor ID or period format */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
           content: never;
         };
       };

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { createGuardianTutorLink } from '../controllers/tutorController'
+import { createGuardianTutorLink, editTutorPaymentsFromPeriod } from '../controllers/tutorController'
 
 const router = Router()
 
@@ -31,5 +31,65 @@ const router = Router()
  *         description: Link already exists
  */
 router.post('/guardian-links', createGuardianTutorLink)
+
+/**
+ * @openapi
+ * /tutors/{tutorId}/payments:
+ *   patch:
+ *     summary: Update tutor payment status for a date range
+ *     description: |
+ *       Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the
+ *       given tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).
+ *       The range is expanded to full months: `periodStart` is treated as the first moment of
+ *       its month and `periodEnd` as the last moment of its month.
+ *     tags: [Tutors]
+ *     parameters:
+ *       - in: path
+ *         name: tutorId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the tutor
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [periodStart, periodEnd, status]
+ *             properties:
+ *               periodStart:
+ *                 type: string
+ *                 format: date
+ *                 example: '2026-01-01'
+ *                 description: Any date within the first month of the range (UTC)
+ *               periodEnd:
+ *                 type: string
+ *                 format: date
+ *                 example: '2026-02-01'
+ *                 description: Any date within the last month of the range (UTC)
+ *               status:
+ *                 type: string
+ *                 enum: [pending, completed]
+ *                 description: New payment status to apply
+ *     responses:
+ *       200:
+ *         description: Payments updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 updated:
+ *                   type: integer
+ *                   description: Number of payment records updated
+ *       400:
+ *         description: Invalid tutor ID or period format
+ *       403:
+ *         description: Forbidden
+ */
+router.patch('/:tutorId/payments', editTutorPaymentsFromPeriod)
 
 export default router

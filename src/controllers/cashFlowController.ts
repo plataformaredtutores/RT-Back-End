@@ -117,63 +117,34 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
 
             let amount = 0
 
-            // At this point, we can have multiple adminShare, for example, in the relation AdminProfitShare, we have 
-            // | id | profitShare | availableSince | availableUntil 
-            // |----|-------------|----------------|----------------|
-            // | 1  | 40          | 2026-01     | 2300-01     |
-            // | 2  | 20          | 2025-12     | 2026-01     |
-            // | 3  | 30          | 2020-02     | 2025-12     |
+            // Profit shares always align to month boundaries — at most one share is
+            // active per month, so no sub-period splitting is needed.
+            const shareForTheMonth = adminShares.find((s) =>
+                s.availableSince <= monthStart && s.availableUntil >= monthStart
+            )
 
-            // As we can see, the share for december 2025, that is a pending month, is 20% from the begin of december 
-            // to 12 of december, and 30% from 12 of december to the end of december. 
-
-            // For this case (and other with multiple shares in the same month), we need to calculate the share for each period and then sum the results.
-            const adminSharesForTheMonth = adminShares.filter((s) => {
-                return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
-            })
-            const periodForEachShare = adminSharesForTheMonth.map((s) => {
-                const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
-                const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
-                return {
-                    shareStart,
-                    shareEnd,
-                }
-            })
-
-            for (const [index, period] of periodForEachShare.entries()) {
-                const share = adminSharesForTheMonth[index].profitShare as Decimal
-                // Here we can calculate the amount to receive and pay for the month, using the share and the total amount of the month, that is calculated using the class payments.
+            if (shareForTheMonth) {
+                const share = shareForTheMonth.profitShare as Decimal
                 const guardianPayments = await prisma.classPayment.aggregate({
-                    _sum: {
-                        guardianAmount: true
-                    },
+                    _sum: { guardianAmount: true },
                     where: {
                         Class: {
                             institutionId,
-                            date: {
-                                gte: new Date(period.shareStart),
-                                lte: new Date(period.shareEnd)
-                            }
-                        },
+                            date: { gte: monthStart, lte: monthEnd }
+                        }
                     }
                 })
-
                 const tutorPayments = await prisma.classPayment.aggregate({
-                    _sum: {
-                        tutorAmount: true
-                    },
+                    _sum: { tutorAmount: true },
                     where: {
                         Class: {
                             institutionId,
-                            date: {
-                                gte: new Date(period.shareStart),
-                                lte: new Date(period.shareEnd)
-                            }
-                        },
+                            date: { gte: monthStart, lte: monthEnd }
+                        }
                     }
                 })
-
-                amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100) - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                amount = (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
+                       - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
             }
 
             adminPayments.push({
@@ -198,45 +169,32 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                 const monthEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 0, 23, 59, 59, 999))
 
                 let amount = 0
-                const adminSharesForTheMonth = adminShares.filter((s) => {
-                    return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
-                })
-                const periodForEachShare = adminSharesForTheMonth.map((s) => {
-                    const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
-                    const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
-                    return { shareStart, shareEnd }
-                })
+                const shareForTheMonth = adminShares.find((s) =>
+                    s.availableSince <= monthStart && s.availableUntil >= monthStart
+                )
 
-                for (const [index, period] of periodForEachShare.entries()) {
-                    const share = adminSharesForTheMonth[index].profitShare as Decimal
+                if (shareForTheMonth) {
+                    const share = shareForTheMonth.profitShare as Decimal
                     const guardianPayments = await prisma.classPayment.aggregate({
                         _sum: { guardianAmount: true },
                         where: {
                             Class: {
                                 institutionId,
-                                date: {
-                                    gte: new Date(period.shareStart),
-                                    lte: new Date(period.shareEnd)
-                                }
+                                date: { gte: monthStart, lte: monthEnd }
                             }
                         }
                     })
-
                     const tutorPayments = await prisma.classPayment.aggregate({
                         _sum: { tutorAmount: true },
                         where: {
                             Class: {
                                 institutionId,
-                                date: {
-                                    gte: new Date(period.shareStart),
-                                    lte: new Date(period.shareEnd)
-                                }
+                                date: { gte: monthStart, lte: monthEnd }
                             }
                         }
                     })
-
-                    amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
-                    amount -= (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                    amount = (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
+                           - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
                 }
 
                 adminPaymentsByInstitution.push({
@@ -420,7 +378,7 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             }
         })
 
-        const coordinatorPaymentsResult = []
+        const coordinatorPaymentsResult = [...coordinatorPayments]
 
         for (const month of pendingMonths) {
             const monthStart = month.start
@@ -428,52 +386,34 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
 
             let amount = 0
 
-            const coordinatorSharesForTheMonth = coordinatorShares.filter((s) => {
-                return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
-            })
-            const periodForEachShare = coordinatorSharesForTheMonth.map((s) => {
-                const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
-                const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
-                return {
-                shareStart,
-                    shareEnd,
-                }
-            })
+            // Profit shares always align to month boundaries — at most one share is
+            // active per month, so no sub-period splitting is needed.
+            const shareForTheMonth = coordinatorShares.find((s) =>
+                s.availableSince <= monthStart && s.availableUntil >= monthStart
+            )
 
-            for (const [index, period] of periodForEachShare.entries()) {
-                const share = coordinatorSharesForTheMonth[index].profitShare as Decimal
-                // Here we can calculate the amount to receive and pay for the month, using the share and the total amount of the month, that is calculated using the class payments.
+            if (shareForTheMonth) {
+                const share = shareForTheMonth.profitShare as Decimal
                 const guardianPayments = await prisma.classPayment.aggregate({
-                    _sum: {
-                        guardianAmount: true
-                    },
+                    _sum: { guardianAmount: true },
                     where: {
                         Class: {
                             institutionId,
-                            date: {
-                                gte: new Date(period.shareStart),
-                                lte: new Date(period.shareEnd)
-                            }
-                        },
+                            date: { gte: monthStart, lte: monthEnd }
+                        }
                     }
                 })
-
                 const tutorPayments = await prisma.classPayment.aggregate({
-                    _sum: {
-                        tutorAmount: true
-                    },
+                    _sum: { tutorAmount: true },
                     where: {
                         Class: {
                             institutionId,
-                            date: {
-                                gte: new Date(period.shareStart),
-                                lte: new Date(period.shareEnd)
-                            }
-                        },
+                            date: { gte: monthStart, lte: monthEnd }
+                        }
                     }
                 })
-
-                amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100) - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                amount = (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
+                       - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
             }
 
             coordinatorPaymentsResult.push({
@@ -663,7 +603,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                 }
             })
 
-            const coordinatorPaymentsResult = []
+            const coordinatorPaymentsResult = [...coordinatorPayments]
 
             for (const month of pendingMonths) {
                 const monthStart = month.start
@@ -671,52 +611,34 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
 
                 let amount = 0
 
-                const coordinatorSharesForTheMonth = coordinatorShares.filter((s) => {
-                    return (s.availableSince <= monthEnd) && (s.availableUntil >= monthStart)
-                })
-                const periodForEachShare = coordinatorSharesForTheMonth.map((s) => {
-                    const shareStart = s.availableSince > monthStart ? s.availableSince : monthStart
-                    const shareEnd = s.availableUntil < monthEnd ? s.availableUntil : monthEnd
-                    return {
-                        shareStart,
-                        shareEnd,
-                    }
-                })
+                // Profit shares always align to month boundaries — at most one share is
+                // active per month, so no sub-period splitting is needed.
+                const shareForTheMonth = coordinatorShares.find((s) =>
+                    s.availableSince <= monthStart && s.availableUntil >= monthStart
+                )
 
-                for (const [index, period] of periodForEachShare.entries()) {
-                    const share = coordinatorSharesForTheMonth[index].profitShare as Decimal
-                    
+                if (shareForTheMonth) {
+                    const share = shareForTheMonth.profitShare as Decimal
                     const guardianPayments = await prisma.classPayment.aggregate({
-                        _sum: {
-                            guardianAmount: true
-                        },
+                        _sum: { guardianAmount: true },
                         where: {
                             Class: {
                                 institutionId,
-                                date: {
-                                    gte: new Date(period.shareStart),
-                                    lte: new Date(period.shareEnd)
-                                }
-                            },
+                                date: { gte: monthStart, lte: monthEnd }
+                            }
                         }
                     })
-
                     const tutorPayments = await prisma.classPayment.aggregate({
-                        _sum: {
-                            tutorAmount: true
-                        },
+                        _sum: { tutorAmount: true },
                         where: {
                             Class: {
                                 institutionId,
-                                date: {
-                                    gte: new Date(period.shareStart),
-                                    lte: new Date(period.shareEnd)
-                                }
-                            },
+                                date: { gte: monthStart, lte: monthEnd }
+                            }
                         }
                     })
-
-                    amount += (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100) - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
+                    amount = (guardianPayments._sum.guardianAmount || 0) * (share.toNumber() / 100)
+                           - (tutorPayments._sum.tutorAmount || 0) * (share.toNumber() / 100)
                 }
 
                 coordinatorPaymentsResult.push({
@@ -843,7 +765,8 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
         // - filterGuardianPaymentStatus = pending => show only the pending payments, that are always bankTransfer
         // - filterGuardianPaymentStatus = bankTransfer => show only the completed payments with bankTransfer type, and the pending payments, that are always bankTransfer
         // - filterGuardianPaymentStatus = card => show only the completed payments with card type
-        // - filterGuardianPaymentStatus = completed => show all the payments with completed status, independtly of the type, no guardian with a pending payment will be shown, 
+        // - filterGuardianPaymentStatus = card-transfer => show only the completed payments with card or bank transfer type, this type is considered when a guardian has at least one completed payment with card but no pending payments
+        // - filterGuardianPaymentStatus = completed => show all the payments with completed status, independtly of the type, no guardian with a pending payment will be shown. When filtering completed payments, we can mark in the response if all the completed payments are with card, with bank transfer or mixed, to show that in the details and be able to filter by that in the frontend
         let guardianPaymentType: PaymentType | undefined = undefined
         let guardianPaymentStatus: PaymentStatus | undefined = undefined
 
@@ -856,6 +779,10 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
         } else if (filteredGuardianPaymentStatus === 'card') {
             guardianPaymentStatus = PaymentStatus.completed
             guardianPaymentType = PaymentType.card
+        } else if (filteredGuardianPaymentStatus === 'card-transfer') {
+            // Mixed: guardian has both completed card and completed bankTransfer payments, no pending
+            guardianPaymentStatus = PaymentStatus.completed
+            guardianPaymentType = undefined
         } else if (filteredGuardianPaymentStatus === 'completed') {
             guardianPaymentStatus = PaymentStatus.completed
             guardianPaymentType = undefined
@@ -934,6 +861,53 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
                             }
                         }
                     }
+                } : filteredGuardianPaymentStatus === 'card-transfer' ? {
+                    // Require at least one completed card payment AND at least one completed bankTransfer payment,
+                    // and exclude any guardian that still has a pending payment.
+                    NOT: {
+                        Students: {
+                            some: {
+                                Classes: {
+                                    some: {
+                                        date: { gte: start, lte: end },
+                                        ClassPayment: { guardianPaymentStatus: PaymentStatus.pending }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    AND: [
+                        {
+                            Students: {
+                                some: {
+                                    Classes: {
+                                        some: {
+                                            date: { gte: start, lte: end },
+                                            ClassPayment: {
+                                                guardianPaymentStatus: PaymentStatus.completed,
+                                                guardianPaymentType: PaymentType.card
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            Students: {
+                                some: {
+                                    Classes: {
+                                        some: {
+                                            date: { gte: start, lte: end },
+                                            ClassPayment: {
+                                                guardianPaymentStatus: PaymentStatus.completed,
+                                                guardianPaymentType: PaymentType.bankTransfer
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
                 } : {})
             },
             select: {

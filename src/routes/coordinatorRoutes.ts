@@ -63,13 +63,14 @@ router.patch('/:institutionId/profit-share', editCoordinatorProfitShare)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [coordinatorId]
+ *             required: [coordinatorId, payments]
  *             properties:
  *               coordinatorId:
  *                 type: integer
  *                 description: ID of the coordinator receiving the payments
- *             allOf:
- *               - type: array
+ *               payments:
+ *                 type: array
+ *                 description: One or more payment periods to record
  *                 items:
  *                   type: object
  *                   required: [amount, period]
@@ -123,24 +124,26 @@ router.post('/:institutionId/payments', makeCoordinatorPayment)
 
 /**
  * @openapi
- * /coordinators/{institutionId}/payments/{paymentId}:
+ * /coordinators/{coordinatorId}/payments/{period}:
  *   delete:
  *     summary: Delete a coordinator payment
- *     description: Permanently deletes the coordinator payment record with the given ID.
+ *     description: |
+ *       Permanently deletes a coordinator payment record identified by its
+ *       numeric payment ID (`period` path param) scoped to the given `coordinatorId`.
  *     tags: [Coordinators]
  *     parameters:
  *       - in: path
- *         name: institutionId
+ *         name: coordinatorId
  *         required: true
  *         schema:
  *           type: integer
- *         description: Institution ID
+ *         description: ID of the coordinator who owns the payment
  *       - in: path
- *         name: paymentId
+ *         name: period
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID of the coordinator payment to delete
+ *         description: Numeric ID of the coordinator payment record to delete
  *     responses:
  *       200:
  *         description: Payment deleted successfully
@@ -158,7 +161,7 @@ router.post('/:institutionId/payments', makeCoordinatorPayment)
  *       403:
  *         description: Forbidden
  */
-router.delete('/:institutionId/payments/:paymentId', deleteCoordinatorPayment)
+router.delete('/:coordinatorId/payments/:period', deleteCoordinatorPayment)
 
 export default router
 

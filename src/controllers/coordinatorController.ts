@@ -28,15 +28,19 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
       return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
     }
 
+    // Profit shares align to month boundaries
+    const now = new Date();
+    const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const prevMonthEnd = new Date(thisMonthStart.getTime() - 1);
+
     const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
       where: {
         institutionId: parsedInstitutionId,
         coordinatorId: {
           not: parsedCoordinatorId,
         },
-        availableUntil: {
-          gt: new Date(), // Only consider active profit shares
-        },
+        availableSince: { lte: thisMonthStart },
+        availableUntil: { gte: thisMonthStart },
       },
       _sum: {
         profitShare: true,
@@ -46,12 +50,8 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
     // The admin has variable profit share.
     const adminProfitShare = await prisma.adminProfitShare.findFirst({
       where: {
-        availableUntil: {
-          gt: new Date(), // Only consider active profit share
-        },
-      },
-      orderBy: {
-        availableUntil: 'desc',
+        availableSince: { lte: thisMonthStart },
+        availableUntil: { gte: thisMonthStart },
       },
       select: {
         profitShare: true,
@@ -65,39 +65,47 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
       return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
     }
 
-    await prisma.coordinatorProfitShare.updateMany({
-      where: {
-      coordinatorId: parsedCoordinatorId,
-      institutionId: parsedInstitutionId,
-      availableUntil: {
-        equals: await prisma.coordinatorProfitShare.findFirst({
+    await prisma.$transaction(async (tx) => {
+      // If a share already starts this month (repeated edit within same month), delete it so it
+      // can be cleanly replaced — prevents stacking multiple shares in the same month.
+      const thisMonthShare = await tx.coordinatorProfitShare.findFirst({
         where: {
           coordinatorId: parsedCoordinatorId,
           institutionId: parsedInstitutionId,
+          availableSince: { gte: thisMonthStart },
         },
-        orderBy: {
-          availableUntil: 'desc',
+      });
+      if (thisMonthShare) {
+        await tx.coordinatorProfitShare.delete({ where: { id: thisMonthShare.id } });
+      }
+
+      // Cap the previously active share at the last moment of the previous month
+      const previousShare = await tx.coordinatorProfitShare.findFirst({
+        where: {
+          coordinatorId: parsedCoordinatorId,
+          institutionId: parsedInstitutionId,
+          availableSince: { lt: thisMonthStart },
+          availableUntil: { gte: thisMonthStart },
         },
-        select: { availableUntil: true },
-        }).then(res => res?.availableUntil),
-      },
-      },
-      data: {
-      availableUntil: new Date(), // Set available until to now to expire the current profit share
-      },
-    })
+      });
+      if (previousShare) {
+        await tx.coordinatorProfitShare.update({
+          where: { id: previousShare.id },
+          data: { availableUntil: prevMonthEnd },
+        });
+      }
 
-    // The profit to create is mean to last forever, but, it can be edited by creating a new one, and updating the previous one to expire when the new one is created, so, we set the available until to a far future date, but, we also need to set it to the end of the current month to avoid issues with the cash flow summary that is calculated month by month.
-
-    await prisma.coordinatorProfitShare.create({
-      data: {
-        coordinatorId: parsedCoordinatorId,
-        institutionId: parsedInstitutionId,
-        profitShare,
-        availableSince: new Date(),
-        availableUntil: new Date(new Date().getFullYear()+237, new Date().getMonth(), 0) // Set available until the end of the current month
-      },
-    })
+      // Create the new share effective from the 1st of the current month
+      await tx.coordinatorProfitShare.create({
+        data: {
+          coordinatorId: parsedCoordinatorId,
+          institutionId: parsedInstitutionId,
+          profitShare,
+          availableSince: thisMonthStart,
+          availableUntil: new Date('2099-12-31T23:59:59.999Z'),
+        },
+      });
+    });
 
     res.status(200).json({ ok: true, message: 'Coordinator profit share updated successfully' });
   } catch (err) {
@@ -110,14 +118,23 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
   try {
     const { institutionId } = req.params;
     const coordinatorId = req.body.coordinatorId;
-    const amounts = req.body as { amount: number, period: Date }[];
+    const amounts = req.body.payments as { amount: number, period: Date }[];
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-
+    const now = new Date();
+    for (const { period } of amounts) {
+      const periodDate = new Date(period);
+      if (
+        periodDate.getUTCFullYear() === now.getUTCFullYear() &&
+        periodDate.getUTCMonth() === now.getUTCMonth()
+      ) {
+        return res.status(400).json({ ok: false, message: 'Cannot register a payment for the current month as it has not ended yet' });
+      }
+    }
 
     const parsedInstitutionId = Number(institutionId)
     const parsedCoordinatorId = Number(coordinatorId)
@@ -169,22 +186,34 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
 
 export async function deleteCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
   try {
-    const { paymentId } = req.params;
+    const { period, coordinatorId } = req.params;
     const userRole = (req as any).auth?.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    const parsedPaymentId = Number(paymentId)
+    const parsedCoordinatorId = Number(coordinatorId);
+    const parsedPeriod = new Date(period);
 
-    if (!Number.isFinite(parsedPaymentId)) {
-      return res.status(400).json({ ok: false, message: 'Payment ID is required' });
+    if (!Number.isFinite(parsedCoordinatorId)) {
+      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
     }
 
-    await prisma.coordinatorPayment.delete({
-      where: { id: parsedPaymentId },
-    })
+    if (Number.isNaN(parsedPeriod.getTime())) {
+      return res.status(400).json({ ok: false, message: 'Invalid period' });
+    }
+
+    const result = await prisma.coordinatorPayment.deleteMany({
+      where: {
+        coordinatorId: parsedCoordinatorId,
+        period: parsedPeriod,
+      },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ ok: false, message: 'Coordinator payment not found' });
+    }
 
     res.status(200).json({ ok: true, message: 'Coordinator payment deleted successfully' });
   } catch (err) {
