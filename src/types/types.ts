@@ -1421,8 +1421,8 @@ export interface paths {
       };
     };
     /**
-     * Deactivate a guardian-tutor link
-     * @description Soft deletes a guardian-tutor relationship by setting active = false.
+     * Delete a guardian-tutor link
+     * @description Deletes a guardian-tutor relationship identified by guardianId, tutorId, and institutionId.
      */
     delete: {
       requestBody: {

@@ -98,8 +98,8 @@ router.patch('/:tutorId/payments', editTutorPaymentsFromPeriod)
  * @openapi
  * /tutors/guardian-links:
  *   delete:
- *     summary: Deactivate a guardian-tutor link
- *     description: Soft deletes a guardian-tutor relationship by setting active = false.
+ *     summary: Delete a guardian-tutor link
+ *     description: Deletes a guardian-tutor relationship identified by guardianId, tutorId, and institutionId.
  *     tags: [Tutors]
  *     requestBody:
  *       required: true
