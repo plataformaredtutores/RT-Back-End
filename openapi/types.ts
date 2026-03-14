@@ -1431,6 +1431,37 @@ export interface paths {
         };
       };
     };
+    /**
+     * Delete a guardian-tutor link
+     * @description Deletes a guardian-tutor relationship identified by guardianId, tutorId, and institutionId.
+     */
+    delete: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["DeleteGuardianTutorLinkInput"];
+        };
+      };
+      responses: {
+        /** @description Guardian-tutor link deactivated */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DeleteGuardianTutorLinkResponse"];
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+        /** @description Link not found */
+        404: {
+          content: never;
+        };
+      };
+    };
   };
   "/tutors/{tutorId}/payments": {
     /**
@@ -1937,6 +1968,15 @@ export interface components {
       institutionId: number;
     };
     CreateGuardianTutorLinkResponse: {
+      ok: boolean;
+      link: components["schemas"]["GuardianTutor"];
+    };
+    DeleteGuardianTutorLinkInput: {
+      guardianId: number;
+      tutorId: number;
+      institutionId: number;
+    };
+    DeleteGuardianTutorLinkResponse: {
       ok: boolean;
       link: components["schemas"]["GuardianTutor"];
     };
