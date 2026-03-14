@@ -6,7 +6,7 @@ import {
   getInstitutions,
   searchInstitutions,
   getGuardiansFromInstitution,
-  deleteInstitution,
+  deactivateInstitution,
   reactivateInstitution,
   getInstitutionDeletionOptions,
   hardDeleteInstitution,
@@ -131,7 +131,7 @@ router.get('/search', searchInstitutions);
  * @openapi
  * /institutions/{id}:
  *   delete:
- *     summary: Delete (deactivate) an institution
+ *     summary: Deactivate an institution
  *     description: |
  *       Soft delete an institution.
  *       - If the institution has no users, it can be deactivated immediately (no payment checks).
@@ -146,19 +146,19 @@ router.get('/search', searchInstitutions);
  *         description: Institution ID
  *     responses:
  *       200:
- *         description: Institution deleted
+ *         description: Institution deactivated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeactivateInstitutionResponse'
  *       400:
- *         description: Cannot delete due to pending or missing payments
+ *         description: Cannot deactivate due to pending or missing payments
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeactivateInstitutionResponse'
  */
-router.delete('/:id', deleteInstitution);
+router.delete('/:id', deactivateInstitution);
 
 /**
  * @openapi

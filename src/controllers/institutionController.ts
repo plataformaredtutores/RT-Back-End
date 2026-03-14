@@ -94,7 +94,7 @@ export async function getGuardiansFromInstitution(req: Request, res: Response, n
   }
 }
 
-export async function deleteInstitution(req: Request, res: Response, next: NextFunction) {
+export async function deactivateInstitution(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     const institutionId = Number(id);
@@ -120,7 +120,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
         data: { isActive: false },
       });
 
-      return res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
+      return res.status(200).json({ ok: true, message: 'Sede desactivada correctamente' });
     }
 
     // Check class payments (last 12 months) are all completed for this institution
@@ -151,7 +151,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     if (hasPendingClassPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede eliminar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
       });
     }
 
@@ -197,7 +197,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     if (missingOrPendingCoordinatorPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede eliminar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
       });
     }
 
@@ -212,7 +212,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
       data: { isActive: false },
     });
 
-    res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
+    res.status(200).json({ ok: true, message: 'Sede desactivada correctamente' });
   }
   catch (err) {
     next(err);

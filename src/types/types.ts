@@ -1117,7 +1117,7 @@ export interface paths {
   };
   "/institutions/{id}": {
     /**
-     * Delete (deactivate) an institution
+     * Deactivate an institution
      * @description Soft delete an institution.
      * - If the institution has no users, it can be deactivated immediately (no payment checks).
      * - Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.
@@ -1130,16 +1130,16 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Institution deleted */
+        /** @description Institution deactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
-        /** @description Cannot delete due to pending or missing payments */
+        /** @description Cannot deactivate due to pending or missing payments */
         400: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
       };
@@ -1859,7 +1859,7 @@ export interface components {
       institution: components["schemas"]["Institution"];
       fees: components["schemas"]["Fee"][];
     };
-    DeleteInstitutionResponse: {
+    DeactivateInstitutionResponse: {
       ok: boolean;
       message: string;
     };

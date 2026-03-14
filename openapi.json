@@ -1867,7 +1867,7 @@
     },
     "/institutions/{id}": {
       "delete": {
-        "summary": "Delete (deactivate) an institution",
+        "summary": "Deactivate an institution",
         "description": "Soft delete an institution.\n- If the institution has no users, it can be deactivated immediately (no payment checks).\n- Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.\n",
         "tags": [
           "Institutions"
@@ -1885,21 +1885,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Institution deleted",
+            "description": "Institution deactivated",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeactivateInstitutionResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Cannot delete due to pending or missing payments",
+            "description": "Cannot deactivate due to pending or missing payments",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeactivateInstitutionResponse"
                 }
               }
             }
@@ -3115,7 +3115,7 @@
           "fees"
         ]
       },
-      "DeleteInstitutionResponse": {
+      "DeactivateInstitutionResponse": {
         "type": "object",
         "properties": {
           "ok": {

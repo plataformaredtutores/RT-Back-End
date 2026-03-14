@@ -217,7 +217,7 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['institution', 'fees']
         },
-        DeleteInstitutionResponse: {
+        DeactivateInstitutionResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },

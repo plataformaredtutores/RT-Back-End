@@ -602,6 +602,11 @@ export interface paths {
      * - tutor: institutionId and tutorId are inferred from the authenticated tutor.
      * - coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.
      * - admin: tutorId and institutionId must be provided.
+     *
+     * Class creation is blocked when the month of the class is already settled:
+     * - if an admin payment exists for that month
+     * - if a coordinator payment exists for that institution and month
+     * - if any class for that tutor in that month already has tutorPaymentStatus = completed
      */
     post: {
       requestBody: {
@@ -619,6 +624,12 @@ export interface paths {
         /** @description Forbidden (role not allowed) */
         403: {
           content: never;
+        };
+        /** @description Class creation blocked because monthly payments are already settled */
+        409: {
+          content: {
+            "application/json": components["schemas"]["CreateClassBlockedResponse"];
+          };
         };
       };
     };
@@ -1106,7 +1117,7 @@ export interface paths {
   };
   "/institutions/{id}": {
     /**
-     * Delete (deactivate) an institution
+     * Deactivate an institution
      * @description Soft delete an institution.
      * - If the institution has no users, it can be deactivated immediately (no payment checks).
      * - Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.
@@ -1119,16 +1130,16 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Institution deleted */
+        /** @description Institution deactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
-        /** @description Cannot delete due to pending or missing payments */
+        /** @description Cannot deactivate due to pending or missing payments */
         400: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
       };
@@ -1848,7 +1859,7 @@ export interface components {
       institution: components["schemas"]["Institution"];
       fees: components["schemas"]["Fee"][];
     };
-    DeleteInstitutionResponse: {
+    DeactivateInstitutionResponse: {
       ok: boolean;
       message: string;
     };
@@ -2112,6 +2123,11 @@ export interface components {
     CreateClassResponse: {
       class: components["schemas"]["Class"];
       classPayment: components["schemas"]["ClassPayment"];
+    };
+    /** @description Returned when the month of the class is already settled for admin, coordinator, or tutor payments. */
+    CreateClassBlockedResponse: {
+      /** @enum {string} */
+      message: "No se puede crear una clase cuando ya se ha pagado al admin" | "No se puede crear una clase cuando ya se ha pagado al coordinador" | "No se puede crear una clase si ya se ha pagado al tutor";
     };
     ClassesCashFlowSummaryAmounts: {
       /** @description Pending amount for the authenticated role */
