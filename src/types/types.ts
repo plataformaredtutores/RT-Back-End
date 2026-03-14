@@ -115,6 +115,91 @@ export interface paths {
       };
     };
   };
+  "/admin/payments": {
+    /**
+     * Record admin payments
+     * @description Creates one or more admin profit-share payment records.
+     * Each entry requires an `amount` and a `period` (first day of the target month).
+     * All records are created inside a single database transaction.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+              /** @description Payment amount */
+              amount: number;
+              /**
+               * Format: date-time
+               * @description First day of the billing month (UTC)
+               */
+              period: string;
+            }[];
+        };
+      };
+      responses: {
+        /** @description Payments recorded successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+              data?: ({
+                  id?: number;
+                  amount?: number;
+                  /** Format: date-time */
+                  period?: string;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                })[];
+            };
+          };
+        };
+        /** @description Invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/admin/payments/{period}": {
+    /**
+     * Delete an admin payment by period
+     * @description Permanently deletes the admin payment record matching the given billing period.
+     * The `period` must be the ISO 8601 date-time string of the first day of the month
+     * (e.g. `2026-01-01T00:00:00.000Z`).
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description First day of the billing month (UTC) of the payment to delete */
+          period: string;
+        };
+      };
+      responses: {
+        /** @description Payment deleted successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid period value */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/auth/login": {
     /** User login */
     post: {
@@ -324,17 +409,37 @@ export interface paths {
     /**
      * Get cash flow details
      * @description Returns detailed financial information separated by user role.
+     * Results are ordered alphabetically by name.
      *
-     * **Logic based on Filtered User Role:**
+     * **Logic based on `filteredUserRole`:**
      *
      * For **coordinator**:
-     * - Returns a list of coordinators with their calculated profit shares and payment statuses for the specified period.
+     * - Returns a list of coordinators with their calculated profit shares and total amount for the specified period.
+     * - Use `paymentStatus` to filter:
+     *   - `pending` — only coordinators with at least one pending payment.
+     *   - `completed` — only coordinators where all payments are completed.
+     *   - *(omit)* — all coordinators regardless of status.
      *
      * For **tutor**:
-     * - Returns a list of tutors with their total earnings and payment status for the specified period.
+     * - Returns a list of tutors with their class earnings for the specified period.
+     * - Use `paymentStatus` to filter classes by tutor payment status (`pending` or `completed`).
+     * - Each tutor entry includes a computed `totalAmount` and overall `paymentStatus`.
      *
      * For **guardian**:
-     * - Returns a list of guardians with their total payments and payment status for the specified period.
+     * - Returns a list of guardians with their total class payments for the specified period.
+     * - Use `filteredGuardianPaymentStatus` to filter:
+     *   - `pending` — only guardians with pending (bank transfer) payments.
+     *   - `bankTransfer` — only guardians whose payments are all completed via bank transfer (no pending, no card).
+     *   - `card` — only guardians whose payments are all completed via card (no pending, no bank transfer).
+     *   - `card-transfer` — guardians who have completed payments of **both** card and bank transfer types, with no pending payments.
+     *   - `completed` — all guardians with all payments completed, regardless of type.
+     *   - *(omit)* — all guardians.
+     * - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
+     *   (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
+     *
+     * For **admin**:
+     * - Admin details are already included in the `/cashflow/summary` response.
+     *   This endpoint returns a message redirecting to the summary.
      */
     get: {
       parameters: {
@@ -343,10 +448,26 @@ export interface paths {
           startDate: components["schemas"]["MonthYear"];
           /** @description End month (MM-YYYY) */
           endDate: components["schemas"]["MonthYear"];
-          /** @description The role to filter the details by (e.g. coordinator, tutor, guardian) */
+          /** @description The role to filter the details by */
           filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
-          /** @description Optional filter by institution ID */
+          /** @description Optional filter by institution ID (admin only) */
           institutionId?: number;
+          /**
+           * @description Filter by payment status. Applies when `filteredUserRole` is `coordinator` or `tutor`.
+           * - `coordinator`: `pending` returns coordinators with at least one pending payment;
+           *   `completed` returns coordinators where all payments are completed.
+           * - `tutor`: filters class payments included for each tutor by tutor payment status.
+           */
+          paymentStatus?: "pending" | "completed";
+          /**
+           * @description Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
+           * - `pending` — guardians with pending (bank transfer) payments.
+           * - `bankTransfer` — guardians with all completed payments via bank transfer only (no card, no pending).
+           * - `card` — guardians with all completed payments via card only (no bank transfer, no pending).
+           * - `card-transfer` — guardians with both card and bank transfer completed payments, and no pending payments.
+           * - `completed` — guardians with all payments completed, regardless of type.
+           */
+          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed";
           /** @description Page number for pagination */
           page?: number;
           /** @description Number of items per page */
@@ -354,21 +475,74 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Cash flow details */
+        /** @description Cash flow details (shape varies by `filteredUserRole`) */
         200: {
           content: {
-            "application/json": {
+            "application/json": OneOf<[({
+                coordinator?: {
+                  id?: number;
+                  name?: string;
+                  email?: string;
+                  Institution?: {
+                    id?: number;
+                    name?: string;
+                  };
+                };
+                coordinatorPayments?: ({
+                    amount?: number;
+                    /** @enum {string} */
+                    status?: "pending" | "completed";
+                    /** Format: date-time */
+                    period?: string;
+                  })[];
+                /** @description Total profit share amount (pending + completed) for the period */
+                amount?: number;
+              })[], ({
                 id?: number;
                 name?: string;
                 email?: string;
-              }[];
+                Institution?: {
+                  id?: number;
+                  name?: string;
+                };
+                /** @description Sum of tutor earnings for the period */
+                totalAmount?: number;
+                /**
+                 * @description Overall payment status (pending if any class payment is pending)
+                 * @enum {string}
+                 */
+                paymentStatus?: "pending" | "completed";
+              })[], ({
+                id?: number;
+                name?: string;
+                email?: string;
+                Institution?: {
+                  id?: number;
+                  name?: string;
+                };
+                /** @description Sum of guardian payments for the period */
+                totalAmount?: number;
+                /**
+                 * @description Overall payment status (pending if any class payment is pending)
+                 * @enum {string}
+                 */
+                paymentStatus?: "pending" | "completed";
+                /**
+                 * @description Payment type derived from completed payments.
+                 * `card` or `bankTransfer` if all completed payments share the same type;
+                 * `null` when types are mixed or there are no completed payments.
+                 *
+                 * @enum {string|null}
+                 */
+                paymentType?: "card" | "bankTransfer" | null;
+              })[]]>;
           };
         };
-        /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
+        /** @description Bad Request (Missing dates or invalid date format) */
         400: {
           content: never;
         };
-        /** @description Forbidden (Invalid role or permissions) */
+        /** @description Forbidden (Coordinator attempting to view coordinator or admin details) */
         403: {
           content: never;
         };
@@ -428,6 +602,11 @@ export interface paths {
      * - tutor: institutionId and tutorId are inferred from the authenticated tutor.
      * - coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.
      * - admin: tutorId and institutionId must be provided.
+     *
+     * Class creation is blocked when the month of the class is already settled:
+     * - if an admin payment exists for that month
+     * - if a coordinator payment exists for that institution and month
+     * - if any class for that tutor in that month already has tutorPaymentStatus = completed
      */
     post: {
       requestBody: {
@@ -445,6 +624,12 @@ export interface paths {
         /** @description Forbidden (role not allowed) */
         403: {
           content: never;
+        };
+        /** @description Class creation blocked because monthly payments are already settled */
+        409: {
+          content: {
+            "application/json": components["schemas"]["CreateClassBlockedResponse"];
+          };
         };
       };
     };
@@ -551,6 +736,41 @@ export interface paths {
       };
     };
   };
+  "/classes/class-payments/bulk-status": {
+    /**
+     * Bulk-update guardian class payments by guardian and period
+     * @description Updates guardian-side class payments for all classes that belong to a
+     * specific guardian, optionally filtered by class date range.
+     *
+     * Behavior:
+     * - `guardianPaymentStatus = pending`: sets `guardianPaymentStatus` to `pending`
+     * - `guardianPaymentStatus = card | bankTransfer`: sets `guardianPaymentType`
+     *   and marks `guardianPaymentStatus` as `completed`
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BulkUpdateGuardianClassPaymentStatusInput"];
+        };
+      };
+      responses: {
+        /** @description Number of records updated */
+        200: {
+          content: {
+            "application/json": components["schemas"]["BulkUpdateClassPaymentsResponse"];
+          };
+        };
+        /** @description Missing or invalid input */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/coordinators/{institutionId}/profit-share": {
     /**
      * Edit coordinator profit share
@@ -592,8 +812,11 @@ export interface paths {
   };
   "/coordinators/{institutionId}/payments": {
     /**
-     * Create a coordinator payment
-     * @description Creates a payment marked as completed for the current month.
+     * Record coordinator payments
+     * @description Creates one or more coordinator profit-share payment records, all marked as `completed`.
+     * `coordinatorId` must be included in the request body alongside the payments array.
+     * All records are created inside a single database transaction.
+     * The coordinator must exist, have the `coordinator` role, and be active.
      */
     post: {
       parameters: {
@@ -604,17 +827,43 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateCoordinatorPaymentInput"];
+          "application/json": {
+            /** @description ID of the coordinator receiving the payments */
+            coordinatorId: number;
+            /** @description One or more payment periods to record */
+            payments: {
+                /** @description Payment amount */
+                amount: number;
+                /**
+                 * Format: date-time
+                 * @description First day of the billing month (UTC)
+                 */
+                period: string;
+              }[];
+          };
         };
       };
       responses: {
-        /** @description Coordinator payment created */
+        /** @description Coordinator payments created successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateCoordinatorPaymentResponse"];
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+              payments?: ({
+                  id?: number;
+                  coordinatorId?: number;
+                  institutionId?: number;
+                  amount?: number;
+                  /** Format: date-time */
+                  period?: string;
+                  /** @enum {string} */
+                  status?: "pending" | "completed";
+                })[];
+            };
           };
         };
-        /** @description Invalid input */
+        /** @description Invalid input or coordinator is inactive */
         400: {
           content: never;
         };
@@ -624,6 +873,42 @@ export interface paths {
         };
         /** @description Coordinator not found */
         404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/coordinators/{coordinatorId}/payments/{period}": {
+    /**
+     * Delete a coordinator payment
+     * @description Permanently deletes a coordinator payment record identified by its
+     * numeric payment ID (`period` path param) scoped to the given `coordinatorId`.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description ID of the coordinator who owns the payment */
+          coordinatorId: number;
+          /** @description Numeric ID of the coordinator payment record to delete */
+          period: number;
+        };
+      };
+      responses: {
+        /** @description Payment deleted successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              message?: string;
+            };
+          };
+        };
+        /** @description Invalid payment ID */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
           content: never;
         };
       };
@@ -832,7 +1117,7 @@ export interface paths {
   };
   "/institutions/{id}": {
     /**
-     * Delete (deactivate) an institution
+     * Deactivate an institution
      * @description Soft delete an institution.
      * - If the institution has no users, it can be deactivated immediately (no payment checks).
      * - Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.
@@ -845,16 +1130,16 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Institution deleted */
+        /** @description Institution deactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
-        /** @description Cannot delete due to pending or missing payments */
+        /** @description Cannot deactivate due to pending or missing payments */
         400: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
           };
         };
       };
@@ -891,7 +1176,7 @@ export interface paths {
   "/institutions/{id}/deletion-options": {
     /**
      * Get deletion options for an institution
-     * @description Returns whether the institution can be hard-deleted (no users associated).
+     * @description Returns whether the institution can be hard-deleted (no classes associated).
      */
     get: {
       parameters: {
@@ -917,7 +1202,7 @@ export interface paths {
   "/institutions/{id}/hard-delete": {
     /**
      * Permanently delete an institution
-     * @description Hard-delete an institution only if it has no users associated.
+     * @description Hard-delete an institution only if it has no classes associated.
      */
     delete: {
       parameters: {
@@ -930,13 +1215,13 @@ export interface paths {
         /** @description Institution deleted permanently */
         200: {
           content: {
-            "application/json": components["schemas"]["HardDeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
           };
         };
         /** @description Cannot hard-delete institution */
         400: {
           content: {
-            "application/json": components["schemas"]["HardDeleteInstitutionResponse"];
+            "application/json": components["schemas"]["DeleteInstitutionResponse"];
           };
         };
       };
@@ -1142,6 +1427,66 @@ export interface paths {
         };
         /** @description Link already exists */
         409: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/tutors/{tutorId}/payments": {
+    /**
+     * Update tutor payment status for a date range
+     * @description Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the
+     * given tutor whose class date falls within [`periodStart`, `periodEnd`] (inclusive, UTC).
+     * The range is expanded to full months: `periodStart` is treated as the first moment of
+     * its month and `periodEnd` as the last moment of its month.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description ID of the tutor */
+          tutorId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date
+             * @description Any date within the first month of the range (UTC)
+             * @example 2026-01-01
+             */
+            periodStart: string;
+            /**
+             * Format: date
+             * @description Any date within the last month of the range (UTC)
+             * @example 2026-02-01
+             */
+            periodEnd: string;
+            /**
+             * @description New payment status to apply
+             * @enum {string}
+             */
+            status: "pending" | "completed";
+          };
+        };
+      };
+      responses: {
+        /** @description Payments updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              ok?: boolean;
+              /** @description Number of payment records updated */
+              updated?: number;
+            };
+          };
+        };
+        /** @description Invalid tutor ID or period format */
+        400: {
+          content: never;
+        };
+        /** @description Forbidden */
+        403: {
           content: never;
         };
       };
@@ -1514,7 +1859,7 @@ export interface components {
       institution: components["schemas"]["Institution"];
       fees: components["schemas"]["Fee"][];
     };
-    DeleteInstitutionResponse: {
+    DeactivateInstitutionResponse: {
       ok: boolean;
       message: string;
     };
@@ -1526,7 +1871,7 @@ export interface components {
       ok: boolean;
       canHardDelete: boolean;
     };
-    HardDeleteInstitutionResponse: {
+    DeleteInstitutionResponse: {
       ok: boolean;
       message: string;
     };
@@ -1779,6 +2124,11 @@ export interface components {
       class: components["schemas"]["Class"];
       classPayment: components["schemas"]["ClassPayment"];
     };
+    /** @description Returned when the month of the class is already settled for admin, coordinator, or tutor payments. */
+    CreateClassBlockedResponse: {
+      /** @enum {string} */
+      message: "No se puede crear una clase cuando ya se ha pagado al admin" | "No se puede crear una clase cuando ya se ha pagado al coordinador" | "No se puede crear una clase si ya se ha pagado al tutor";
+    };
     ClassesCashFlowSummaryAmounts: {
       /** @description Pending amount for the authenticated role */
       pendingAmount: number;
@@ -1824,6 +2174,30 @@ export interface components {
       guardianPaymentStatus?: components["schemas"]["PaymentStatus"];
       tutorPaymentStatus?: components["schemas"]["PaymentStatus"];
       guardianPaymentType?: components["schemas"]["PaymentType"];
+    };
+    /** @description Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed. */
+    BulkUpdateGuardianClassPaymentStatusInput: {
+      /**
+       * @description Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.
+       * @enum {string}
+       */
+      guardianPaymentStatus: "pending" | "card" | "bankTransfer";
+      /**
+       * Format: date-time
+       * @description Optional lower bound for the class date filter.
+       */
+      periodStart?: string;
+      /**
+       * Format: date-time
+       * @description Optional upper bound for the class date filter.
+       */
+      periodEnd?: string;
+      /** @description Guardian whose class payments will be updated. */
+      guardianId: number;
+    };
+    BulkUpdateClassPaymentsResponse: {
+      /** @description Number of ClassPayment records affected. */
+      count: number;
     };
     CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
       BankAccount?: components["schemas"]["UserBankAccountInput"] | null;

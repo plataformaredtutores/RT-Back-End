@@ -94,7 +94,7 @@ export async function getGuardiansFromInstitution(req: Request, res: Response, n
   }
 }
 
-export async function deleteInstitution(req: Request, res: Response, next: NextFunction) {
+export async function deactivateInstitution(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     const institutionId = Number(id);
@@ -120,14 +120,16 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
         data: { isActive: false },
       });
 
-      return res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
+      return res.status(200).json({ ok: true, message: 'Sede desactivada correctamente' });
     }
 
-    // Check class payments (last 12 months) are all completed for this institution
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-    const effectiveStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), institution.createdAt.getTime()));
+    // Check class payments from the last 12 completed months (exclude current month)
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const last12MonthsStart = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+    const effectiveStartDate = new Date(
+      Math.max(last12MonthsStart.getTime(), institution.createdAt.getTime()),
+    );
 
     const recentClassPayments = await prisma.classPayment.findMany({
       where: {
@@ -135,6 +137,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
           institutionId,
           date: {
             gte: effectiveStartDate,
+            lt: currentMonthStart,
           },
         },
       },
@@ -151,15 +154,14 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     if (hasPendingClassPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede eliminar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
       });
     }
 
-    // Check coordinator payments for the last 12 months: every month must exist and be completed
+    // Check coordinator payments for the last 12 completed months: every month must exist and be completed
     const months: Array<{ year: number; month: number }> = [];
-    const now = new Date();
     const earliestMonth = new Date(institution.createdAt.getFullYear(), institution.createdAt.getMonth(), 1);
-    for (let i = 0; i < 12; i++) {
+    for (let i = 1; i <= 12; i++) {
       const dt = new Date(now);
       dt.setMonth(now.getMonth() - i);
       const monthStart = new Date(dt.getFullYear(), dt.getMonth(), 1);
@@ -170,10 +172,10 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     const coordinatorPayments = await prisma.coordinatorPayment.findMany({
       where: {
         institutionId,
-          period: {
-            gte: new Date(now.getFullYear(), now.getMonth() - 11, 1),
-            lte: new Date(now.getFullYear(), now.getMonth(), 1),
-          }
+        period: {
+          gte: new Date(now.getFullYear(), now.getMonth() - 12, 1),
+          lt: currentMonthStart,
+        }
       },
       select: {
         period: true,
@@ -197,7 +199,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
     if (missingOrPendingCoordinatorPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede eliminar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
       });
     }
 
@@ -212,7 +214,7 @@ export async function deleteInstitution(req: Request, res: Response, next: NextF
       data: { isActive: false },
     });
 
-    res.status(200).json({ ok: true, message: 'Sede eliminada correctamente' });
+    res.status(200).json({ ok: true, message: 'Sede desactivada correctamente' });
   }
   catch (err) {
     next(err);
@@ -295,15 +297,15 @@ export async function getInstitutionDeletionOptions(req: Request, res: Response,
       return res.status(400).json({ ok: false, message: 'Invalid institution id' });
     }
 
-    const usersCount = await prisma.user.count({ where: { institutionId } });
+    const classesCount = await prisma.class.count({ where: { institutionId } });
 
-    res.status(200).json({ ok: true, canHardDelete: usersCount === 0 });
+    res.status(200).json({ ok: true, canHardDelete: classesCount === 0 });
   } catch (err) {
     next(err);
   }
 }
 
-export async function hardDeleteInstitution(req: Request, res: Response, next: NextFunction) {
+export async function deleteInstitution(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     const institutionId = Number(id);
@@ -312,13 +314,23 @@ export async function hardDeleteInstitution(req: Request, res: Response, next: N
       return res.status(400).json({ ok: false, message: 'Invalid institution id' });
     }
 
-    const usersCount = await prisma.user.count({ where: { institutionId } });
-    if (usersCount > 0) {
+    const classesCount = await prisma.class.count({ where: { institutionId } });
+    if (classesCount > 0) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede borrar permanentemente una sede con usuarios asociados.'
+        message: 'No se puede borrar permanentemente una sede con clases asociadas.'
       });
     }
+
+    const usersToDelete = await prisma.user.findMany({
+      where: {
+        institutionId,
+        role: { in: [UserRole.coordinator, UserRole.guardian, UserRole.tutor] },
+      },
+      select: { id: true },
+    });
+
+    const userIds = usersToDelete.map((u) => u.id);
 
     await prisma.$transaction([
       prisma.classPayment.deleteMany({ where: { Class: { institutionId } } }),
@@ -328,6 +340,13 @@ export async function hardDeleteInstitution(req: Request, res: Response, next: N
       prisma.coordinatorPayment.deleteMany({ where: { institutionId } }),
       prisma.coordinatorProfitShare.deleteMany({ where: { institutionId } }),
       prisma.fee.deleteMany({ where: { institutionId } }),
+      ...(userIds.length > 0
+        ? [
+            prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } }),
+            prisma.userBankAccount.deleteMany({ where: { userId: { in: userIds } } }),
+            prisma.user.deleteMany({ where: { id: { in: userIds } } }),
+          ]
+        : []),
       prisma.institution.delete({ where: { id: institutionId } })
     ]);
 

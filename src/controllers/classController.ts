@@ -3,14 +3,19 @@ import { Request, Response, NextFunction } from "express"
 import prisma from "../lib/prisma"
 import { calculateFeeAmount } from "./utils"
 
+function getMonthBounds(value: Date) {
+  const year = value.getUTCFullYear()
+  const month = value.getUTCMonth()
+
+  return {
+    monthStart: new Date(Date.UTC(year, month, 1, 0, 0, 0, 0)),
+    monthEnd: new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)),
+  }
+}
+
 export async function createClass(req: Request, res: Response, next: NextFunction) {
   try {
     const role = (req as any).auth.role as UserRole
-
-    console.log("Auth", (req as any).auth)
-
-    console.log("Role:", role)
-    console.log("User ID:", (req as any).auth.userId)
 
     const { 
       studentId, 
@@ -21,6 +26,12 @@ export async function createClass(req: Request, res: Response, next: NextFunctio
       type,
       modality
     } = req.body
+
+    const classDate = new Date(date)
+
+    if (Number.isNaN(classDate.getTime())) {
+      return res.status(400).json({ message: "Invalid class date" })
+    }
 
     let institutionId: number | undefined = undefined
     let tutorId: number | undefined = undefined
@@ -40,8 +51,68 @@ export async function createClass(req: Request, res: Response, next: NextFunctio
       }
     }
 
+    const { monthStart, monthEnd } = getMonthBounds(classDate)
+
+    const [adminPayment, coordinatorPayment] = await Promise.all([
+      prisma.adminPayment.findFirst({
+        where: {
+          period: {
+            gte: monthStart,
+            lte: monthEnd,
+          },
+        },
+        select: { period: true },
+      }),
+      institutionId === undefined
+        ? Promise.resolve(null)
+        : prisma.coordinatorPayment.findFirst({
+            where: {
+              institutionId,
+              period: {
+                gte: monthStart,
+                lte: monthEnd,
+              },
+            },
+            select: { id: true },
+          }),
+    ])
+
+    if (adminPayment) {
+      return res.status(409).json({
+        message: "No se puede crear una clase cuando ya se ha pagado al admin",
+      })
+    }
+
+    if (coordinatorPayment) {
+      return res.status(409).json({
+        message: "No se puede crear una clase cuando ya se ha pagado al coordinador",
+      })
+    }
+
+    if (tutorId !== undefined && tutorId !== null) {
+      const completedTutorPayment = await prisma.classPayment.findFirst({
+        where: {
+          tutorPaymentStatus: PaymentStatus.completed,
+          Class: {
+            tutorId,
+            date: {
+              gte: monthStart,
+              lte: monthEnd,
+            },
+          },
+        },
+        select: { id: true },
+      })
+
+      if (completedTutorPayment) {
+        return res.status(409).json({
+          message: "No se puede crear una clase si ya se ha pagado al tutor",
+        })
+      }
+    }
+
     const createData: any = {
-      date: new Date(date),
+      date: classDate,
       numberOfStudents,
       duration,
       subject,

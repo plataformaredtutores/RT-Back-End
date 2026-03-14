@@ -6,10 +6,10 @@ import {
   getInstitutions,
   searchInstitutions,
   getGuardiansFromInstitution,
-  deleteInstitution,
+  deactivateInstitution,
   reactivateInstitution,
   getInstitutionDeletionOptions,
-  hardDeleteInstitution,
+  deleteInstitution,
 } from '../controllers/institutionController';
 
 const router = Router();
@@ -131,7 +131,7 @@ router.get('/search', searchInstitutions);
  * @openapi
  * /institutions/{id}:
  *   delete:
- *     summary: Delete (deactivate) an institution
+ *     summary: Deactivate an institution
  *     description: |
  *       Soft delete an institution.
  *       - If the institution has no users, it can be deactivated immediately (no payment checks).
@@ -146,19 +146,19 @@ router.get('/search', searchInstitutions);
  *         description: Institution ID
  *     responses:
  *       200:
- *         description: Institution deleted
+ *         description: Institution deactivated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeactivateInstitutionResponse'
  *       400:
- *         description: Cannot delete due to pending or missing payments
+ *         description: Cannot deactivate due to pending or missing payments
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeactivateInstitutionResponse'
  */
-router.delete('/:id', deleteInstitution);
+router.delete('/:id', deactivateInstitution);
 
 /**
  * @openapi
@@ -195,7 +195,7 @@ router.patch('/:id/reactivate', reactivateInstitution);
  * /institutions/{id}/deletion-options:
  *   get:
  *     summary: Get deletion options for an institution
- *     description: Returns whether the institution can be hard-deleted (no users associated).
+ *     description: Returns whether the institution can be hard-deleted (no classes associated).
  *     tags: [Institutions]
  *     parameters:
  *       - in: path
@@ -221,7 +221,7 @@ router.get('/:id/deletion-options', getInstitutionDeletionOptions);
  * /institutions/{id}/hard-delete:
  *   delete:
  *     summary: Permanently delete an institution
- *     description: Hard-delete an institution only if it has no users associated.
+ *     description: Hard-delete an institution only if it has no classes associated.
  *     tags: [Institutions]
  *     parameters:
  *       - in: path
@@ -236,14 +236,14 @@ router.get('/:id/deletion-options', getInstitutionDeletionOptions);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/HardDeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeleteInstitutionResponse'
  *       400:
  *         description: Cannot hard-delete institution
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/HardDeleteInstitutionResponse'
+ *               $ref: '#/components/schemas/DeleteInstitutionResponse'
  */
-router.delete('/:id/hard-delete', hardDeleteInstitution);
+router.delete('/:id/hard-delete', deleteInstitution);
 
 export default router;

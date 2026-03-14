@@ -23,6 +23,11 @@ const router = Router()
  *       - tutor: institutionId and tutorId are inferred from the authenticated tutor.
  *       - coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.
  *       - admin: tutorId and institutionId must be provided.
+ *
+ *       Class creation is blocked when the month of the class is already settled:
+ *       - if an admin payment exists for that month
+ *       - if a coordinator payment exists for that institution and month
+ *       - if any class for that tutor in that month already has tutorPaymentStatus = completed
  *     requestBody:
  *       required: true
  *       content:
@@ -36,6 +41,12 @@ const router = Router()
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/CreateClassResponse'
+ *       409:
+ *         description: Class creation blocked because monthly payments are already settled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateClassBlockedResponse'
  *       403:
  *         description: Forbidden (role not allowed)
  *     

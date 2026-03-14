@@ -217,7 +217,7 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['institution', 'fees']
         },
-        DeleteInstitutionResponse: {
+        DeactivateInstitutionResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
@@ -241,7 +241,7 @@ const options: swaggerJSDoc.Options = {
           },
           required: ['ok', 'canHardDelete'],
         },
-        HardDeleteInstitutionResponse: {
+        DeleteInstitutionResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
@@ -742,6 +742,21 @@ const options: swaggerJSDoc.Options = {
             classPayment: { $ref: '#/components/schemas/ClassPayment' }
           },
           required: ['class', 'classPayment']
+        },
+        CreateClassBlockedResponse: {
+          type: 'object',
+          description: 'Returned when the month of the class is already settled for admin, coordinator, or tutor payments.',
+          properties: {
+            message: {
+              type: 'string',
+              enum: [
+                'No se puede crear una clase cuando ya se ha pagado al admin',
+                'No se puede crear una clase cuando ya se ha pagado al coordinador',
+                'No se puede crear una clase si ya se ha pagado al tutor'
+              ]
+            }
+          },
+          required: ['message']
         },
 
         ClassesCashFlowSummaryAmounts: {

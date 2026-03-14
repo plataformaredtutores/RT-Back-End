@@ -964,7 +964,7 @@
         "tags": [
           "Classes"
         ],
-        "description": "Creates a class and its related ClassPayment.\n\nThis endpoint can be used by 3 roles:\n- tutor: institutionId and tutorId are inferred from the authenticated tutor.\n- coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.\n- admin: tutorId and institutionId must be provided.\n",
+        "description": "Creates a class and its related ClassPayment.\n\nThis endpoint can be used by 3 roles:\n- tutor: institutionId and tutorId are inferred from the authenticated tutor.\n- coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.\n- admin: tutorId and institutionId must be provided.\n\nClass creation is blocked when the month of the class is already settled:\n- if an admin payment exists for that month\n- if a coordinator payment exists for that institution and month\n- if any class for that tutor in that month already has tutorPaymentStatus = completed\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -988,6 +988,16 @@
           },
           "403": {
             "description": "Forbidden (role not allowed)"
+          },
+          "409": {
+            "description": "Class creation blocked because monthly payments are already settled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateClassBlockedResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -1857,7 +1867,7 @@
     },
     "/institutions/{id}": {
       "delete": {
-        "summary": "Delete (deactivate) an institution",
+        "summary": "Deactivate an institution",
         "description": "Soft delete an institution.\n- If the institution has no users, it can be deactivated immediately (no payment checks).\n- Otherwise, it can be deactivated only if there are no pending class payments in the last 12 months and all coordinator payments for those months exist and are completed.\n",
         "tags": [
           "Institutions"
@@ -1875,21 +1885,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Institution deleted",
+            "description": "Institution deactivated",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeactivateInstitutionResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Cannot delete due to pending or missing payments",
+            "description": "Cannot deactivate due to pending or missing payments",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeactivateInstitutionResponse"
                 }
               }
             }
@@ -1942,7 +1952,7 @@
     "/institutions/{id}/deletion-options": {
       "get": {
         "summary": "Get deletion options for an institution",
-        "description": "Returns whether the institution can be hard-deleted (no users associated).",
+        "description": "Returns whether the institution can be hard-deleted (no classes associated).",
         "tags": [
           "Institutions"
         ],
@@ -1977,7 +1987,7 @@
     "/institutions/{id}/hard-delete": {
       "delete": {
         "summary": "Permanently delete an institution",
-        "description": "Hard-delete an institution only if it has no users associated.",
+        "description": "Hard-delete an institution only if it has no classes associated.",
         "tags": [
           "Institutions"
         ],
@@ -1998,7 +2008,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HardDeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
                 }
               }
             }
@@ -2008,7 +2018,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HardDeleteInstitutionResponse"
+                  "$ref": "#/components/schemas/DeleteInstitutionResponse"
                 }
               }
             }
@@ -3105,7 +3115,7 @@
           "fees"
         ]
       },
-      "DeleteInstitutionResponse": {
+      "DeactivateInstitutionResponse": {
         "type": "object",
         "properties": {
           "ok": {
@@ -3150,7 +3160,7 @@
           "canHardDelete"
         ]
       },
-      "HardDeleteInstitutionResponse": {
+      "DeleteInstitutionResponse": {
         "type": "object",
         "properties": {
           "ok": {
@@ -4048,6 +4058,23 @@
         "required": [
           "class",
           "classPayment"
+        ]
+      },
+      "CreateClassBlockedResponse": {
+        "type": "object",
+        "description": "Returned when the month of the class is already settled for admin, coordinator, or tutor payments.",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": [
+              "No se puede crear una clase cuando ya se ha pagado al admin",
+              "No se puede crear una clase cuando ya se ha pagado al coordinador",
+              "No se puede crear una clase si ya se ha pagado al tutor"
+            ]
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "ClassesCashFlowSummaryAmounts": {
