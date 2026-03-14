@@ -964,7 +964,7 @@
         "tags": [
           "Classes"
         ],
-        "description": "Creates a class and its related ClassPayment.\n\nThis endpoint can be used by 3 roles:\n- tutor: institutionId and tutorId are inferred from the authenticated tutor.\n- coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.\n- admin: tutorId and institutionId must be provided.\n",
+        "description": "Creates a class and its related ClassPayment.\n\nThis endpoint can be used by 3 roles:\n- tutor: institutionId and tutorId are inferred from the authenticated tutor.\n- coordinator: institutionId is inferred from the authenticated coordinator; tutorId must be provided.\n- admin: tutorId and institutionId must be provided.\n\nClass creation is blocked when the month of the class is already settled:\n- if an admin payment exists for that month\n- if a coordinator payment exists for that institution and month\n- if any class for that tutor in that month already has tutorPaymentStatus = completed\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -988,6 +988,16 @@
           },
           "403": {
             "description": "Forbidden (role not allowed)"
+          },
+          "409": {
+            "description": "Class creation blocked because monthly payments are already settled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateClassBlockedResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -4048,6 +4058,23 @@
         "required": [
           "class",
           "classPayment"
+        ]
+      },
+      "CreateClassBlockedResponse": {
+        "type": "object",
+        "description": "Returned when the month of the class is already settled for admin, coordinator, or tutor payments.",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": [
+              "No se puede crear una clase cuando ya se ha pagado al admin",
+              "No se puede crear una clase cuando ya se ha pagado al coordinador",
+              "No se puede crear una clase si ya se ha pagado al tutor"
+            ]
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "ClassesCashFlowSummaryAmounts": {
