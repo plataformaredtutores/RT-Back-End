@@ -196,9 +196,9 @@ export async function createUser(req: Request, res: Response, next: NextFunction
 
     if (existingUser) {
       if (existingUser.isActive) {
-        return res.status(400).json({ ok: false, message: 'Email already exists' })
+        return res.status(409).json({ ok: false, message: 'Email already exists' })
       }
-      return res.status(400).json({ ok: false, message: 'Ese correo esta desactivado' })
+      return res.status(409).json({ok: false,  message: 'User exists but is deactivated'})
     }
 
     const hashedPassword = await argon2.hash(password, {
