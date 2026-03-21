@@ -142,10 +142,12 @@ router.get('/summary', getCashFlowSummary)
  *         - `bankTransfer` — only guardians whose payments are all completed via bank transfer (no pending, no card).
  *         - `card` — only guardians whose payments are all completed via card (no pending, no bank transfer).
  *         - `card-transfer` — guardians who have completed payments of **both** card and bank transfer types, with no pending payments.
+ *         - `No payments` — guardians with no students/classes in the selected period.
  *         - `completed` — all guardians with all payments completed, regardless of type.
- *         - *(omit)* — all guardians.
+ *         - *(omit)* — all guardians, including those with `No payments`.
  *       - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
  *         (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
+ *         `paymentStatus` can be `pending`, `completed`, or `No payments`.
  *
  *       For **admin**:
  *       - Admin details are already included in the `/cashflow/summary` response.
@@ -193,7 +195,7 @@ router.get('/summary', getCashFlowSummary)
  *         required: false
  *         schema:
  *           type: string
- *           enum: [pending, bankTransfer, card, card-transfer, completed]
+ *           enum: [pending, bankTransfer, card, card-transfer, completed, No payments]
  *         description: |
  *           Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
  *           - `pending` — guardians with pending (bank transfer) payments.
@@ -201,6 +203,7 @@ router.get('/summary', getCashFlowSummary)
  *           - `card` — guardians with all completed payments via card only (no bank transfer, no pending).
  *           - `card-transfer` — guardians with both card and bank transfer completed payments, and no pending payments.
  *           - `completed` — guardians with all payments completed, regardless of type.
+ *           - `No payments` — guardians without classes in the selected period.
  *       - in: query
  *         name: page
  *         required: false
@@ -307,8 +310,8 @@ router.get('/summary', getCashFlowSummary)
  *                         description: Sum of guardian payments for the period
  *                       paymentStatus:
  *                         type: string
- *                         enum: [pending, completed]
- *                         description: Overall payment status (pending if any class payment is pending)
+ *                         enum: [pending, completed, No payments]
+ *                         description: Overall payment status (`pending` if any class payment is pending; `No payments` when guardian has no classes in the period)
  *                       paymentType:
  *                         type: string
  *                         nullable: true

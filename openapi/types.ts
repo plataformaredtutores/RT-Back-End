@@ -432,10 +432,12 @@ export interface paths {
      *   - `bankTransfer` — only guardians whose payments are all completed via bank transfer (no pending, no card).
      *   - `card` — only guardians whose payments are all completed via card (no pending, no bank transfer).
      *   - `card-transfer` — guardians who have completed payments of **both** card and bank transfer types, with no pending payments.
+     *   - `No payments` — guardians with no students/classes in the selected period.
      *   - `completed` — all guardians with all payments completed, regardless of type.
-     *   - *(omit)* — all guardians.
+     *   - *(omit)* — all guardians, including those with `No payments`.
      * - Each guardian entry includes computed `totalAmount`, `paymentStatus`, and `paymentType`
      *   (`card`, `bankTransfer`, or `null` when mixed / no completed payments).
+     *   `paymentStatus` can be `pending`, `completed`, or `No payments`.
      *
      * For **admin**:
      * - Admin details are already included in the `/cashflow/summary` response.
@@ -466,8 +468,9 @@ export interface paths {
            * - `card` — guardians with all completed payments via card only (no bank transfer, no pending).
            * - `card-transfer` — guardians with both card and bank transfer completed payments, and no pending payments.
            * - `completed` — guardians with all payments completed, regardless of type.
+           * - `No payments` — guardians without classes in the selected period.
            */
-          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed";
+          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed" | "No payments";
           /** @description Page number for pagination */
           page?: number;
           /** @description Number of items per page */
@@ -523,10 +526,10 @@ export interface paths {
                 /** @description Sum of guardian payments for the period */
                 totalAmount?: number;
                 /**
-                 * @description Overall payment status (pending if any class payment is pending)
+                 * @description Overall payment status (`pending` if any class payment is pending; `No payments` when guardian has no classes in the period)
                  * @enum {string}
                  */
-                paymentStatus?: "pending" | "completed";
+                paymentStatus?: "pending" | "completed" | "No payments";
                 /**
                  * @description Payment type derived from completed payments.
                  * `card` or `bankTransfer` if all completed payments share the same type;
@@ -2098,6 +2101,10 @@ export interface components {
     ClassType: "school" | "university" | "cancelled";
     /** @enum {string} */
     PaymentStatus: "completed" | "pending";
+    /** @enum {string} */
+    GuardianCashFlowPaymentStatus: "completed" | "pending" | "No payments";
+    /** @enum {string} */
+    GuardianFilteredPaymentStatus: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed" | "No payments";
     /** @enum {string} */
     PaymentType: "card" | "bankTransfer";
     Class: {

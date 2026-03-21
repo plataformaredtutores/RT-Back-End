@@ -634,6 +634,14 @@ const options: swaggerJSDoc.Options = {
           type: 'string',
           enum: ['completed', 'pending']
         },
+        GuardianCashFlowPaymentStatus: {
+          type: 'string',
+          enum: ['completed', 'pending', 'No payments']
+        },
+        GuardianFilteredPaymentStatus: {
+          type: 'string',
+          enum: ['pending', 'bankTransfer', 'card', 'card-transfer', 'completed', 'No payments']
+        },
         PaymentType: {
           type: 'string',
           enum: ['card', 'bankTransfer']
