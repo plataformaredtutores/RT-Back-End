@@ -12,6 +12,24 @@ function parseMonthYear(value: unknown) {
     return { month, year }
 }
 
+async function getCoordinatorCreationMonthStart(userId: number) {
+    const coordinator = await prisma.user.findFirst({
+        where: {
+            id: userId,
+            role: UserRole.coordinator,
+        },
+        select: { createdAt: true },
+    })
+
+    if (!coordinator) return null
+
+    return new Date(Date.UTC(
+        coordinator.createdAt.getUTCFullYear(),
+        coordinator.createdAt.getUTCMonth(),
+        1,
+    ))
+}
+
 export async function getCashFlowSummary(req: Request, res: Response, next: NextFunction){
     const {
         startDate,
@@ -32,6 +50,22 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
 
     const start = new Date(Date.UTC(startParsed.year, startParsed.month - 1, 1))
     const end = new Date(Date.UTC(endParsed.year, endParsed.month, 0, 23, 59, 59, 999))
+
+    if (role === UserRole.coordinator) {
+        const coordinatorId = Number((req as any).auth.uid)
+        const coordinatorStart = await getCoordinatorCreationMonthStart(coordinatorId)
+
+        if (!coordinatorStart) {
+            return res.status(403).json({ ok: false, message: 'Forbidden' })
+        }
+
+        if (start < coordinatorStart) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Coordinators can only query periods from their creation month onward',
+            })
+        }
+    }
 
     if (role === 'admin') {
         const institutionId = req.query.institutionId ? Number(req.query.institutionId) : undefined
@@ -71,6 +105,13 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             adminPayments.map((p) => {
                 return `${p.period.getUTCFullYear()}-${p.period.getUTCMonth()}`
             })
+        )
+
+        const recordedStatusByPeriod = new Map<string, PaymentStatus>(
+            adminPayments.map((p) => [
+                `${p.period.getUTCFullYear()}-${p.period.getUTCMonth()}`,
+                p.status,
+            ])
         )
 
         const pendingMonths = []
@@ -129,7 +170,6 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                     _sum: { guardianAmount: true },
                     where: {
                         Class: {
-                            institutionId,
                             date: { gte: monthStart, lte: monthEnd }
                         }
                     }
@@ -138,7 +178,6 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                     _sum: { tutorAmount: true },
                     where: {
                         Class: {
-                            institutionId,
                             date: { gte: monthStart, lte: monthEnd }
                         }
                     }
@@ -154,6 +193,9 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             })
         }
 
+        let adminAmountToReceive: number
+        let adminAmountReceived: number
+
         if (institutionId) {
             const adminPaymentsByInstitution = [] as Array<{
                 amount: number
@@ -165,6 +207,7 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
             while (currentIterAll <= end) {
                 const currentYear = currentIterAll.getUTCFullYear()
                 const currentMonth = currentIterAll.getUTCMonth()
+                const periodKey = `${currentYear}-${currentMonth}`
                 const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1))
                 const monthEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 0, 23, 59, 59, 999))
 
@@ -199,62 +242,34 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
 
                 adminPaymentsByInstitution.push({
                     amount,
-                    status: 'pending' as PaymentStatus,
+                    status: recordedStatusByPeriod.get(periodKey) ?? ('pending' as PaymentStatus),
                     period: monthStart
                 })
 
                 currentIterAll.setUTCMonth(currentIterAll.getUTCMonth() + 1)
             }
 
-            const payments = await prisma.classPayment.groupBy({
-                by: ['guardianPaymentStatus', 'tutorPaymentStatus'],
-                _sum: {
-                    guardianAmount: true,
-                    tutorAmount: true
-                },
-                where: {
-                    Class: {
-                        institutionId,
-                        date: {
-                            gte: start,
-                            lte: end
-                        }
-                    }
+            adminAmountToReceive = adminPaymentsByInstitution.reduce((acc, payment) => {
+                return payment.status === 'pending' ? acc + payment.amount : acc
+            }, 0)
+
+            adminAmountReceived = adminPaymentsByInstitution.reduce((acc, payment) => {
+                return payment.status === 'completed' ? acc + payment.amount : acc
+            }, 0)
+        } else {
+            adminAmountToReceive = adminPayments.reduce((acc, payment) => {
+                if (payment.status === 'pending') {
+                    return acc + payment.amount
                 }
-            })
+                return acc
+            }, 0)
 
-            let amountToReceive = 0
-            let amountReceived = 0
-            let amountToPay = 0
-            let amountPaid = 0
-
-            payments.forEach(payment => {
-                if (payment.guardianPaymentStatus === PaymentStatus.pending) {
-                    amountToReceive += payment._sum.guardianAmount || 0
-                } else if (payment.guardianPaymentStatus === PaymentStatus.completed) {
-                    amountReceived += payment._sum.guardianAmount || 0
+            adminAmountReceived = adminPayments.reduce((acc, payment) => {
+                if (payment.status === 'completed') {
+                    return acc + payment.amount
                 }
-
-                if (payment.tutorPaymentStatus === PaymentStatus.pending) {
-                    amountToPay += payment._sum.tutorAmount || 0
-                } else if (payment.tutorPaymentStatus === PaymentStatus.completed) {
-                    amountPaid += payment._sum.tutorAmount || 0
-                }
-            })
-
-            const adminAmountToReceive = adminPaymentsByInstitution.reduce((acc, payment) => acc + payment.amount, 0)
-
-            const response = {
-                adminPayments: adminPaymentsByInstitution,
-                amountToReceive,
-                amountReceived,
-                amountToPay,
-                amountPaid,
-                adminAmountToReceive,
-                adminAmountReceived: 0
-            }
-            console.log('[CashFlow Summary - Admin (institution)]', JSON.stringify(response, null, 2))
-            return res.json(response)
+                return acc
+            }, 0)
         }
 
         // Finally, we can sum the amounts for each month and return the result.
@@ -294,22 +309,6 @@ export async function getCashFlowSummary(req: Request, res: Response, next: Next
                 amountPaid += payment._sum.tutorAmount || 0
             }
         })
-
-        const adminAmountToReceive = adminPayments.reduce((acc, payment) => {
-            if (payment.status === 'pending') {
-                return acc + payment.amount
-            } else {
-                return acc
-            }
-        }, 0)
-
-        const adminAmountReceived = adminPayments.reduce((acc, payment) => {
-            if (payment.status === 'completed') {
-                return acc + payment.amount
-            } else {
-                return acc
-            }
-        }, 0)
 
         const response = { adminPayments, amountToReceive, amountReceived, amountToPay, amountPaid, adminAmountToReceive, adminAmountReceived }
         console.log('[CashFlow Summary - Admin]', JSON.stringify(response, null, 2))
@@ -507,6 +506,22 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
 
     const start = new Date(Date.UTC(startParsed.year, startParsed.month - 1, 1))
     const end = new Date(Date.UTC(endParsed.year, endParsed.month, 0, 23, 59, 59, 999))
+
+    if (role === UserRole.coordinator) {
+        const coordinatorId = Number((req as any).auth.uid)
+        const coordinatorStart = await getCoordinatorCreationMonthStart(coordinatorId)
+
+        if (!coordinatorStart) {
+            return res.status(403).json({ ok: false, message: 'Forbidden' })
+        }
+
+        if (start < coordinatorStart) {
+            return res.status(400).json({
+                ok: false,
+                message: 'Coordinators can only query periods from their creation month onward',
+            })
+        }
+    }
 
     if (role === UserRole.coordinator && (filteredUserRole === UserRole.coordinator || filteredUserRole === UserRole.admin)) {
         return res.status(403).json({ message: 'Coordinator cannot view other coordinators or admin details' })

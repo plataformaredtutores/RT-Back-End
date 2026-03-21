@@ -13,6 +13,12 @@ function getMonthBounds(value: Date) {
   }
 }
 
+function roundClassAmount(value: number) {
+  const base = Math.trunc(value)
+  const decimals = value - base
+  return decimals >= 0.5 ? base + 1 : base
+}
+
 export async function createClass(req: Request, res: Response, next: NextFunction) {
   try {
     const role = (req as any).auth.role as UserRole
@@ -147,11 +153,14 @@ export async function createClass(req: Request, res: Response, next: NextFunctio
       amounts = calculateFeeAmount(classFee, duration)
     }
 
+    const roundedGuardianAmount = roundClassAmount(amounts.guardianAmount)
+    const roundedTutorAmount = roundClassAmount(amounts.tutorAmount)
+
     const classPayment = await prisma.classPayment.create({
       data: {
         classId: newClass.id,
-        guardianAmount: amounts.guardianAmount,
-        tutorAmount: amounts.tutorAmount
+        guardianAmount: roundedGuardianAmount,
+        tutorAmount: roundedTutorAmount
       }
     })
     return res.status(201).json({ class: newClass, classPayment })
