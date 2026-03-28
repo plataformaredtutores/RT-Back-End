@@ -494,6 +494,7 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
     } = req.query
 
     const role = (req as any).auth.role as UserRole
+    const requesterInstitutionId = Number((req as any).auth.institutionId)
     const pageNumber = Number(page) > 0 ? Number(page) : 1
     const pageSizeNumber = Number(pageSize) > 0 ? Number(pageSize) : 10
     
@@ -708,9 +709,13 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             }
         }
 
-        const total = result.length
+        const filteredResult = role === UserRole.coordinator
+            ? result.filter((entry) => entry.coordinator?.Institution?.id === requesterInstitutionId)
+            : result
+
+        const total = filteredResult.length
         const startIndex = (pageNumber - 1) * pageSizeNumber
-        const items = result.slice(startIndex, startIndex + pageSizeNumber)
+        const items = filteredResult.slice(startIndex, startIndex + pageSizeNumber)
 
         return res.json({
             total,
@@ -775,9 +780,13 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             (tutor as any).paymentStatus = status;
         }
         
-        const total = tutorsAndPayments.length
+        const filteredTutorsAndPayments = role === UserRole.coordinator
+            ? tutorsAndPayments.filter((tutor) => tutor.Institution?.id === requesterInstitutionId)
+            : tutorsAndPayments
+
+        const total = filteredTutorsAndPayments.length
         const startIndex = (pageNumber - 1) * pageSizeNumber
-        const items = tutorsAndPayments.slice(startIndex, startIndex + pageSizeNumber)
+        const items = filteredTutorsAndPayments.slice(startIndex, startIndex + pageSizeNumber)
 
         console.log('[CashFlow Details - Tutors]', JSON.stringify({ total, page: pageNumber, pageSize: pageSizeNumber, items }, null, 2))
         return res.json({
@@ -1046,9 +1055,13 @@ export async function getCashFlowDetails(req: Request, res: Response, next: Next
             (guardian as any).paymentType = guardianPaymentType;
         }
         
-        const total = guardiansAndPayments.length
+        const filteredGuardiansAndPayments = role === UserRole.coordinator
+            ? guardiansAndPayments.filter((guardian) => guardian.Institution?.id === requesterInstitutionId)
+            : guardiansAndPayments
+
+        const total = filteredGuardiansAndPayments.length
         const startIndex = (pageNumber - 1) * pageSizeNumber
-        const items = guardiansAndPayments.slice(startIndex, startIndex + pageSizeNumber)
+        const items = filteredGuardiansAndPayments.slice(startIndex, startIndex + pageSizeNumber)
 
         console.log('[CashFlow Details - Guardians]', JSON.stringify({ total, page: pageNumber, pageSize: pageSizeNumber, items }, null, 2))
         return res.json({
