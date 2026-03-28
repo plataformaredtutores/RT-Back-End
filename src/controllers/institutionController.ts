@@ -123,12 +123,12 @@ export async function deactivateInstitution(req: Request, res: Response, next: N
       return res.status(200).json({ ok: true, message: 'Sede desactivada correctamente' });
     }
 
-    // Check class payments from the last 12 completed months (exclude current month)
+    // Check class payments from the last 24 completed months (exclude current month)
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const last12MonthsStart = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+    const last24MonthsStart = new Date(now.getFullYear(), now.getMonth() - 24, 1);
     const effectiveStartDate = new Date(
-      Math.max(last12MonthsStart.getTime(), institution.createdAt.getTime()),
+      Math.max(last24MonthsStart.getTime(), institution.createdAt.getTime()),
     );
 
     const recentClassPayments = await prisma.classPayment.findMany({
@@ -154,14 +154,14 @@ export async function deactivateInstitution(req: Request, res: Response, next: N
     if (hasPendingClassPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede desactivar la sede: existen pagos de clases pendientes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de clases pendientes en los últimos 24 meses.',
       });
     }
 
-    // Check coordinator payments for the last 12 completed months: every month must exist and be completed
+    // Check coordinator payments for the last 24 completed months: every month must exist and be completed
     const months: Array<{ year: number; month: number }> = [];
     const earliestMonth = new Date(institution.createdAt.getFullYear(), institution.createdAt.getMonth(), 1);
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= 24; i++) {
       const dt = new Date(now);
       dt.setMonth(now.getMonth() - i);
       const monthStart = new Date(dt.getFullYear(), dt.getMonth(), 1);
@@ -173,7 +173,7 @@ export async function deactivateInstitution(req: Request, res: Response, next: N
       where: {
         institutionId,
         period: {
-          gte: new Date(now.getFullYear(), now.getMonth() - 12, 1),
+          gte: new Date(now.getFullYear(), now.getMonth() - 24, 1),
           lt: currentMonthStart,
         }
       },
@@ -199,7 +199,7 @@ export async function deactivateInstitution(req: Request, res: Response, next: N
     if (missingOrPendingCoordinatorPayments) {
       return res.status(400).json({
         ok: false,
-        message: 'No se puede desactivar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 12 meses.',
+        message: 'No se puede desactivar la sede: existen pagos de coordinador pendientes o faltantes en los últimos 24 meses.',
       });
     }
 
