@@ -8,6 +8,211 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model AdminPayment {
+  id        Int           @id @default(autoincrement())
+  amount    Int
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    PaymentStatus @default(pending)
+  period    DateTime      @unique
+
+  @@index([period])
+}
+
+model AdminProfitShare {
+  id             Int      @id @default(autoincrement())
+  profitShare    Decimal  @db.Decimal(5, 2)
+  availableSince DateTime @default(now())
+  availableUntil DateTime
+}
+
+model CoordinatorPayment {
+  id            Int           @id @default(autoincrement())
+  institutionId Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  amount        Int
+  coordinatorId Int
+  status        PaymentStatus @default(pending)
+  period        DateTime
+  Coordinator   User          @relation(fields: [coordinatorId], references: [id])
+  Institution   Institution   @relation(fields: [institutionId], references: [id])
+
+  @@index([period])
+}
+
+model CoordinatorProfitShare {
+  id             Int         @id @default(autoincrement())
+  coordinatorId  Int
+  institutionId  Int
+  profitShare    Decimal     @db.Decimal(5, 2)
+  availableSince DateTime    @default(now())
+  availableUntil DateTime
+  Coordinator    User        @relation(fields: [coordinatorId], references: [id])
+  Institution    Institution @relation(fields: [institutionId], references: [id])
+
+  @@index([institutionId])
+  @@index([coordinatorId])
+}
+
+model Class {
+  id               Int           @id @default(autoincrement())
+  date             DateTime
+  modality         ClassModality
+  type             ClassType
+  duration         Int
+  studentId        Int
+  tutorId          Int
+  institutionId    Int
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  numberOfStudents Int
+  subject          ClassSubject
+  Institution      Institution   @relation(fields: [institutionId], references: [id])
+  Student          Student       @relation(fields: [studentId], references: [id])
+  Tutor            User          @relation("TutorClasses", fields: [tutorId], references: [id])
+  ClassPayment     ClassPayment?
+
+  @@index([institutionId])
+  @@index([tutorId])
+  @@index([studentId])
+}
+
+model ClassPayment {
+  id                    Int           @id @default(autoincrement())
+  classId               Int           @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  guardianAmount        Int
+  guardianPaymentStatus PaymentStatus @default(pending)
+  guardianPaymentType   PaymentType   @default(bankTransfer)
+  tutorAmount           Int
+  tutorPaymentStatus    PaymentStatus @default(pending)
+  Class                 Class         @relation(fields: [classId], references: [id])
+
+  @@index([createdAt])
+}
+
+model Fee {
+  id               Int           @id @default(autoincrement())
+  modality         ClassModality
+  institutionId    Int
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  guardianAmount   Int           @default(0)
+  numberOfStudents Int           @default(1)
+  tutorAmount      Int           @default(0)
+  type             ClassType
+  Institution      Institution   @relation(fields: [institutionId], references: [id])
+
+  @@unique([type, modality, numberOfStudents, institutionId])
+  @@index([institutionId])
+}
+
+model Institution {
+  id                      Int                      @id @default(autoincrement())
+  name                    String                   @unique
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  isActive                Boolean                  @default(true)
+  Classes                 Class[]
+  CoordinatorPayments     CoordinatorPayment[]
+  coordinatorProfitShares CoordinatorProfitShare[]
+  Fees                    Fee[]
+  GuardianTutors          GuardianTutor[]
+  Students                Student[]
+  Users                   User[]
+}
+
+model GuardianTutor {
+  guardianId    Int
+  tutorId       Int
+  institutionId Int
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  Guardian      User        @relation("GuardianTutorGuardian", fields: [guardianId], references: [id])
+  Institution   Institution @relation(fields: [institutionId], references: [id])
+  Tutor         User        @relation("GuardianTutorTutor", fields: [tutorId], references: [id])
+
+  @@id([guardianId, tutorId, institutionId])
+  @@index([tutorId])
+  @@index([institutionId])
+  @@index([guardianId])
+}
+
+model Student {
+  id            Int         @id @default(autoincrement())
+  name          String
+  institutionId Int
+  guardianId    Int
+  isActive      Boolean     @default(true)
+  Classes       Class[]
+  Guardian      User        @relation("GuardianStudents", fields: [guardianId], references: [id])
+  Institution   Institution @relation(fields: [institutionId], references: [id])
+
+  @@index([guardianId])
+  @@index([institutionId])
+}
+
+model User {
+  id                      Int                      @id @default(autoincrement())
+  name                    String
+  email                   String                   @unique
+  rut                     String
+  phone                   String?
+  address                 String?
+  chargeEmail             String?
+  institutionId           Int?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  hashedPassword          String
+  role                    UserRole
+  isActive                Boolean                  @default(true)
+  deactivatedAt           DateTime?
+  ClassesAsTutor          Class[]                  @relation("TutorClasses")
+  coordinatorPayments     CoordinatorPayment[]
+  coordinatorProfitShares CoordinatorProfitShare[]
+  GuardianLinks           GuardianTutor[]          @relation("GuardianTutorGuardian")
+  TutorLinks              GuardianTutor[]          @relation("GuardianTutorTutor")
+  RefreshTokens           RefreshToken[]           @relation("RefreshTokens")
+  Students                Student[]                @relation("GuardianStudents")
+  Institution             Institution?             @relation(fields: [institutionId], references: [id])
+  BankAccount             UserBankAccount?
+
+  @@index([role])
+  @@index([institutionId])
+  @@index([institutionId, role])
+  @@index([isActive, deactivatedAt])
+}
+
+model UserBankAccount {
+  id            Int         @id @default(autoincrement())
+  userId        Int         @unique
+  bankName      String
+  accountType   AccountType
+  accountNumber String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  accountEmail  String
+  rut           String      @default("")
+  accountName   String      @default("")
+  User          User        @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    Int
+  tokenHash String
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  User      User     @relation("RefreshTokens", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 enum UserRole {
   admin
   coordinator
@@ -52,226 +257,4 @@ enum PaymentStatus {
 enum PaymentType {
   card
   bankTransfer
-}
-
-model AdminPayment {
-  id            Int      @id @default(autoincrement())
-  period        DateTime
-  amount        Int
-  status        PaymentStatus @default(pending)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([period])
-  @@index([period])
-}
-
-model AdminProfitShare {
-  id                 Int      @id @default(autoincrement())
-  profitShare        Decimal  @db.Decimal(5, 2)
-  availableSince     DateTime @default(now())
-  availableUntil     DateTime
-}
-
-model CoordinatorPayment {
-  id            Int      @id @default(autoincrement())
-  coordinatorId Int
-  institutionId Int
-  period        DateTime
-  amount        Int
-  status        PaymentStatus @default(pending)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  Coordinator   User     @relation(fields: [coordinatorId], references: [id])
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-
-  @@index([period])
-}
-
-model CoordinatorProfitShare {
-  id                 Int      @id @default(autoincrement())
-  coordinatorId      Int
-  institutionId      Int
-  profitShare        Decimal  @db.Decimal(5, 2)
-  availableSince     DateTime @default(now())
-  availableUntil     DateTime
-
-  Coordinator   User     @relation(fields: [coordinatorId], references: [id])
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-  
-  @@index([institutionId])
-  @@index([coordinatorId])
-}
-
-model Class {
-  id                Int        @id @default(autoincrement())
-  date              DateTime
-  subject           ClassSubject
-  modality          ClassModality
-  numberOfStudents  Int
-  type              ClassType
-  duration          Int
-  institutionId     Int
-  studentId         Int
-  tutorId           Int
-  ClassPayment      ClassPayment?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-
-  Institution       Institution @relation(fields: [institutionId], references: [id])
-  Student           Student     @relation(fields: [studentId], references: [id])
-  Tutor             User        @relation("TutorClasses", fields: [tutorId], references: [id])
-  
-  @@index([institutionId])
-  @@index([tutorId])
-  @@index([studentId])
-}
-
-model ClassPayment {
-  id                      Int           @id @default(autoincrement())
-  classId                 Int
-  guardianAmount          Int           
-  guardianPaymentStatus   PaymentStatus @default(pending)
-  guardianPaymentType     PaymentType   @default(bankTransfer)
-  tutorAmount             Int
-  tutorPaymentStatus      PaymentStatus @default(pending)
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-
-  Class                   Class         @relation(fields: [classId], references: [id])
-  
-  @@unique([classId])
-  @@index([createdAt])
-}
-
-
-model Fee {
-  id                Int      @id @default(autoincrement())
-  type              ClassType
-  modality          ClassModality
-  numberOfStudents  Int      @default(1)
-  tutorAmount       Int      @default(0)
-  guardianAmount    Int      @default(0)
-  institutionId     Int
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  Institution       Institution @relation(fields: [institutionId], references: [id])
- 
-  @@index([institutionId])
-  @@unique([type, modality, numberOfStudents, institutionId])
-}
-
-model Institution {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Users               User[]
-  Fees                Fee[]
-  Classes             Class[]
-  CoordinatorPayments CoordinatorPayment[]
-  GuardianTutors      GuardianTutor[]
-  Students            Student[]
-
-  coordinatorProfitShares CoordinatorProfitShare[]
-}
-
-model GuardianTutor {
-  guardianId    Int
-  tutorId       Int
-  institutionId Int
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  Guardian      User        @relation("GuardianTutorGuardian", fields: [guardianId], references: [id])
-  Tutor         User        @relation("GuardianTutorTutor",  fields: [tutorId],  references: [id])
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-
-  @@id([guardianId, tutorId, institutionId])
-  @@index([tutorId])
-  @@index([institutionId])
-  @@index([guardianId])
-}
-
-model Student {
-  id            Int        @id @default(autoincrement())
-  name          String
-  guardianId    Int
-  institutionId Int
-  isActive      Boolean    @default(true)
-
-  Guardian      User        @relation("GuardianStudents", fields: [guardianId], references: [id])
-  Institution   Institution @relation(fields: [institutionId], references: [id])
-  Classes       Class[]
-  
-  @@index([guardianId])
-  @@index([institutionId])
-}
-
-model User {
-  id                Int      @id @default(autoincrement())
-  hashedPassword    String
-  name              String
-  role              UserRole
-  email             String   @unique
-  rut               String  
-  phone             String?  
-  address           String?
-  chargeEmail       String?
-  institutionId     Int?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  isActive          Boolean  @default(true)
-  deactivatedAt     DateTime?
-
-  BankAccount       UserBankAccount?
-  Institution       Institution?  @relation(fields: [institutionId], references: [id])
-
-  GuardianLinks     GuardianTutor[]  @relation("GuardianTutorGuardian")
-  TutorLinks        GuardianTutor[]  @relation("GuardianTutorTutor")
-  Students          Student[]      @relation("GuardianStudents")
-  ClassesAsTutor    Class[]        @relation("TutorClasses")
-  RefreshTokens     RefreshToken[] @relation("RefreshTokens")
-  @@index([role])
-  @@index([institutionId])
-  @@index([institutionId, role])
-  @@index([isActive, deactivatedAt])
-  coordinatorPayments CoordinatorPayment[]
-  coordinatorProfitShares CoordinatorProfitShare[]
-}
-
-model UserBankAccount {
-  id             Int      @id @default(autoincrement())
-  userId         Int      @unique
-  bankName       String
-  accountType    AccountType
-  accountName    String   @default("")
-  accountNumber  String
-  accountEmail   String
-  rut            String   @default("")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  User           User     @relation(fields: [userId], references: [id])
-}
-
-
-model RefreshToken {
-  id           String   @id @default(cuid())
-  userId       Int
-  tokenHash    String
-  revoked      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-
-  User         User     @relation("RefreshTokens", fields: [userId], references: [id])
-  @@index([userId])
-  @@index([expiresAt])
 }
