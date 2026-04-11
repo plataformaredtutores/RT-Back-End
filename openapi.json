@@ -2607,7 +2607,7 @@
     "/users/{id}/delete/{role}": {
       "delete": {
         "summary": "Permanently delete a user by ID",
-        "description": "Hard delete a user from the system.\n- Admins can delete any user\n- Coordinators can only delete users in their institution\n- Users with associated classes cannot be deleted (guardian/tutor)\n- Admin users cannot be deleted\n",
+        "description": "Hard delete a user from the system.\n- Admins can delete any user\n- Coordinators can only delete users in their institution\n- Only admins can delete coordinators\n- For coordinator deletion, all required monthly payments must be completed\n- Required months: up to last 24 months (excluding current), capped by coordinator existing time\n- Coordinator profit shares and coordinator payments are deleted before deleting the coordinator user\n- Users with associated classes cannot be deleted (guardian/tutor)\n- Admin users cannot be deleted\n",
         "tags": [
           "Users"
         ],

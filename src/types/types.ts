@@ -1619,6 +1619,10 @@ export interface paths {
      * @description Hard delete a user from the system.
      * - Admins can delete any user
      * - Coordinators can only delete users in their institution
+     * - Only admins can delete coordinators
+     * - For coordinator deletion, all required monthly payments must be completed
+     * - Required months: up to last 24 months (excluding current), capped by coordinator existing time
+     * - Coordinator profit shares and coordinator payments are deleted before deleting the coordinator user
      * - Users with associated classes cannot be deleted (guardian/tutor)
      * - Admin users cannot be deleted
      */

@@ -165,6 +165,13 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       })
     }
 
+    if (role === 'coordinator' && coordinatorProfitShare == null) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Coordinator users must have a coordinator profit share defined.'
+      })
+    }
+
     if (role === 'guardian' && BankAccount) {
       return res.status(400).json({
         ok: false,
@@ -789,6 +796,7 @@ export async function getGuardianLinks(req: Request, res: Response, next: NextFu
 export async function deleteUser(req: Request, res: Response, next: NextFunction) {
   try {
     const { id, role } = req.params
+    const userId = Number(id)
 
     const userRole = (req as any).auth?.role;
     const userInstitutionId = (req as any).auth?.iid;
@@ -812,11 +820,78 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       return res.status(400).json({ ok: false, message: 'Invalid role' })
     }
 
+    if (role === 'coordinator') {
+      const coordinator = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, createdAt: true }
+      })
+
+      if (!coordinator || coordinator.role !== 'coordinator') {
+        return res.status(404).json({ ok: false, message: 'User not found' })
+      }
+
+      const now = new Date()
+      const coordinatorStartMonth = new Date(
+        coordinator.createdAt.getFullYear(),
+        coordinator.createdAt.getMonth(),
+        1
+      )
+
+      const periodsToCheck: Array<{ periodYear: number; periodMonth: number; start: Date; end: Date }> = []
+      for (let i = 1; i <= 24; i += 1) {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - i)
+        const start = new Date(d.getFullYear(), d.getMonth(), 1)
+        if (start < coordinatorStartMonth) break
+
+        periodsToCheck.push({
+          periodYear: d.getFullYear(),
+          periodMonth: d.getMonth() + 1,
+          start,
+          end: new Date(d.getFullYear(), d.getMonth() + 1, 1),
+        })
+      }
+
+      if (periodsToCheck.length > 0) {
+        const payments = await prisma.coordinatorPayment.findMany({
+          where: {
+            coordinatorId: userId,
+            OR: periodsToCheck.map((period) => ({
+              period: { gte: period.start, lt: period.end }
+            }))
+          },
+          select: {
+            period: true,
+            status: true
+          }
+        })
+
+        const paymentMap = new Map<string, PaymentStatus>()
+        payments.forEach((payment: { period: Date; status: PaymentStatus }) => {
+          const key = `${payment.period.getFullYear()}-${payment.period.getMonth() + 1}`
+          paymentMap.set(key, payment.status)
+        })
+
+        const hasMissingOrPending = periodsToCheck.some((period) => {
+          const key = `${period.periodYear}-${period.periodMonth}`
+          const status = paymentMap.get(key)
+          return !status || status === PaymentStatus.pending
+        })
+
+        if (hasMissingOrPending) {
+          return res.status(400).json({
+            ok: false,
+            message: 'No se puede eliminar un coordinador con pagos pendientes'
+          })
+        }
+      }
+    }
+
     if (role === 'guardian') {
       const hasClasses = await prisma.class.findFirst({
         where: {
           Student: {
-            guardianId: Number(id)
+            guardianId: userId
           }
         },
         select: { id: true }
@@ -833,7 +908,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     if (role === 'tutor') {
       const hasClasses = await prisma.class.findFirst({
         where: {
-          tutorId: Number(id)
+          tutorId: userId
         },
         select: { id: true }
       })
@@ -850,7 +925,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       if (userRole === 'coordinator') {
         const scopedUser = await tx.user.findFirst({
           where: {
-            id: Number(id),
+            id: userId,
             Institution: {
               is: {
                 id: Number(userInstitutionId)
@@ -865,13 +940,18 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
         }
       }
 
-      await tx.userBankAccount.deleteMany({ where: { userId: Number(id) } })
-      await tx.refreshToken.deleteMany({ where: { userId: Number(id) } })
-      await tx.guardianTutor.deleteMany({ where: { guardianId: Number(id) } })
-      await tx.guardianTutor.deleteMany({ where: { tutorId: Number(id) } })
+      await tx.userBankAccount.deleteMany({ where: { userId } })
+      await tx.refreshToken.deleteMany({ where: { userId } })
+      await tx.guardianTutor.deleteMany({ where: { guardianId: userId } })
+      await tx.guardianTutor.deleteMany({ where: { tutorId: userId } })
+
+      if (role === 'coordinator') {
+        await tx.coordinatorProfitShare.deleteMany({ where: { coordinatorId: userId } })
+        await tx.coordinatorPayment.deleteMany({ where: { coordinatorId: userId } })
+      }
 
       await tx.user.delete({
-        where: { id: Number(id) }
+        where: { id: userId }
       })
     })
 
