@@ -144,8 +144,10 @@ export async function deleteAdminPayment(req: Request, res: Response, next: Next
     }
     // The period is at the start of the month, so we can delete by period without worrying about timezones
 
+    const periodParam = Array.isArray(period) ? period[0] : period
+
     await prisma.adminPayment.delete({
-      where: { period: new Date(period) }
+      where: { period: new Date(periodParam ?? '') }
     });
 
     res.json({ ok: true, message: 'Admin payment deleted successfully' });

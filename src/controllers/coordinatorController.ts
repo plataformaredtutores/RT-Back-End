@@ -193,8 +193,11 @@ export async function deleteCoordinatorPayment(req: Request, res: Response, next
       return res.status(403).json({ ok: false, message: 'Forbidden' });
     }
 
-    const parsedCoordinatorId = Number(coordinatorId);
-    const parsedPeriod = new Date(period);
+    const coordinatorIdParam = Array.isArray(coordinatorId) ? coordinatorId[0] : coordinatorId
+    const periodParam = Array.isArray(period) ? period[0] : period
+
+    const parsedCoordinatorId = Number(coordinatorIdParam);
+    const parsedPeriod = new Date(periodParam ?? '');
 
     if (!Number.isFinite(parsedCoordinatorId)) {
       return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
