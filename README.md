@@ -8,7 +8,7 @@ API en Express + Prisma lista para escalar (Docker, Makefile, middlewares base, 
 - npm
 - Docker
 
-## Inicio rápido
+## Inicio rápido 
 
 1) Crear el archivo de entorno `.env`
 
