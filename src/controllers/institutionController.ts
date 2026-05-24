@@ -11,7 +11,7 @@ export async function createInstitution(req: Request, res: Response, next: NextF
     });
 
     const baseFees = await prisma.fee.findMany({
-      where: { institutionId: 49 },
+      where: { institutionId: process.env.DEFAULT_INSTITUTION_ID ? Number(process.env.DEFAULT_INSTITUTION_ID) : 49 },
       select: {
         type: true,
         modality: true,
