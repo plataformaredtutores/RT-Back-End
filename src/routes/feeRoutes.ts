@@ -1,7 +1,7 @@
-import { Router } from 'express';
-import { getFees, simulateFeePayment, editFees } from '../controllers/feeController';
+import { Router } from 'express'
+import { getFees, simulateFeePayment, editFees } from '../controllers/feeController'
 
-const router = Router();
+const router = Router()
 
 /**
  * @openapi
@@ -37,7 +37,7 @@ const router = Router();
  *                 message:
  *                   type: string
  */
-router.get('/:institutionId', getFees);
+router.get('/:institutionId', getFees)
 
 /**
  * @openapi
@@ -92,7 +92,7 @@ router.get('/:institutionId', getFees);
  *                 message:
  *                   type: string
  */
-router.put('/edit', editFees);
+router.put('/edit', editFees)
 
 /**
  * @openapi
@@ -136,6 +136,6 @@ router.put('/edit', editFees);
  *                 message:
  *                   type: string
  */
-router.post('/simulate', simulateFeePayment);
+router.post('/simulate', simulateFeePayment)
 
-export default router;
+export default router

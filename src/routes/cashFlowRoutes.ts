@@ -1,10 +1,7 @@
-import { Router } from 'express';
-import { 
-    getCashFlowSummary,
-    getCashFlowDetails
-} from '../controllers/cashFlowController';
+import { Router } from 'express'
+import { getCashFlowSummary, getCashFlowDetails } from '../controllers/cashFlowController'
 
-const router = Router();
+const router = Router()
 
 /**
  * @openapi
@@ -14,7 +11,7 @@ const router = Router();
  *     tags: [CashFlow]
  *     description: |
  *       Returns a summary of amounts to receive and pay.
- *       
+ *
  *       **Logic based on Authenticated User Role:**
  *
  *       For **admin**:
@@ -357,4 +354,4 @@ router.get('/summary', getCashFlowSummary)
  */
 router.get('/details', getCashFlowDetails)
 
-export default router;
+export default router

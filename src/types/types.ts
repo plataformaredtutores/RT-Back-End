@@ -3,45 +3,48 @@
  * Do not make direct changes to the file.
  */
 
-
 /** OneOf type helpers */
-type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
-type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
-type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
+type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never }
+type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U
+type OneOf<T extends any[]> = T extends [infer Only]
+  ? Only
+  : T extends [infer A, infer B, ...infer Rest]
+    ? OneOf<[XOR<A, B>, ...Rest]>
+    : never
 
 export interface paths {
-  "/users": {
+  '/users': {
     /** List users */
     get: {
       parameters: {
         query?: {
           /** @description Filter by user role */
-          role?: "admin" | "coordinator" | "tutor" | "guardian";
+          role?: 'admin' | 'coordinator' | 'tutor' | 'guardian'
           /** @description Filter by institution id */
-          institutionId?: number;
+          institutionId?: number
           /** @description Case-insensitive search in name or email */
-          nameOrEmail?: string;
+          nameOrEmail?: string
           /** @description If false, only active users are returned. If true or omitted, returns all. */
-          sendInactive?: boolean;
+          sendInactive?: boolean
           /** @description Page number (1-based) */
-          page?: number;
+          page?: number
           /** @description Items per page */
-          pageSize?: number;
+          pageSize?: number
           /** @description If true, returns all users that match filters and ignores page/pageSize. */
-          all?: boolean;
+          all?: boolean
           /** @description Include user bank account details */
-          includeBankAccount?: boolean;
-        };
-      };
+          includeBankAccount?: boolean
+        }
+      }
       responses: {
         /** @description List of users */
         200: {
           content: {
-            "application/json": components["schemas"]["UserWithInstitution"][];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['UserWithInstitution'][]
+          }
+        }
+      }
+    }
     /**
      * Create a user
      * @description Create a new user in the system.
@@ -58,28 +61,28 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateUserWithBankAccountInput"];
-        };
-      };
+          'application/json': components['schemas']['CreateUserWithBankAccountInput']
+        }
+      }
       responses: {
         /** @description User created successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateUserResponse"];
-          };
-        };
+            'application/json': components['schemas']['CreateUserResponse']
+          }
+        }
         /** @description Invalid input or validation error (missing required fields, invalid email format, or database constraint violation) */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden - insufficient permissions */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/deactivate/{id}/{role}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/deactivate/{id}/{role}': {
     /**
      * Deactivate a user by ID
      * @description Soft delete a user by marking them as inactive (isActive = false).
@@ -92,36 +95,36 @@ export interface paths {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
+          id: string
           /** @description User role */
-          role: "admin" | "coordinator" | "tutor" | "guardian";
-        };
-      };
+          role: 'admin' | 'coordinator' | 'tutor' | 'guardian'
+        }
+      }
       responses: {
         /** @description User deactivated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["DeactivateUserResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeactivateUserResponse']
+          }
+        }
         /** @description Cannot deactivate due to pending or missing payments */
         400: {
           content: {
-            "application/json": components["schemas"]["DeleteUserBlockedResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeleteUserBlockedResponse']
+          }
+        }
         /** @description Forbidden - user lacks permission to deactivate this user */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/reactivate/{role}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/reactivate/{role}': {
     /**
      * Reactivate a user by ID
      * @description Reactivates a previously deactivated user (isActive = true).
@@ -132,30 +135,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
+          id: string
           /** @description User role */
-          role: "admin" | "coordinator" | "tutor" | "guardian";
-        };
-      };
+          role: 'admin' | 'coordinator' | 'tutor' | 'guardian'
+        }
+      }
       responses: {
         /** @description User reactivated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["ReactivateUserResponse"];
-          };
-        };
+            'application/json': components['schemas']['ReactivateUserResponse']
+          }
+        }
         /** @description Forbidden - user lacks permission to reactivate this user */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/admin/profit-share": {
+          content: never
+        }
+      }
+    }
+  }
+  '/admin/profit-share': {
     /**
      * Edit admin profit share
      * @description Deactivates the current admin profit share and creates a new one. The current share remains active until today 23:59:59.999 UTC, and the new share becomes active tomorrow at 00:00:00.000 UTC. Validates that for every institution the new admin share plus the active coordinator shares (at the new effective timestamp) does not exceed 100%. Both operations run inside a database transaction.
@@ -163,28 +166,28 @@ export interface paths {
     patch: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["EditAdminProfitShareInput"];
-        };
-      };
+          'application/json': components['schemas']['EditAdminProfitShareInput']
+        }
+      }
       responses: {
         /** @description Admin profit share updated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["EditAdminProfitShareResponse"];
-          };
-        };
+            'application/json': components['schemas']['EditAdminProfitShareResponse']
+          }
+        }
         /** @description Invalid input or combined shares exceed 100% */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/admin/payments": {
+          content: never
+        }
+      }
+    }
+  }
+  '/admin/payments': {
     /**
      * Record admin payments
      * @description Creates one or more admin profit-share payment records.
@@ -194,47 +197,47 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-              /** @description Payment amount */
-              amount: number;
-              /**
-               * Format: date-time
-               * @description First day of the billing month (UTC)
-               */
-              period: string;
-            }[];
-        };
-      };
+          'application/json': {
+            /** @description Payment amount */
+            amount: number
+            /**
+             * Format: date-time
+             * @description First day of the billing month (UTC)
+             */
+            period: string
+          }[]
+        }
+      }
       responses: {
         /** @description Payments recorded successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-              data?: ({
-                  id?: number;
-                  amount?: number;
-                  /** Format: date-time */
-                  period?: string;
-                  /** @enum {string} */
-                  status?: "pending" | "completed";
-                })[];
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+              data?: {
+                id?: number
+                amount?: number
+                /** Format: date-time */
+                period?: string
+                /** @enum {string} */
+                status?: 'pending' | 'completed'
+              }[]
+            }
+          }
+        }
         /** @description Invalid input */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/admin/payments/{period}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/admin/payments/{period}': {
     /**
      * Delete an admin payment by period
      * @description Permanently deletes the admin payment record matching the given billing period.
@@ -245,158 +248,158 @@ export interface paths {
       parameters: {
         path: {
           /** @description First day of the billing month (UTC) of the payment to delete */
-          period: string;
-        };
-      };
+          period: string
+        }
+      }
       responses: {
         /** @description Payment deleted successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Invalid period value */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/login": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/login': {
     /** User login */
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: email */
-            email: string;
+            email: string
             /** Format: password */
-            password: string;
-          };
-        };
-      };
+            password: string
+          }
+        }
+      }
       responses: {
         /** @description Successful login */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              token?: string;
-              expiresIn?: string;
+            'application/json': {
+              ok?: boolean
+              token?: string
+              expiresIn?: string
               user?: {
-                id?: number;
-                email?: string;
-                role?: string;
-                name?: string;
-                institutionId?: number;
-              };
-            };
-          };
-        };
+                id?: number
+                email?: string
+                role?: string
+                name?: string
+                institutionId?: number
+              }
+            }
+          }
+        }
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": {
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/auth/logout": {
+            'application/json': {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/auth/logout': {
     /** User logout */
     post: {
       responses: {
         /** @description Successful logout */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+            }
+          }
+        }
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": {
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/auth/request-password-reset": {
+            'application/json': {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/auth/request-password-reset': {
     /** Request password reset */
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: email */
-            email: string;
-          };
-        };
-      };
+            email: string
+          }
+        }
+      }
       responses: {
         /** @description Recovery email sent */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description User not found */
         404: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/auth/reset-password": {
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/auth/reset-password': {
     /** Reset password using token */
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            token: string;
+          'application/json': {
+            token: string
             /** Format: password */
-            newPassword: string;
-          };
-        };
-      };
+            newPassword: string
+          }
+        }
+      }
       responses: {
         /** @description Password updated */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Invalid token or missing fields */
         400: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/cashflow/summary": {
+          content: never
+        }
+      }
+    }
+  }
+  '/cashflow/summary': {
     /**
      * Get cash flow summary
      * @description Returns a summary of amounts to receive and pay.
@@ -415,66 +418,66 @@ export interface paths {
       parameters: {
         query: {
           /** @description Start month (MM-YYYY) */
-          startDate: components["schemas"]["MonthYear"];
+          startDate: components['schemas']['MonthYear']
           /** @description End month (MM-YYYY) */
-          endDate: components["schemas"]["MonthYear"];
+          endDate: components['schemas']['MonthYear']
           /** @description Optional filter by institution ID (Only for admin role) */
-          institutionId?: number;
-        };
-      };
+          institutionId?: number
+        }
+      }
       responses: {
         /** @description Cash flow summary */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
+            'application/json': {
+              ok?: boolean
               /** @description Total pending payments from Guardians */
-              amountToReceive?: number;
+              amountToReceive?: number
               /** @description Total completed payments from Guardians */
-              amountReceived?: number;
+              amountReceived?: number
               /** @description Total pending payments to Tutors */
-              amountToPay?: number;
+              amountToPay?: number
               /** @description Total completed payments to Tutors */
-              amountPaid?: number;
+              amountPaid?: number
               /** @description List of admin profit share payments (only if role=admin) */
-              adminPayments?: ({
-                  amount?: number;
-                  /** @enum {string} */
-                  status?: "pending" | "completed";
-                  /** Format: date-time */
-                  period?: string;
-                })[];
+              adminPayments?: {
+                amount?: number
+                /** @enum {string} */
+                status?: 'pending' | 'completed'
+                /** Format: date-time */
+                period?: string
+              }[]
               /** @description List of coordinator profit share payments (only if role=coordinator) */
-              coordinatorPayments?: ({
-                  amount?: number;
-                  /** @enum {string} */
-                  status?: "pending" | "completed";
-                  /** Format: date-time */
-                  period?: string;
-                })[];
+              coordinatorPayments?: {
+                amount?: number
+                /** @enum {string} */
+                status?: 'pending' | 'completed'
+                /** Format: date-time */
+                period?: string
+              }[]
               /** @description Total pending profit share amount for Admin */
-              adminAmountToReceive?: number;
+              adminAmountToReceive?: number
               /** @description Total completed profit share amount for Admin */
-              adminAmountReceived?: number;
+              adminAmountReceived?: number
               /** @description Total pending profit share amount for Coordinator */
-              coordinatorAmountToReceive?: number;
+              coordinatorAmountToReceive?: number
               /** @description Total completed profit share amount for Coordinator */
-              coordinatorAmountReceived?: number;
-            };
-          };
-        };
+              coordinatorAmountReceived?: number
+            }
+          }
+        }
         /** @description Bad Request (Missing dates, invalid formats, or non-matching start/end dates) */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden (Invalid role or permissions) */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/cashflow/details": {
+          content: never
+        }
+      }
+    }
+  }
+  '/cashflow/details': {
     /**
      * Get cash flow details
      * @description Returns detailed financial information separated by user role.
@@ -516,20 +519,20 @@ export interface paths {
       parameters: {
         query: {
           /** @description Start month (MM-YYYY) */
-          startDate: components["schemas"]["MonthYear"];
+          startDate: components['schemas']['MonthYear']
           /** @description End month (MM-YYYY) */
-          endDate: components["schemas"]["MonthYear"];
+          endDate: components['schemas']['MonthYear']
           /** @description The role to filter the details by */
-          filteredUserRole?: "coordinator" | "tutor" | "guardian" | "admin";
+          filteredUserRole?: 'coordinator' | 'tutor' | 'guardian' | 'admin'
           /** @description Optional filter by institution ID (admin only) */
-          institutionId?: number;
+          institutionId?: number
           /**
            * @description Filter by payment status. Applies when `filteredUserRole` is `coordinator` or `tutor`.
            * - `coordinator`: `pending` returns coordinators with at least one pending payment;
            *   `completed` returns coordinators where all payments are completed.
            * - `tutor`: filters class payments included for each tutor by tutor payment status.
            */
-          paymentStatus?: "pending" | "completed";
+          paymentStatus?: 'pending' | 'completed'
           /**
            * @description Filter guardian payments by status/type. Only applies when `filteredUserRole` is `guardian`.
            * - `pending` — guardians with pending (bank transfer) payments.
@@ -539,107 +542,119 @@ export interface paths {
            * - `completed` — guardians with all payments completed, regardless of type.
            * - `No payments` — guardians without classes in the selected period.
            */
-          filteredGuardianPaymentStatus?: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed" | "No payments";
+          filteredGuardianPaymentStatus?:
+            | 'pending'
+            | 'bankTransfer'
+            | 'card'
+            | 'card-transfer'
+            | 'completed'
+            | 'No payments'
           /** @description Page number for pagination */
-          page?: number;
+          page?: number
           /** @description Number of items per page */
-          pageSize?: number;
-        };
-      };
+          pageSize?: number
+        }
+      }
       responses: {
         /** @description Cash flow details (paginated; shape of `items` varies by `filteredUserRole`) */
         200: {
           content: {
-            "application/json": OneOf<[{
-              /** @description Total coordinators matching filters before pagination */
-              total?: number;
-              page?: number;
-              pageSize?: number;
-              items?: ({
-                  coordinator?: {
-                    id?: number;
-                    name?: string;
-                    email?: string;
-                    Institution?: {
-                      id?: number;
-                      name?: string;
-                    };
-                  };
-                  coordinatorPayments?: ({
-                      amount?: number;
+            'application/json': OneOf<
+              [
+                {
+                  /** @description Total coordinators matching filters before pagination */
+                  total?: number
+                  page?: number
+                  pageSize?: number
+                  items?: {
+                    coordinator?: {
+                      id?: number
+                      name?: string
+                      email?: string
+                      Institution?: {
+                        id?: number
+                        name?: string
+                      }
+                    }
+                    coordinatorPayments?: {
+                      amount?: number
                       /** @enum {string} */
-                      status?: "pending" | "completed";
+                      status?: 'pending' | 'completed'
                       /** Format: date-time */
-                      period?: string;
-                    })[];
-                  /** @description Total profit share amount (pending + completed) for the period */
-                  amount?: number;
-                })[];
-            }, {
-              /** @description Total tutors matching filters before pagination */
-              total?: number;
-              page?: number;
-              pageSize?: number;
-              items?: ({
-                  id?: number;
-                  name?: string;
-                  email?: string;
-                  Institution?: {
-                    id?: number;
-                    name?: string;
-                  };
-                  /** @description Sum of tutor earnings for the period */
-                  totalAmount?: number;
-                  /**
-                   * @description Overall payment status (pending if any class payment is pending)
-                   * @enum {string}
-                   */
-                  paymentStatus?: "pending" | "completed";
-                })[];
-            }, {
-              /** @description Total guardians matching filters before pagination */
-              total?: number;
-              page?: number;
-              pageSize?: number;
-              items?: ({
-                  id?: number;
-                  name?: string;
-                  email?: string;
-                  Institution?: {
-                    id?: number;
-                    name?: string;
-                  };
-                  /** @description Sum of guardian payments for the period */
-                  totalAmount?: number;
-                  /**
-                   * @description Overall payment status (`pending` if any class payment is pending; `No payments` when guardian has no classes in the period)
-                   * @enum {string}
-                   */
-                  paymentStatus?: "pending" | "completed" | "No payments";
-                  /**
-                   * @description Payment type derived from completed payments.
-                   * `card` or `bankTransfer` if all completed payments share the same type;
-                   * `null` when types are mixed or there are no completed payments.
-                   *
-                   * @enum {string|null}
-                   */
-                  paymentType?: "card" | "bankTransfer" | null;
-                })[];
-            }]>;
-          };
-        };
+                      period?: string
+                    }[]
+                    /** @description Total profit share amount (pending + completed) for the period */
+                    amount?: number
+                  }[]
+                },
+                {
+                  /** @description Total tutors matching filters before pagination */
+                  total?: number
+                  page?: number
+                  pageSize?: number
+                  items?: {
+                    id?: number
+                    name?: string
+                    email?: string
+                    Institution?: {
+                      id?: number
+                      name?: string
+                    }
+                    /** @description Sum of tutor earnings for the period */
+                    totalAmount?: number
+                    /**
+                     * @description Overall payment status (pending if any class payment is pending)
+                     * @enum {string}
+                     */
+                    paymentStatus?: 'pending' | 'completed'
+                  }[]
+                },
+                {
+                  /** @description Total guardians matching filters before pagination */
+                  total?: number
+                  page?: number
+                  pageSize?: number
+                  items?: {
+                    id?: number
+                    name?: string
+                    email?: string
+                    Institution?: {
+                      id?: number
+                      name?: string
+                    }
+                    /** @description Sum of guardian payments for the period */
+                    totalAmount?: number
+                    /**
+                     * @description Overall payment status (`pending` if any class payment is pending; `No payments` when guardian has no classes in the period)
+                     * @enum {string}
+                     */
+                    paymentStatus?: 'pending' | 'completed' | 'No payments'
+                    /**
+                     * @description Payment type derived from completed payments.
+                     * `card` or `bankTransfer` if all completed payments share the same type;
+                     * `null` when types are mixed or there are no completed payments.
+                     *
+                     * @enum {string|null}
+                     */
+                    paymentType?: 'card' | 'bankTransfer' | null
+                  }[]
+                },
+              ]
+            >
+          }
+        }
         /** @description Bad Request (Missing dates or invalid date format) */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden (Coordinator attempting to view coordinator or admin details) */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/classes": {
+          content: never
+        }
+      }
+    }
+  }
+  '/classes': {
     /**
      * List classes with details
      * @description Returns classes with related information (ClassPayment, Tutor, Student + Guardian, Institution).
@@ -654,36 +669,36 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter by class date >= startDate */
-          startDate?: string;
+          startDate?: string
           /** @description Filter by class date <= endDate */
-          endDate?: string;
+          endDate?: string
           /** @description Optional filter by tutorId (ignored for role tutor) */
-          tutorId?: number;
+          tutorId?: number
           /** @description Optional filter by guardianId (ignored for role guardian) */
-          guardianId?: number;
+          guardianId?: number
           /** @description Optional filter by studentId */
-          studentId?: number;
+          studentId?: number
           /** @description Required for role admin (institution to query) */
-          institutionId?: number;
+          institutionId?: number
           /** @description Page number (1-based). If provided with pageSize, enables pagination. */
-          page?: number;
+          page?: number
           /** @description Items per page. If provided with page, enables pagination. */
-          pageSize?: number;
-        };
-      };
+          pageSize?: number
+        }
+      }
       responses: {
         /** @description Array of class details */
         200: {
           content: {
-            "application/json": components["schemas"]["ClassDetails"][];
-          };
-        };
+            'application/json': components['schemas']['ClassDetails'][]
+          }
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Create a class
      * @description Creates a class and its related ClassPayment.
@@ -701,30 +716,30 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateClassInput"];
-        };
-      };
+          'application/json': components['schemas']['CreateClassInput']
+        }
+      }
       responses: {
         /** @description Created class and its payment */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateClassResponse"];
-          };
-        };
+            'application/json': components['schemas']['CreateClassResponse']
+          }
+        }
         /** @description Forbidden (role not allowed) */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Class creation blocked because monthly payments are already settled */
         409: {
           content: {
-            "application/json": components["schemas"]["CreateClassBlockedResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/classes/cash-flow-summary": {
+            'application/json': components['schemas']['CreateClassBlockedResponse']
+          }
+        }
+      }
+    }
+  }
+  '/classes/cash-flow-summary': {
     /**
      * Get classes cash flow summary
      * @description Returns a cash-flow summary computed from ClassPayment.
@@ -743,34 +758,34 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter by class date >= startDate */
-          startDate?: string;
+          startDate?: string
           /** @description Filter by class date <= endDate */
-          endDate?: string;
+          endDate?: string
           /** @description Optional filter by tutorId (ignored for role tutor) */
-          tutorId?: number;
+          tutorId?: number
           /** @description Optional filter by guardianId (ignored for role guardian) */
-          guardianId?: number;
+          guardianId?: number
           /** @description Optional filter by studentId */
-          studentId?: number;
+          studentId?: number
           /** @description Required for role admin (institution to query) */
-          institutionId?: number;
-        };
-      };
+          institutionId?: number
+        }
+      }
       responses: {
         /** @description Cash flow summary */
         200: {
           content: {
-            "application/json": components["schemas"]["ClassesCashFlowSummaryResponse"];
-          };
-        };
+            'application/json': components['schemas']['ClassesCashFlowSummaryResponse']
+          }
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/classes/{classId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/classes/{classId}': {
     /**
      * Delete a class
      * @description Deletes the class and any related ClassPayment.
@@ -778,22 +793,22 @@ export interface paths {
     delete: {
       parameters: {
         path: {
-          classId: number;
-        };
-      };
+          classId: number
+        }
+      }
       responses: {
         /** @description Deleted successfully */
         204: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/classes/class-payments/{classPaymentId}/status": {
+          content: never
+        }
+      }
+    }
+  }
+  '/classes/class-payments/{classPaymentId}/status': {
     /**
      * Update class payment fields
      * @description Updates guardianPaymentStatus, tutorPaymentStatus and/or guardianPaymentType.
@@ -802,31 +817,31 @@ export interface paths {
     patch: {
       parameters: {
         path: {
-          classPaymentId: number;
-        };
-      };
+          classPaymentId: number
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateClassPaymentStatusInput"];
-        };
-      };
+          'application/json': components['schemas']['UpdateClassPaymentStatusInput']
+        }
+      }
       responses: {
         /** @description Updated ClassPayment */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description At least one field must be provided */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/classes/class-payments/bulk-status": {
+          content: never
+        }
+      }
+    }
+  }
+  '/classes/class-payments/bulk-status': {
     /**
      * Bulk-update guardian class payments by guardian and period
      * @description Updates guardian-side class payments for all classes that belong to a
@@ -840,28 +855,28 @@ export interface paths {
     patch: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["BulkUpdateGuardianClassPaymentStatusInput"];
-        };
-      };
+          'application/json': components['schemas']['BulkUpdateGuardianClassPaymentStatusInput']
+        }
+      }
       responses: {
         /** @description Number of records updated */
         200: {
           content: {
-            "application/json": components["schemas"]["BulkUpdateClassPaymentsResponse"];
-          };
-        };
+            'application/json': components['schemas']['BulkUpdateClassPaymentsResponse']
+          }
+        }
         /** @description Missing or invalid input */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/coordinators/{institutionId}/profit-share": {
+          content: never
+        }
+      }
+    }
+  }
+  '/coordinators/{institutionId}/profit-share': {
     /**
      * Edit coordinator profit share
      * @description Updates the profit share for a coordinator in a specific institution.
@@ -870,37 +885,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          institutionId: number;
-        };
-      };
+          institutionId: number
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["EditCoordinatorProfitShareInput"];
-        };
-      };
+          'application/json': components['schemas']['EditCoordinatorProfitShareInput']
+        }
+      }
       responses: {
         /** @description Coordinator profit share updated */
         200: {
           content: {
-            "application/json": components["schemas"]["EditCoordinatorProfitShareResponse"];
-          };
-        };
+            'application/json': components['schemas']['EditCoordinatorProfitShareResponse']
+          }
+        }
         /** @description Invalid input */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Coordinator profit share not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/coordinators/{institutionId}/payments": {
+          content: never
+        }
+      }
+    }
+  }
+  '/coordinators/{institutionId}/payments': {
     /**
      * Record coordinator payments
      * @description Creates one or more coordinator profit-share payment records, all marked as `completed`.
@@ -912,63 +927,63 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          institutionId: number;
-        };
-      };
+          institutionId: number
+        }
+      }
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description ID of the coordinator receiving the payments */
-            coordinatorId: number;
+            coordinatorId: number
             /** @description One or more payment periods to record */
             payments: {
-                /** @description Payment amount */
-                amount: number;
-                /**
-                 * Format: date-time
-                 * @description First day of the billing month (UTC)
-                 */
-                period: string;
-              }[];
-          };
-        };
-      };
+              /** @description Payment amount */
+              amount: number
+              /**
+               * Format: date-time
+               * @description First day of the billing month (UTC)
+               */
+              period: string
+            }[]
+          }
+        }
+      }
       responses: {
         /** @description Coordinator payments created successfully */
         201: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-              payments?: ({
-                  id?: number;
-                  coordinatorId?: number;
-                  institutionId?: number;
-                  amount?: number;
-                  /** Format: date-time */
-                  period?: string;
-                  /** @enum {string} */
-                  status?: "pending" | "completed";
-                })[];
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+              payments?: {
+                id?: number
+                coordinatorId?: number
+                institutionId?: number
+                amount?: number
+                /** Format: date-time */
+                period?: string
+                /** @enum {string} */
+                status?: 'pending' | 'completed'
+              }[]
+            }
+          }
+        }
         /** @description Invalid input or coordinator is inactive */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Coordinator not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/coordinators/{coordinatorId}/payments/{period}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/coordinators/{coordinatorId}/payments/{period}': {
     /**
      * Delete a coordinator payment
      * @description Permanently deletes a coordinator payment record identified by its
@@ -978,159 +993,159 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the coordinator who owns the payment */
-          coordinatorId: number;
+          coordinatorId: number
           /** @description Numeric ID of the coordinator payment record to delete */
-          period: number;
-        };
-      };
+          period: number
+        }
+      }
       responses: {
         /** @description Payment deleted successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Invalid payment ID */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/fees/{institutionId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/fees/{institutionId}': {
     /** Get all active fees from an institution */
     get: {
       parameters: {
         path: {
           /** @description Institution ID */
-          institutionId: number;
-        };
-      };
+          institutionId: number
+        }
+      }
       responses: {
         /** @description List of active fees */
         200: {
           content: {
-            "application/json": components["schemas"]["Fee"][];
-          };
-        };
+            'application/json': components['schemas']['Fee'][]
+          }
+        }
         /** @description Institution not found */
         404: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/fees/edit": {
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/fees/edit': {
     /** Edit fees */
     put: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["EditFeesRequest"];
-        };
-      };
+          'application/json': components['schemas']['EditFeesRequest']
+        }
+      }
       responses: {
         /** @description Fees updated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["EditFeesResponse"];
-          };
-        };
+            'application/json': components['schemas']['EditFeesResponse']
+          }
+        }
         /** @description Bad request - validation error */
         400: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Forbidden - admin access required */
         403: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description One or more fees not found */
         404: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/fees/simulate": {
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/fees/simulate': {
     /** Simulate a fee payment given a custom duration */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["SimulateFeePaymentRequest"];
-        };
-      };
+          'application/json': components['schemas']['SimulateFeePaymentRequest']
+        }
+      }
       responses: {
         /** @description Simulated fee payment */
         200: {
           content: {
-            "application/json": components["schemas"]["SimulateFeePaymentResponse"];
-          };
-        };
+            'application/json': components['schemas']['SimulateFeePaymentResponse']
+          }
+        }
         /** @description Bad request - fees list is required */
         400: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Fee not found */
         404: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/institutions": {
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/institutions': {
     /** Get all institutions */
     get: {
       parameters: {
         query?: {
           /** @description If false, only active institutions are returned. If true or omitted, returns all. */
-          sendInactive?: boolean;
-        };
-      };
+          sendInactive?: boolean
+        }
+      }
       responses: {
         /** @description List of institutions */
         200: {
           content: {
-            "application/json": components["schemas"]["Institution"][];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['Institution'][]
+          }
+        }
+      }
+    }
     /**
      * Create an institution
      * @description Creates an institution and clones fee rows from institution id=1 (The Grange School).
@@ -1138,74 +1153,74 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateInstitutionInput"];
-        };
-      };
+          'application/json': components['schemas']['CreateInstitutionInput']
+        }
+      }
       responses: {
         /** @description Created institution */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateInstitutionResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/institutions/{institutionId}/guardians": {
+            'application/json': components['schemas']['CreateInstitutionResponse']
+          }
+        }
+      }
+    }
+  }
+  '/institutions/{institutionId}/guardians': {
     /** Get guardians from an institution */
     get: {
       parameters: {
         path: {
           /** @description Institution ID */
-          institutionId: string;
-        };
-      };
+          institutionId: string
+        }
+      }
       responses: {
         /** @description List of guardian */
         200: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/institutions/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/institutions/search': {
     /** Search institutions by name */
     get: {
       parameters: {
         query: {
           /** @description Search query to match institution names */
-          query: string;
-        };
-      };
+          query: string
+        }
+      }
       responses: {
         /** @description List of institutions matching the search query */
         200: {
           content: {
-            "application/json": components["schemas"]["Institution"][];
-          };
-        };
+            'application/json': components['schemas']['Institution'][]
+          }
+        }
         /** @description Bad request - search query is required */
         400: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Forbidden - admin access required */
         403: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/institutions/{id}": {
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/institutions/{id}': {
     /**
      * Deactivate an institution
      * @description Soft delete an institution.
@@ -1216,26 +1231,26 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          id: number;
-        };
-      };
+          id: number
+        }
+      }
       responses: {
         /** @description Institution deactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeactivateInstitutionResponse']
+          }
+        }
         /** @description Cannot deactivate due to pending or missing payments */
         400: {
           content: {
-            "application/json": components["schemas"]["DeactivateInstitutionResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/institutions/{id}/reactivate": {
+            'application/json': components['schemas']['DeactivateInstitutionResponse']
+          }
+        }
+      }
+    }
+  }
+  '/institutions/{id}/reactivate': {
     /**
      * Reactivate an institution
      * @description Reactivates a previously deactivated institution.
@@ -1244,26 +1259,26 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          id: number;
-        };
-      };
+          id: number
+        }
+      }
       responses: {
         /** @description Institution reactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
-          };
-        };
+            'application/json': components['schemas']['ReactivateInstitutionResponse']
+          }
+        }
         /** @description Institution not found */
         404: {
           content: {
-            "application/json": components["schemas"]["ReactivateInstitutionResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/institutions/{id}/deletion-options": {
+            'application/json': components['schemas']['ReactivateInstitutionResponse']
+          }
+        }
+      }
+    }
+  }
+  '/institutions/{id}/deletion-options': {
     /**
      * Get deletion options for an institution
      * @description Returns whether the institution can be hard-deleted (no classes associated).
@@ -1272,24 +1287,24 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          id: number;
-        };
-      };
+          id: number
+        }
+      }
       responses: {
         /** @description Deletion options */
         200: {
           content: {
-            "application/json": components["schemas"]["InstitutionDeletionOptionsResponse"];
-          };
-        };
+            'application/json': components['schemas']['InstitutionDeletionOptionsResponse']
+          }
+        }
         /** @description Invalid institution id */
         400: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/institutions/{id}/hard-delete": {
+          content: never
+        }
+      }
+    }
+  }
+  '/institutions/{id}/hard-delete': {
     /**
      * Permanently delete an institution
      * @description Hard-delete an institution only if it has no classes associated.
@@ -1298,47 +1313,47 @@ export interface paths {
       parameters: {
         path: {
           /** @description Institution ID */
-          id: number;
-        };
-      };
+          id: number
+        }
+      }
       responses: {
         /** @description Institution deleted permanently */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeleteInstitutionResponse']
+          }
+        }
         /** @description Cannot hard-delete institution */
         400: {
           content: {
-            "application/json": components["schemas"]["DeleteInstitutionResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/mail": {
+            'application/json': components['schemas']['DeleteInstitutionResponse']
+          }
+        }
+      }
+    }
+  }
+  '/mail': {
     /** Send email */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["MailRequest"];
-        };
-      };
+          'application/json': components['schemas']['MailRequest']
+        }
+      }
       responses: {
         /** @description Mail accepted for delivery */
         202: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              id?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/students/{guardianId}": {
+            'application/json': {
+              ok?: boolean
+              id?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/students/{guardianId}': {
     /**
      * Get students by guardian ID
      * @description Retrieve students associated with a specific guardian.
@@ -1350,35 +1365,35 @@ export interface paths {
       parameters: {
         query?: {
           /** @description If false, only active students are returned for admin/coordinator. If true or omitted, returns all. Guardians/tutors always receive only active students. */
-          sendInactive?: boolean;
-        };
+          sendInactive?: boolean
+        }
         path: {
           /** @description Guardian ID */
-          guardianId: number;
-        };
-      };
+          guardianId: number
+        }
+      }
       responses: {
         /** @description List of students retrieved successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              students?: components["schemas"]["Student"][];
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              students?: components['schemas']['Student'][]
+            }
+          }
+        }
         /** @description Forbidden - user is not authenticated */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description No students found for the specified guardian */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/students/{id}/reactivate": {
+          content: never
+        }
+      }
+    }
+  }
+  '/students/{id}/reactivate': {
     /**
      * Reactivate a student
      * @description Reactivates a previously deactivated student.
@@ -1388,31 +1403,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description Student ID */
-          id: number;
-        };
-      };
+          id: number
+        }
+      }
       responses: {
         /** @description Student reactivated successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Invalid student id */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden - user is not an admin or coordinator */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/students/add": {
+          content: never
+        }
+      }
+    }
+  }
+  '/students/add': {
     /**
      * Add a student to a guardian
      * @description Create a student for a guardian or reactivate an existing inactive one with the same name (case-insensitive).
@@ -1423,38 +1438,38 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["AddStudentToGuardianRequest"];
-        };
-      };
+          'application/json': components['schemas']['AddStudentToGuardianRequest']
+        }
+      }
       responses: {
         /** @description Student reactivated or already active */
         200: {
           content: {
-            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
-          };
-        };
+            'application/json': components['schemas']['AddStudentToGuardianResponse']
+          }
+        }
         /** @description Student created and added to guardian successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["AddStudentToGuardianResponse"];
-          };
-        };
+            'application/json': components['schemas']['AddStudentToGuardianResponse']
+          }
+        }
         /** @description Invalid input or validation error (missing required fields, institution not found) */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden - user is not an admin or coordinator */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Guardian not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/students/delete": {
+          content: never
+        }
+      }
+    }
+  }
+  '/students/delete': {
     /**
      * Remove a student from a guardian
      * @description Soft-delete (deactivate) a student by setting isActive = false for the specified guardian/student pair.
@@ -1464,32 +1479,32 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["RemoveStudentFromGuardianRequest"];
-        };
-      };
+          'application/json': components['schemas']['RemoveStudentFromGuardianRequest']
+        }
+      }
       responses: {
         /** @description Student removed from guardian successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["RemoveStudentFromGuardianResponse"];
-          };
-        };
+            'application/json': components['schemas']['RemoveStudentFromGuardianResponse']
+          }
+        }
         /** @description Invalid input or validation error (missing required fields) */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden - user is not an admin or coordinator */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Student not found for the specified guardian */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/tutors/guardian-links": {
+          content: never
+        }
+      }
+    }
+  }
+  '/tutors/guardian-links': {
     /**
      * Create a guardian-tutor link
      * @description Creates a GuardianTutor link.
@@ -1497,30 +1512,30 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateGuardianTutorLinkInput"];
-        };
-      };
+          'application/json': components['schemas']['CreateGuardianTutorLinkInput']
+        }
+      }
       responses: {
         /** @description Link created */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateGuardianTutorLinkResponse"];
-          };
-        };
+            'application/json': components['schemas']['CreateGuardianTutorLinkResponse']
+          }
+        }
         /** @description Invalid input */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Link already exists */
         409: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Delete a guardian-tutor link
      * @description Deletes a guardian-tutor relationship identified by guardianId, tutorId, and institutionId.
@@ -1528,32 +1543,32 @@ export interface paths {
     delete: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["DeleteGuardianTutorLinkInput"];
-        };
-      };
+          'application/json': components['schemas']['DeleteGuardianTutorLinkInput']
+        }
+      }
       responses: {
         /** @description Guardian-tutor link deactivated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteGuardianTutorLinkResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeleteGuardianTutorLinkResponse']
+          }
+        }
         /** @description Invalid input */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Link not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/tutors/{tutorId}/payments": {
+          content: never
+        }
+      }
+    }
+  }
+  '/tutors/{tutorId}/payments': {
     /**
      * Update tutor payment status for a date range
      * @description Bulk-updates the `tutorPaymentStatus` field on every class payment belonging to the
@@ -1565,55 +1580,55 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the tutor */
-          tutorId: number;
-        };
-      };
+          tutorId: number
+        }
+      }
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * Format: date
              * @description Any date within the first month of the range (UTC)
              * @example 2026-01-01
              */
-            periodStart: string;
+            periodStart: string
             /**
              * Format: date
              * @description Any date within the last month of the range (UTC)
              * @example 2026-02-01
              */
-            periodEnd: string;
+            periodEnd: string
             /**
              * @description New payment status to apply
              * @enum {string}
              */
-            status: "pending" | "completed";
-          };
-        };
-      };
+            status: 'pending' | 'completed'
+          }
+        }
+      }
       responses: {
         /** @description Payments updated successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
+            'application/json': {
+              ok?: boolean
               /** @description Number of payment records updated */
-              updated?: number;
-            };
-          };
-        };
+              updated?: number
+            }
+          }
+        }
         /** @description Invalid tutor ID or period format */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden */
         403: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/delete/{role}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/delete/{role}': {
     /**
      * Permanently delete a user by ID
      * @description Hard delete a user from the system.
@@ -1630,30 +1645,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
+          id: string
           /** @description User role */
-          role: "admin" | "coordinator" | "tutor" | "guardian";
-        };
-      };
+          role: 'admin' | 'coordinator' | 'tutor' | 'guardian'
+        }
+      }
       responses: {
         /** @description User deleted successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["DeleteUserResponse"];
-          };
-        };
+            'application/json': components['schemas']['DeleteUserResponse']
+          }
+        }
         /** @description Forbidden - user lacks permission to delete this user */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}': {
     /**
      * Get a user by ID
      * @description Returns user details.
@@ -1663,115 +1678,115 @@ export interface paths {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description User found */
         200: {
           content: {
-            "application/json": components["schemas"]["UserByIdResponse"];
-          };
-        };
+            'application/json': components['schemas']['UserByIdResponse']
+          }
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/bank-account": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/bank-account': {
     /** Edit a user's bank account information */
     patch: {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UserBankAccountInput"];
-        };
-      };
+          'application/json': components['schemas']['UserBankAccountInput']
+        }
+      }
       responses: {
         /** @description Updated bank account information */
         200: {
           content: {
-            "application/json": components["schemas"]["UserBankAccount"];
-          };
-        };
+            'application/json': components['schemas']['UserBankAccount']
+          }
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/personal-information": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/personal-information': {
     /** Edit a user's personal information */
     patch: {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["EditUserPersonalInformationInput"];
-        };
-      };
+          'application/json': components['schemas']['EditUserPersonalInformationInput']
+        }
+      }
       responses: {
         /** @description Updated user information */
         201: {
           content: {
-            "application/json": components["schemas"]["User"];
-          };
-        };
+            'application/json': components['schemas']['User']
+          }
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/change-password": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/change-password': {
     /** Change a user's password */
     patch: {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["ChangePasswordRequest"];
-        };
-      };
+          'application/json': components['schemas']['ChangePasswordRequest']
+        }
+      }
       responses: {
         /** @description Password updated successfully */
         200: {
           content: {
-            "application/json": {
-              ok?: boolean;
-              message?: string;
-            };
-          };
-        };
+            'application/json': {
+              ok?: boolean
+              message?: string
+            }
+          }
+        }
         /** @description Current password is incorrect */
         401: {
-          content: never;
-        };
+          content: never
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/tutor-links": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/tutor-links': {
     /**
      * Get tutor links for a user
      * @description Returns tutor links. Only active links are returned by default,
@@ -1781,49 +1796,49 @@ export interface paths {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Tutor links retrieved successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["TutorLink"][];
-          };
-        };
+            'application/json': components['schemas']['TutorLink'][]
+          }
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/users/{id}/guardian-links": {
+          content: never
+        }
+      }
+    }
+  }
+  '/users/{id}/guardian-links': {
     /** Get guardian links for a user */
     get: {
       parameters: {
         path: {
           /** @description User ID */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Guardian links retrieved successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["GuardianLink"][];
-          };
-        };
+            'application/json': components['schemas']['GuardianLink'][]
+          }
+        }
         /** @description User not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
+          content: never
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
@@ -1831,577 +1846,607 @@ export interface components {
      * @description Month and year in MM-YYYY format
      * @example 02-2026
      */
-    MonthYear: string;
+    MonthYear: string
     UserLoginRequest: {
       /** Format: email */
-      email: string;
-      password: string;
-    };
+      email: string
+      password: string
+    }
     UserLoginResponse: {
-      ok: boolean;
+      ok: boolean
       user: {
-        id?: number;
-        email?: string;
-        role?: string;
-        name?: string;
-        institutionId?: number | null;
-      };
-    };
+        id?: number
+        email?: string
+        role?: string
+        name?: string
+        institutionId?: number | null
+      }
+    }
     MailRequest: {
-      to: string | string[];
-      cc?: string | string[];
-      bcc?: string | string[];
-      subject: string;
-      text?: string;
-      html?: string;
+      to: string | string[]
+      cc?: string | string[]
+      bcc?: string | string[]
+      subject: string
+      text?: string
+      html?: string
       /** Format: email */
-      replyTo?: string;
-    };
+      replyTo?: string
+    }
     User: {
-      id: number;
-      name: string;
+      id: number
+      name: string
       /** Format: email */
-      email: string;
+      email: string
       /** @enum {string} */
-      role: "admin" | "coordinator" | "tutor" | "guardian";
-      rut?: string | null;
-      phone?: string | null;
-      address?: string | null;
-      chargeEmail?: string | null;
-      institutionId?: number | null;
+      role: 'admin' | 'coordinator' | 'tutor' | 'guardian'
+      rut?: string | null
+      phone?: string | null
+      address?: string | null
+      chargeEmail?: string | null
+      institutionId?: number | null
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     UserInput: {
       /** @description User full name (required) */
-      name: string;
+      name: string
       /**
        * Format: email
        * @description User email (must be unique, required)
        */
-      email: string;
+      email: string
       /**
        * @description User role (required)
        * @enum {string}
        */
-      role: "admin" | "coordinator" | "tutor" | "guardian";
+      role: 'admin' | 'coordinator' | 'tutor' | 'guardian'
       /** @description RUT in format XX.XXX.XXX-K (required, used to generate initial password) */
-      rut: string;
+      rut: string
       /** @description Phone number (optional) */
-      phone?: string | null;
+      phone?: string | null
       /** @description Address (optional) */
-      address?: string | null;
+      address?: string | null
       /**
        * Format: email
        * @description Charge email (optional)
        */
-      chargeEmail?: string | null;
+      chargeEmail?: string | null
       /** @description Institution ID (required for non-admin users, inferred for coordinators) */
-      institutionId?: number | null;
-    };
+      institutionId?: number | null
+    }
     Institution: {
-      id: number;
-      name: string;
-      isActive: boolean;
+      id: number
+      name: string
+      isActive: boolean
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     CreateInstitutionInput: {
-      name: string;
-    };
+      name: string
+    }
     CreateInstitutionResponse: {
-      institution: components["schemas"]["Institution"];
-      fees: components["schemas"]["Fee"][];
-    };
+      institution: components['schemas']['Institution']
+      fees: components['schemas']['Fee'][]
+    }
     DeactivateInstitutionResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     ReactivateInstitutionResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     InstitutionDeletionOptionsResponse: {
-      ok: boolean;
-      canHardDelete: boolean;
-    };
+      ok: boolean
+      canHardDelete: boolean
+    }
     DeleteInstitutionResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     ReactivateUserResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     DeactivateUserResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     DeleteUserResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     /** @description Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC). */
     EditAdminProfitShareInput: {
       /** @description New admin profit share percentage (0-100) */
-      profitShare: number;
-    };
+      profitShare: number
+    }
     EditAdminProfitShareResponse: {
-      ok: boolean;
-      message: string;
+      ok: boolean
+      message: string
       data: {
-        id?: number;
-        profitShare?: number;
+        id?: number
+        profitShare?: number
         /**
          * Format: date-time
          * @description Effective start timestamp (next day at 00:00:00.000 UTC).
          */
-        availableSince?: string;
+        availableSince?: string
         /**
          * Format: date-time
          * @description Effective end timestamp (far-future while active).
          */
-        availableUntil?: string;
-      };
-    };
+        availableUntil?: string
+      }
+    }
     EditCoordinatorProfitShareInput: {
-      coordinatorId: number;
-      profitShare: number;
-    };
+      coordinatorId: number
+      profitShare: number
+    }
     EditCoordinatorProfitShareResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     CreateCoordinatorPaymentInput: {
-      coordinatorId: number;
-      amount: number;
-    };
+      coordinatorId: number
+      amount: number
+    }
     CreateCoordinatorPaymentResponse: {
-      ok: boolean;
-      message: string;
-      payment: components["schemas"]["CoordinatorPayment"];
-    };
+      ok: boolean
+      message: string
+      payment: components['schemas']['CoordinatorPayment']
+    }
     ErrorResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     CreateGuardianTutorLinkInput: {
-      guardianId: number;
-      tutorId: number;
-      institutionId: number;
-    };
+      guardianId: number
+      tutorId: number
+      institutionId: number
+    }
     CreateGuardianTutorLinkResponse: {
-      ok: boolean;
-      link: components["schemas"]["GuardianTutor"];
-    };
+      ok: boolean
+      link: components['schemas']['GuardianTutor']
+    }
     DeleteGuardianTutorLinkInput: {
-      guardianId: number;
-      tutorId: number;
-      institutionId: number;
-    };
+      guardianId: number
+      tutorId: number
+      institutionId: number
+    }
     DeleteGuardianTutorLinkResponse: {
-      ok: boolean;
-      link: components["schemas"]["GuardianTutor"];
-    };
+      ok: boolean
+      link: components['schemas']['GuardianTutor']
+    }
     DeleteUserBlockedResponse: {
-      ok: boolean;
-      message: string;
-    };
-    UserWithInstitution: components["schemas"]["User"] & ({
-      Institution?: components["schemas"]["Institution"];
-      BankAccount?: components["schemas"]["UserBankAccount"];
-      coordinatorProfitShares?: components["schemas"]["CoordinatorProfitShare"][] | null;
-    });
+      ok: boolean
+      message: string
+    }
+    UserWithInstitution: components['schemas']['User'] & {
+      Institution?: components['schemas']['Institution']
+      BankAccount?: components['schemas']['UserBankAccount']
+      coordinatorProfitShares?: components['schemas']['CoordinatorProfitShare'][] | null
+    }
     CoordinatorProfitShare: {
-      id: number;
-      coordinatorId: number;
-      institutionId: number;
-      profitShare: number;
+      id: number
+      coordinatorId: number
+      institutionId: number
+      profitShare: number
       /** Format: date-time */
-      createdAt?: string;
+      createdAt?: string
       /** Format: date-time */
-      updatedAt?: string;
-    };
+      updatedAt?: string
+    }
     UserBankAccount: {
-      id?: number;
-      userId?: number;
-      bankName?: string;
+      id?: number
+      userId?: number
+      bankName?: string
       /** @enum {string} */
-      accountType?: "AHORRO" | "CORRIENTE" | "VISTA";
-      accountNumber?: string;
+      accountType?: 'AHORRO' | 'CORRIENTE' | 'VISTA'
+      accountNumber?: string
       /** Format: email */
-      accountEmail?: string;
-      accountName?: string;
-      rut?: string;
+      accountEmail?: string
+      accountName?: string
+      rut?: string
       /** Format: date-time */
-      createdAt?: string;
+      createdAt?: string
       /** Format: date-time */
-      updatedAt?: string;
-    };
+      updatedAt?: string
+    }
     CoordinatorPayment: {
-      id: number;
-      coordinatorId: number;
-      institutionId: number;
-      periodYear: number;
-      periodMonth: number;
-      amount: number;
-      status: components["schemas"]["PaymentStatus"];
+      id: number
+      coordinatorId: number
+      institutionId: number
+      periodYear: number
+      periodMonth: number
+      amount: number
+      status: components['schemas']['PaymentStatus']
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     Student: {
-      id?: number;
-      name?: string;
-      guardianId?: number;
-      institutionId?: number;
-      isActive?: boolean;
-    };
+      id?: number
+      name?: string
+      guardianId?: number
+      institutionId?: number
+      isActive?: boolean
+    }
     StudentSummary: {
-      id: number;
-      name: string;
-    };
+      id: number
+      name: string
+    }
     TutorSummary: {
-      name: string;
-    };
+      name: string
+    }
     GuardianLinkWithTutor: {
-      tutorId: number;
-      Tutor: components["schemas"]["TutorSummary"];
-    };
+      tutorId: number
+      Tutor: components['schemas']['TutorSummary']
+    }
     UserWithGuardianLinks: {
-      id: number;
-      name: string;
-      Students: components["schemas"]["StudentSummary"][];
-      GuardianLinks: components["schemas"]["GuardianLinkWithTutor"][];
-    };
+      id: number
+      name: string
+      Students: components['schemas']['StudentSummary'][]
+      GuardianLinks: components['schemas']['GuardianLinkWithTutor'][]
+    }
     GuardianTutor: {
-      guardianId?: number;
-      tutorId?: number;
-      institutionId?: number;
-      active?: boolean;
+      guardianId?: number
+      tutorId?: number
+      institutionId?: number
+      active?: boolean
       /** Format: date-time */
-      createdAt?: string;
+      createdAt?: string
       /** Format: date-time */
-      updatedAt?: string;
-    };
+      updatedAt?: string
+    }
     /** @description Tutor link with active guardian only. */
-    TutorLink: components["schemas"]["GuardianTutor"] & {
-      Guardian?: components["schemas"]["User"];
-    };
-    GuardianLink: components["schemas"]["GuardianTutor"] & {
-      Tutor?: components["schemas"]["User"];
-    };
-    UserDetail: components["schemas"]["User"] & ({
-      Institution?: components["schemas"]["Institution"];
-      BankAccount?: components["schemas"]["UserBankAccount"];
-      Students?: components["schemas"]["Student"][];
-      TutorLinks?: (components["schemas"]["GuardianTutor"] & {
-          Guardian?: components["schemas"]["User"];
-        })[];
-      GuardianLinks?: (components["schemas"]["GuardianTutor"] & {
-          Tutor?: components["schemas"]["User"];
-        })[];
-    });
+    TutorLink: components['schemas']['GuardianTutor'] & {
+      Guardian?: components['schemas']['User']
+    }
+    GuardianLink: components['schemas']['GuardianTutor'] & {
+      Tutor?: components['schemas']['User']
+    }
+    UserDetail: components['schemas']['User'] & {
+      Institution?: components['schemas']['Institution']
+      BankAccount?: components['schemas']['UserBankAccount']
+      Students?: components['schemas']['Student'][]
+      TutorLinks?: (components['schemas']['GuardianTutor'] & {
+        Guardian?: components['schemas']['User']
+      })[]
+      GuardianLinks?: (components['schemas']['GuardianTutor'] & {
+        Tutor?: components['schemas']['User']
+      })[]
+    }
     UserBankAccountInput: {
-      userId?: number;
-      bankName: string;
-      accountType: string;
-      accountNumber: string;
-      rut: string;
+      userId?: number
+      bankName: string
+      accountType: string
+      accountNumber: string
+      rut: string
       /** Format: email */
-      accountEmail: string;
-      accountName: string;
-    };
+      accountEmail: string
+      accountName: string
+    }
     /** @enum {string} */
-    ClassSubject: "biology" | "chemistry" | "physics" | "mathematics" | "spanish" | "french" | "english" | "pet" | "socialStudies" | "studySkills" | "other";
+    ClassSubject:
+      | 'biology'
+      | 'chemistry'
+      | 'physics'
+      | 'mathematics'
+      | 'spanish'
+      | 'french'
+      | 'english'
+      | 'pet'
+      | 'socialStudies'
+      | 'studySkills'
+      | 'other'
     /** @enum {string} */
-    ClassModality: "inPerson" | "online";
+    ClassModality: 'inPerson' | 'online'
     /** @enum {string} */
-    ClassType: "school" | "university" | "cancelled";
+    ClassType: 'school' | 'university' | 'cancelled'
     /** @enum {string} */
-    PaymentStatus: "completed" | "pending";
+    PaymentStatus: 'completed' | 'pending'
     /** @enum {string} */
-    GuardianCashFlowPaymentStatus: "completed" | "pending" | "No payments";
+    GuardianCashFlowPaymentStatus: 'completed' | 'pending' | 'No payments'
     /** @enum {string} */
-    GuardianFilteredPaymentStatus: "pending" | "bankTransfer" | "card" | "card-transfer" | "completed" | "No payments";
+    GuardianFilteredPaymentStatus:
+      | 'pending'
+      | 'bankTransfer'
+      | 'card'
+      | 'card-transfer'
+      | 'completed'
+      | 'No payments'
     /** @enum {string} */
-    PaymentType: "card" | "bankTransfer";
+    PaymentType: 'card' | 'bankTransfer'
     Class: {
-      id: number;
+      id: number
       /** Format: date-time */
-      date: string;
-      subject: components["schemas"]["ClassSubject"];
-      modality: components["schemas"]["ClassModality"];
-      numberOfStudents: number;
-      type: components["schemas"]["ClassType"];
-      duration: number;
-      institutionId: number;
-      studentId: number;
-      tutorId: number;
+      date: string
+      subject: components['schemas']['ClassSubject']
+      modality: components['schemas']['ClassModality']
+      numberOfStudents: number
+      type: components['schemas']['ClassType']
+      duration: number
+      institutionId: number
+      studentId: number
+      tutorId: number
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     ClassPayment: {
-      id: number;
-      classId: number;
-      guardianAmount: number;
-      guardianPaymentStatus: components["schemas"]["PaymentStatus"];
-      guardianPaymentType: components["schemas"]["PaymentType"];
-      tutorAmount: number;
-      tutorPaymentStatus: components["schemas"]["PaymentStatus"];
+      id: number
+      classId: number
+      guardianAmount: number
+      guardianPaymentStatus: components['schemas']['PaymentStatus']
+      guardianPaymentType: components['schemas']['PaymentType']
+      tutorAmount: number
+      tutorPaymentStatus: components['schemas']['PaymentStatus']
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     CreateClassBaseInput: {
-      studentId: number;
+      studentId: number
       /**
        * @description ISO 8601 date-time string
        * @example 2025-12-31T10:00:00.000Z
        */
-      date: string;
-      numberOfStudents: number;
+      date: string
+      numberOfStudents: number
       /** @description Duration in minutes */
-      duration: number;
-      subject: components["schemas"]["ClassSubject"];
-      type: components["schemas"]["ClassType"];
-      modality: components["schemas"]["ClassModality"];
-    };
+      duration: number
+      subject: components['schemas']['ClassSubject']
+      type: components['schemas']['ClassType']
+      modality: components['schemas']['ClassModality']
+    }
     /** @description Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor. */
-    CreateClassAsTutorInput: components["schemas"]["CreateClassBaseInput"];
+    CreateClassAsTutorInput: components['schemas']['CreateClassBaseInput']
     /** @description Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided. */
-    CreateClassAsCoordinatorInput: components["schemas"]["CreateClassBaseInput"] & {
+    CreateClassAsCoordinatorInput: components['schemas']['CreateClassBaseInput'] & {
       /** @description Tutor who will teach the class */
-      tutorId: number;
-    };
+      tutorId: number
+    }
     /** @description Admin creates a class. tutorId and institutionId must be provided. */
-    CreateClassAsAdminInput: components["schemas"]["CreateClassBaseInput"] & {
+    CreateClassAsAdminInput: components['schemas']['CreateClassBaseInput'] & {
       /** @description Tutor who will teach the class */
-      tutorId: number;
+      tutorId: number
       /** @description Institution that owns the class */
-      institutionId: number;
-    };
+      institutionId: number
+    }
     /** @description Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin). */
-    CreateClassInput: components["schemas"]["CreateClassAsTutorInput"] | components["schemas"]["CreateClassAsCoordinatorInput"] | components["schemas"]["CreateClassAsAdminInput"];
+    CreateClassInput:
+      | components['schemas']['CreateClassAsTutorInput']
+      | components['schemas']['CreateClassAsCoordinatorInput']
+      | components['schemas']['CreateClassAsAdminInput']
     CreateClassResponse: {
-      class: components["schemas"]["Class"];
-      classPayment: components["schemas"]["ClassPayment"];
-    };
+      class: components['schemas']['Class']
+      classPayment: components['schemas']['ClassPayment']
+    }
     /** @description Returned when the month of the class is already settled for admin, coordinator, or tutor payments. */
     CreateClassBlockedResponse: {
       /** @enum {string} */
-      message: "No se puede crear una clase cuando ya se ha pagado al admin" | "No se puede crear una clase cuando ya se ha pagado al coordinador" | "No se puede crear una clase si ya se ha pagado al tutor";
-    };
+      message:
+        | 'No se puede crear una clase cuando ya se ha pagado al admin'
+        | 'No se puede crear una clase cuando ya se ha pagado al coordinador'
+        | 'No se puede crear una clase si ya se ha pagado al tutor'
+    }
     ClassesCashFlowSummaryAmounts: {
       /** @description Pending amount for the authenticated role */
-      pendingAmount: number;
+      pendingAmount: number
       /** @description Paid amount for the authenticated role */
-      paidAmount: number;
-    };
+      paidAmount: number
+    }
     ClassesCashFlowSummaryInstitution: {
       /** @description Pending guardian incomes (institution scope) */
-      pendingIncomes: number;
+      pendingIncomes: number
       /** @description Received guardian incomes (institution scope) */
-      receivedIncomes: number;
+      receivedIncomes: number
       /** @description Pending tutor expenses (institution scope) */
-      pendingExpenses: number;
+      pendingExpenses: number
       /** @description Paid tutor expenses (institution scope) */
-      paidExpenses: number;
-    };
+      paidExpenses: number
+    }
     /** @description Cash-flow summary. Shape depends on authenticated role (guardian/tutor vs coordinator/admin). */
-    ClassesCashFlowSummaryResponse: components["schemas"]["ClassesCashFlowSummaryAmounts"] | components["schemas"]["ClassesCashFlowSummaryInstitution"];
+    ClassesCashFlowSummaryResponse:
+      | components['schemas']['ClassesCashFlowSummaryAmounts']
+      | components['schemas']['ClassesCashFlowSummaryInstitution']
     UserIdName: {
-      id: number;
-      name: string;
-    };
+      id: number
+      name: string
+    }
     StudentWithGuardianSummary: {
-      id: number;
-      name: string;
-      Guardian: components["schemas"]["UserIdName"];
-    };
+      id: number
+      name: string
+      Guardian: components['schemas']['UserIdName']
+    }
     InstitutionSummary: {
-      id: number;
-      name: string;
-    };
+      id: number
+      name: string
+    }
     /** @description Tutor basic info (id and name) */
-    TutorBrief: components["schemas"]["UserIdName"];
+    TutorBrief: components['schemas']['UserIdName']
     /** @description Class with included relations: ClassPayment, Tutor, Student (with Guardian), Institution. */
-    ClassDetails: components["schemas"]["Class"] & {
-      ClassPayment?: components["schemas"]["ClassPayment"];
-      Tutor: components["schemas"]["TutorBrief"];
-      Student: components["schemas"]["StudentWithGuardianSummary"];
-      Institution: components["schemas"]["InstitutionSummary"];
-    };
+    ClassDetails: components['schemas']['Class'] & {
+      ClassPayment?: components['schemas']['ClassPayment']
+      Tutor: components['schemas']['TutorBrief']
+      Student: components['schemas']['StudentWithGuardianSummary']
+      Institution: components['schemas']['InstitutionSummary']
+    }
     /** @description Provide at least one field to update. */
     UpdateClassPaymentStatusInput: {
-      guardianPaymentStatus?: components["schemas"]["PaymentStatus"];
-      tutorPaymentStatus?: components["schemas"]["PaymentStatus"];
-      guardianPaymentType?: components["schemas"]["PaymentType"];
-    };
+      guardianPaymentStatus?: components['schemas']['PaymentStatus']
+      tutorPaymentStatus?: components['schemas']['PaymentStatus']
+      guardianPaymentType?: components['schemas']['PaymentType']
+    }
     /** @description Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed. */
     BulkUpdateGuardianClassPaymentStatusInput: {
       /**
        * @description Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.
        * @enum {string}
        */
-      guardianPaymentStatus: "pending" | "card" | "bankTransfer";
+      guardianPaymentStatus: 'pending' | 'card' | 'bankTransfer'
       /**
        * Format: date-time
        * @description Optional lower bound for the class date filter.
        */
-      periodStart?: string;
+      periodStart?: string
       /**
        * Format: date-time
        * @description Optional upper bound for the class date filter.
        */
-      periodEnd?: string;
+      periodEnd?: string
       /** @description Guardian whose class payments will be updated. */
-      guardianId: number;
-    };
+      guardianId: number
+    }
     BulkUpdateClassPaymentsResponse: {
       /** @description Number of ClassPayment records affected. */
-      count: number;
-    };
-    CreateUserWithBankAccountInput: components["schemas"]["UserInput"] & ({
-      BankAccount?: components["schemas"]["UserBankAccountInput"] | null;
+      count: number
+    }
+    CreateUserWithBankAccountInput: components['schemas']['UserInput'] & {
+      BankAccount?: components['schemas']['UserBankAccountInput'] | null
       /** @description Profit share percentage for coordinator users. Defaults to 30 when omitted. */
-      coordinatorProfitShare?: number | null;
-    });
+      coordinatorProfitShare?: number | null
+    }
     CreateUserResponse: {
-      ok: boolean;
-      user: components["schemas"]["User"];
-    };
+      ok: boolean
+      user: components['schemas']['User']
+    }
     /** @description UserDetail with optional profit share fields. coordinatorProfitShare is only present when user role is coordinator. adminProfitShare is only present when user role is admin. */
-    UserByIdResponse: components["schemas"]["UserDetail"] & ({
+    UserByIdResponse: components['schemas']['UserDetail'] & {
       /** @description Profit share percentage for coordinator users. Only present when user role is coordinator. */
-      coordinatorProfitShare?: number | null;
+      coordinatorProfitShare?: number | null
       /** @description Current active profit share percentage for admin users. Only present when user role is admin. */
-      adminProfitShare?: number | null;
-    });
+      adminProfitShare?: number | null
+    }
     EditUserPersonalInformationInput: {
-      name: string;
-      rut: string | null;
-      phone: string | null;
-      chargeEmail?: string | null;
-      address?: string | null;
-    };
+      name: string
+      rut: string | null
+      phone: string | null
+      chargeEmail?: string | null
+      address?: string | null
+    }
     ChangePasswordRequest: {
-      currentPassword: string;
-      newPassword: string;
-    };
+      currentPassword: string
+      newPassword: string
+    }
     Fee: {
-      id: number;
-      type: string;
+      id: number
+      type: string
       /** @enum {string} */
-      modality: "inPerson" | "online" | "cancelled";
-      numberOfStudents: number;
-      guardianAmount: number;
-      tutorAmount: number;
-      institutionId: number;
+      modality: 'inPerson' | 'online' | 'cancelled'
+      numberOfStudents: number
+      guardianAmount: number
+      tutorAmount: number
+      institutionId: number
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     SimulateFeePaymentRequest: {
-      fees: components["schemas"]["Fee"][];
-      type: string;
+      fees: components['schemas']['Fee'][]
+      type: string
       /** @enum {string} */
-      classModality: "inPerson" | "online" | "cancelled";
-      numberOfStudents: number;
+      classModality: 'inPerson' | 'online' | 'cancelled'
+      numberOfStudents: number
       /** @description Duration in minutes */
-      duration: number;
-    };
+      duration: number
+    }
     SimulateFeePaymentResponse: {
-      ok: boolean;
-      result: OneOf<[number, {
-        guardianAmount: number;
-        tutorAmount: number;
-      }]>;
-    };
+      ok: boolean
+      result: OneOf<
+        [
+          number,
+          {
+            guardianAmount: number
+            tutorAmount: number
+          },
+        ]
+      >
+    }
     EditFeesRequest: {
       /** @description Array of fees to update. Can also be a single fee object for backward compatibility. */
       fees: {
-          /** @description Fee ID to update */
-          feeId: number;
-          /** @description New tutor amount */
-          tutorAmount: number;
-          /** @description New guardian amount */
-          guardianAmount: number;
-        }[];
-    };
+        /** @description Fee ID to update */
+        feeId: number
+        /** @description New tutor amount */
+        tutorAmount: number
+        /** @description New guardian amount */
+        guardianAmount: number
+      }[]
+    }
     EditFeesResponse: {
-      ok: boolean;
-      message: string;
-    };
+      ok: boolean
+      message: string
+    }
     CreateGuardianInput: {
       /** @description Guardian name */
-      name: string;
+      name: string
       /**
        * Format: email
        * @description Guardian email
        */
-      email: string;
+      email: string
       /** @description Guardian RUT (e.g., 12345678-9) */
-      rut: string;
+      rut: string
       /** @description Guardian phone number (optional) */
-      phone?: string | null;
+      phone?: string | null
       /** @description Guardian address (optional) */
-      address?: string | null;
+      address?: string | null
       /**
        * Format: email
        * @description Charge email (optional)
        */
-      chargeEmail?: string | null;
+      chargeEmail?: string | null
       /** @description Institution ID (required for admin, inferred for coordinator) */
-      institution?: number;
-    };
+      institution?: number
+    }
     CreateGuardianResponse: {
-      ok: boolean;
-      guardian: components["schemas"]["User"];
-    };
+      ok: boolean
+      guardian: components['schemas']['User']
+    }
     AddStudentToGuardianRequest: {
       /** @description Student name (required) */
-      name: string;
+      name: string
       /** @description Institution ID (required) */
-      institutionId: number;
+      institutionId: number
       /** @description Guardian ID (required) */
-      guardianId: number;
-    };
+      guardianId: number
+    }
     AddStudentToGuardianResponse: {
-      ok: boolean;
-      student: components["schemas"]["Student"];
+      ok: boolean
+      student: components['schemas']['Student']
       /** @description True when an existing inactive student was reactivated instead of creating a new record */
-      reactivated?: boolean;
-    };
+      reactivated?: boolean
+    }
     RemoveStudentFromGuardianRequest: {
       /** @description Guardian ID (required) */
-      guardianId: number;
+      guardianId: number
       /** @description Student ID (required) */
-      studentId: number;
-    };
+      studentId: number
+    }
     RemoveStudentFromGuardianResponse: {
-      ok: boolean;
-      message: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+      ok: boolean
+      message: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>

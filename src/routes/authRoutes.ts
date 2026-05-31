@@ -1,5 +1,11 @@
-import { Router } from "express";
-import { login, logout, refreshToken, requestPasswordReset, resetPassword } from "../controllers/authController";
+import { Router } from 'express'
+import {
+  login,
+  logout,
+  refreshToken,
+  requestPasswordReset,
+  resetPassword,
+} from '../controllers/authController'
 
 const router = Router()
 /**

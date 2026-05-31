@@ -1,7 +1,6 @@
-// routes/institutionRoutes.ts
-import { Router } from 'express';
+import { Router } from 'express'
 
-import { 
+import {
   createInstitution,
   getInstitutions,
   searchInstitutions,
@@ -10,9 +9,9 @@ import {
   reactivateInstitution,
   getInstitutionDeletionOptions,
   deleteInstitution,
-} from '../controllers/institutionController';
+} from '../controllers/institutionController'
 
-const router = Router();
+const router = Router()
 
 /**
  * @openapi
@@ -35,7 +34,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/CreateInstitutionResponse'
  */
-router.post('/', createInstitution);
+router.post('/', createInstitution)
 /**
  * @openapi
  * /institutions:
@@ -59,7 +58,7 @@ router.post('/', createInstitution);
  *               items:
  *                 $ref: '#/components/schemas/Institution'
  */
-router.get('/', getInstitutions);
+router.get('/', getInstitutions)
 
 /**
  * @openapi
@@ -78,7 +77,7 @@ router.get('/', getInstitutions);
  *       200:
  *         description: List of guardian
  */
-router.get('/:institutionId/guardians', getGuardiansFromInstitution);
+router.get('/:institutionId/guardians', getGuardiansFromInstitution)
 
 /**
  * @openapi
@@ -125,7 +124,7 @@ router.get('/:institutionId/guardians', getGuardiansFromInstitution);
  *                 message:
  *                   type: string
  */
-router.get('/search', searchInstitutions);
+router.get('/search', searchInstitutions)
 
 /**
  * @openapi
@@ -158,7 +157,7 @@ router.get('/search', searchInstitutions);
  *             schema:
  *               $ref: '#/components/schemas/DeactivateInstitutionResponse'
  */
-router.delete('/:id', deactivateInstitution);
+router.delete('/:id', deactivateInstitution)
 
 /**
  * @openapi
@@ -188,7 +187,7 @@ router.delete('/:id', deactivateInstitution);
  *             schema:
  *               $ref: '#/components/schemas/ReactivateInstitutionResponse'
  */
-router.patch('/:id/reactivate', reactivateInstitution);
+router.patch('/:id/reactivate', reactivateInstitution)
 
 /**
  * @openapi
@@ -214,7 +213,7 @@ router.patch('/:id/reactivate', reactivateInstitution);
  *       400:
  *         description: Invalid institution id
  */
-router.get('/:id/deletion-options', getInstitutionDeletionOptions);
+router.get('/:id/deletion-options', getInstitutionDeletionOptions)
 
 /**
  * @openapi
@@ -244,6 +243,6 @@ router.get('/:id/deletion-options', getInstitutionDeletionOptions);
  *             schema:
  *               $ref: '#/components/schemas/DeleteInstitutionResponse'
  */
-router.delete('/:id/hard-delete', deleteInstitution);
+router.delete('/:id/hard-delete', deleteInstitution)
 
-export default router;
+export default router

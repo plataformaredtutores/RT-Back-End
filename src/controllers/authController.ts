@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
-import argon2 from "argon2";
+import { Request, Response } from 'express'
+import argon2 from 'argon2'
 import { getJose } from '../lib/jose'
-import prisma from "../lib/prisma";
-import { randomToken, hashToken, verifyTokenHash } from "../lib/tokens";
-import { sendEmail } from "../services/mailService";
+import prisma from '../lib/prisma'
+import { randomToken, hashToken, verifyTokenHash } from '../lib/tokens'
+import { sendEmail } from '../services/mailService'
 
 function isHttpsUrl(url?: string) {
   if (!url) return false
@@ -15,27 +15,33 @@ function isHttpsUrl(url?: string) {
 }
 
 function isRequestSecure(req: Request) {
-	if ((req as any).secure) return true
-	const xfProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase()
-	return xfProto === 'https'
+  if ((req as any).secure) return true
+  const xfProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase()
+  return xfProto === 'https'
 }
 
 function getCookieSecurity(req: Request) {
   const isProd = process.env.NODE_ENV === 'production'
   const frontendUrl = process.env.FRONTEND_URL
   const secureFromEnv = process.env.COOKIE_SECURE
-  const secure = secureFromEnv === 'true'
-		? true
-		: secureFromEnv === 'false'
-			? false
-			: (isRequestSecure(req) || (isProd && isHttpsUrl(frontendUrl)))
+  const secure =
+    secureFromEnv === 'true'
+      ? true
+      : secureFromEnv === 'false'
+        ? false
+        : isRequestSecure(req) || (isProd && isHttpsUrl(frontendUrl))
 
   const sameSiteFromEnv = (process.env.COOKIE_SAMESITE || '').toLowerCase()
   const sameSite =
-    sameSiteFromEnv === 'lax' ? ('lax' as const) :
-    sameSiteFromEnv === 'strict' ? ('strict' as const) :
-    sameSiteFromEnv === 'none' ? ('none' as const) :
-    (secure ? ('none' as const) : ('lax' as const))
+    sameSiteFromEnv === 'lax'
+      ? ('lax' as const)
+      : sameSiteFromEnv === 'strict'
+        ? ('strict' as const)
+        : sameSiteFromEnv === 'none'
+          ? ('none' as const)
+          : secure
+            ? ('none' as const)
+            : ('lax' as const)
 
   return { secure, sameSite }
 }
@@ -73,7 +79,9 @@ function parseRefreshCookie(presented: string): { id?: string; raw: string } {
 
 function b64ToKey(b64?: string) {
   const raw = b64 || ''
-  return raw.startsWith('base64:') ? Buffer.from(raw.slice(7), 'base64') : Buffer.from(raw, 'base64')
+  return raw.startsWith('base64:')
+    ? Buffer.from(raw.slice(7), 'base64')
+    : Buffer.from(raw, 'base64')
 }
 const JWT_SECRET = b64ToKey(process.env.JWT_SECRET)
 
@@ -96,11 +104,21 @@ export async function login(req: Request, res: Response) {
 
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
-    select: { id: true, hashedPassword: true, role: true, email: true, name: true, institutionId: true, isActive: true },
+    select: {
+      id: true,
+      hashedPassword: true,
+      role: true,
+      email: true,
+      name: true,
+      institutionId: true,
+      isActive: true,
+    },
   })
-  
-  if (user &&!user?.isActive) {
-    return res.status(403).json({ ok: false, message: 'Account is inactive. Please contact support.' })
+
+  if (user && !user?.isActive) {
+    return res
+      .status(403)
+      .json({ ok: false, message: 'Account is inactive. Please contact support.' })
   }
   if (!user) return res.status(401).json({ ok: false, message: 'Invalid credentials' })
 
@@ -147,7 +165,13 @@ export async function login(req: Request, res: Response) {
     .json({
       ok: true,
       ...(includeToken ? { accessToken } : {}),
-      user: { id: user.id, email: user.email, role: user.role, name: user.name, institutionId: user.institutionId },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        institutionId: user.institutionId,
+      },
     })
 }
 
@@ -204,7 +228,12 @@ export async function refreshToken(req: Request, res: Response) {
     }
   }
 
-  if (!rt || rt.revoked || rt.expiresAt <= new Date() || !(await verifyTokenHash(rt.tokenHash, refreshRaw))) {
+  if (
+    !rt ||
+    rt.revoked ||
+    rt.expiresAt <= new Date() ||
+    !(await verifyTokenHash(rt.tokenHash, refreshRaw))
+  ) {
     return res.status(401).json({ ok: false, message: 'Invalid refresh' })
   }
 
@@ -244,7 +273,10 @@ export async function refreshToken(req: Request, res: Response) {
 
   res
     .cookie('access_token', token, { ...cookieOptsAT(req), maxAge: 30 * 60 * 1000 })
-    .cookie('refresh_token', `${newRecord.id}.${newRaw}`, { ...cookieOptsRT(req), maxAge: 7 * 24 * 60 * 60 * 1000 })
+    .cookie('refresh_token', `${newRecord.id}.${newRaw}`, {
+      ...cookieOptsRT(req),
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
     .json({ ok: true, expiresIn: '30m', ...(includeToken ? { accessToken: token } : {}) })
 }
 
@@ -254,10 +286,8 @@ export async function requestPasswordReset(req: Request, res: Response) {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true }
+    select: { id: true, email: true },
   })
-
-  console.log('user', user)
 
   if (!user) {
     return res.status(200).json({ ok: false, message: 'User not found' })
@@ -271,21 +301,19 @@ export async function requestPasswordReset(req: Request, res: Response) {
     .sign(JWT_SECRET)
 
   const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`
-  
-  const emailResponse = await sendEmail({
+
+  await sendEmail({
     to: email,
     subject: 'Recuperación de contraseña',
-    html: `<p>Haz click <a href="${resetLink}">aquí</a> para restablecer tu contraseña. Este enlace expira en 15 minutos.</p>`
+    html: `<p>Haz click <a href="${resetLink}">aquí</a> para restablecer tu contraseña. Este enlace expira en 15 minutos.</p>`,
   })
 
-  console.log('Email sent:', emailResponse.accepted, emailResponse.rejected)
-
-    res.json({ ok: true, message: 'Recovery email sent' })
+  res.json({ ok: true, message: 'Recovery email sent' })
 }
 
 export async function resetPassword(req: Request, res: Response) {
   const { token, newPassword } = req.body
-  
+
   if (!token || !newPassword) {
     return res.status(400).json({ ok: false, message: 'Token and new password are required' })
   }
@@ -293,33 +321,32 @@ export async function resetPassword(req: Request, res: Response) {
   try {
     const { jwtVerify } = await getJose()
     const { payload } = await jwtVerify(token, JWT_SECRET)
-    
+
     const subParts = payload.sub?.split(':')
     if (!subParts || subParts[0] !== 'reset' || !subParts[1]) {
-       return res.status(400).json({ ok: false, message: 'Invalid token subject' })
+      return res.status(400).json({ ok: false, message: 'Invalid token subject' })
     }
-    
+
     const userId = Number(subParts[1])
 
     const pepper = (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, '')
     const hashedPassword = await argon2.hash(newPassword, {
-      secret: Buffer.from(pepper, 'base64')
-    });
+      secret: Buffer.from(pepper, 'base64'),
+    })
 
     await prisma.user.update({
       where: { id: userId },
-      data: { hashedPassword }
+      data: { hashedPassword },
     })
 
     // Revoke all refresh tokens for security
     await prisma.refreshToken.updateMany({
-        where: { userId },
-        data: { revoked: true }
+      where: { userId },
+      data: { revoked: true },
     })
 
     res.json({ ok: true, message: 'Password updated successfully' })
-
-  } catch (error) {
+  } catch {
     return res.status(400).json({ ok: false, message: 'Invalid or expired token' })
   }
 }

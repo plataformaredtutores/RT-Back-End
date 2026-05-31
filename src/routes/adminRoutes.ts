@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { editAdminProfitShare, makeAdminPayment, deleteAdminPayment } from '../controllers/adminController'
+import {
+  editAdminProfitShare,
+  makeAdminPayment,
+  deleteAdminPayment,
+} from '../controllers/adminController'
 
 const router = Router()
 

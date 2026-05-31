@@ -1,6 +1,5 @@
-// routes/userRoutes.ts
 import { Router } from 'express'
-import { 
+import {
   createUser,
   getUsers,
   deactivateUser,
@@ -11,7 +10,7 @@ import {
   editUserPersonalInformation,
   changeUserPassword,
   getTutorLinks,
-  getGuardianLinks
+  getGuardianLinks,
 } from '../controllers/userController'
 
 const router = Router()
@@ -426,4 +425,4 @@ router.get('/:id/tutor-links', getTutorLinks)
  */
 router.get('/:id/guardian-links', getGuardianLinks)
 
-export default router;
+export default router

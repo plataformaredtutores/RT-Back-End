@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { editCoordinatorProfitShare, makeCoordinatorPayment, deleteCoordinatorPayment } from '../controllers/coordinatorController'
+import {
+  editCoordinatorProfitShare,
+  makeCoordinatorPayment,
+  deleteCoordinatorPayment,
+} from '../controllers/coordinatorController'
 
 const router = Router()
 
@@ -164,4 +168,3 @@ router.post('/:institutionId/payments', makeCoordinatorPayment)
 router.delete('/:coordinatorId/payments/:period', deleteCoordinatorPayment)
 
 export default router
-

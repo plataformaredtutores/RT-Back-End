@@ -13,7 +13,12 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "docs:emit": "ts-node scripts/export-openapi.ts openapi.json",
-    "types:openapi": "openapi-typescript openapi.json -o openapi/types.ts"
+    "types:openapi": "openapi-typescript openapi.json -o openapi/types.ts",
+    "lint": "eslint src scripts",
+    "lint:fix": "eslint src scripts --fix",
+    "format:check": "prettier --check \"src/**/*.ts\" \"scripts/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\"",
+    "check": "pnpm format:check && pnpm lint && pnpm build"
   },
   "author": "",
   "license": "ISC",
@@ -32,6 +37,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
@@ -39,9 +45,15 @@
     "@types/nodemailer": "^7.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.6.0",
     "openapi-typescript": "^7.13.0",
+    "prettier": "3.6.2",
     "prisma": "^6.14.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.0"
   }
 }

@@ -3,23 +3,23 @@
  * This can be removed once real tests are implemented
  */
 
-import { createTestUser, cleanupTestData } from '../../setup/test-helpers';
-import { getTestPrisma } from '../../setup/db.setup';
+import { createTestUser, cleanupTestData } from '../../setup/test-helpers'
+import { getTestPrisma } from '../../setup/db.setup'
 
 describe('Test Setup Verification', () => {
   beforeEach(async () => {
-    await cleanupTestData();
-  });
+    await cleanupTestData()
+  })
 
   afterAll(async () => {
-    await cleanupTestData();
-  });
+    await cleanupTestData()
+  })
 
   it('should connect to test database', async () => {
-    const prisma = getTestPrisma();
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
-    expect(result).toBeDefined();
-  });
+    const prisma = getTestPrisma()
+    const result = await prisma.$queryRaw`SELECT 1 as test`
+    expect(result).toBeDefined()
+  })
 
   it('should create a test user', async () => {
     const user = await createTestUser({
@@ -27,26 +27,25 @@ describe('Test Setup Verification', () => {
       password: 'TestPassword123!',
       role: 'tutor',
       name: 'Test User',
-    });
+    })
 
-    expect(user).toBeDefined();
-    expect(user.email).toBe('test@example.com');
-    expect(user.role).toBe('tutor');
-    expect(user.hashedPassword).toBeDefined();
-    expect(user.hashedPassword).not.toBe('TestPassword123!'); // Should be hashed
-  });
+    expect(user).toBeDefined()
+    expect(user.email).toBe('test@example.com')
+    expect(user.role).toBe('tutor')
+    expect(user.hashedPassword).toBeDefined()
+    expect(user.hashedPassword).not.toBe('TestPassword123!')
+  })
 
   it('should clean up test data', async () => {
     await createTestUser({
       email: 'cleanup@example.com',
       role: 'admin',
-    });
+    })
 
-    await cleanupTestData();
+    await cleanupTestData()
 
-    const prisma = getTestPrisma();
-    const users = await prisma.user.findMany();
-    expect(users.length).toBe(0);
-  });
-});
-
+    const prisma = getTestPrisma()
+    const users = await prisma.user.findMany()
+    expect(users.length).toBe(0)
+  })
+})

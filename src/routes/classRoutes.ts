@@ -1,16 +1,16 @@
-import { Router } from "express"
-import { 
+import { Router } from 'express'
+import {
   createClass,
   getClassesCashFlowSummary,
   getClassesDetails,
   deleteClass,
   updateClassPaymentStatus,
-  updateGuardianClassPaymentStatusByGuardianId
-} from "../controllers/classController"
+  updateGuardianClassPaymentStatusByGuardianId,
+} from '../controllers/classController'
 
 const router = Router()
 
-/** 
+/**
  * @openapi
  * /classes:
  *   post:
@@ -49,9 +49,9 @@ const router = Router()
  *               $ref: '#/components/schemas/CreateClassBlockedResponse'
  *       403:
  *         description: Forbidden (role not allowed)
- *     
-*/
-router.post("/", createClass)
+ *
+ */
+router.post('/', createClass)
 
 /**
  * @openapi

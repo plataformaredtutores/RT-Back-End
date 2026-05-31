@@ -1,37 +1,38 @@
-import { Request, Response, NextFunction } from 'express';
-import prisma from '../lib/prisma';
-import { PaymentStatus } from '@prisma/client';
+import { Request, Response, NextFunction } from 'express'
+import prisma from '../lib/prisma'
+import { PaymentStatus } from '@prisma/client'
 
-// Edit CoordinatorProfitShare
 export async function editCoordinatorProfitShare(req: Request, res: Response, next: NextFunction) {
   try {
-    const { institutionId } = req.params;
-    const { profitShare, coordinatorId } = req.body;
-    const userRole = (req as any).auth?.role;
+    const { institutionId } = req.params
+    const { profitShare, coordinatorId } = req.body
+    const userRole = (req as any).auth?.role
 
     if (userRole !== 'admin') {
-      return res.status(403).json({ ok: false, message: 'Forbidden' });
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
 
     if (typeof profitShare !== 'number' || profitShare < 0 || profitShare > 100) {
-      return res.status(400).json({ ok: false, message: 'Profit share must be a number between 0 and 100' });
+      return res
+        .status(400)
+        .json({ ok: false, message: 'Profit share must be a number between 0 and 100' })
     }
 
     const parsedInstitutionId = Number(institutionId)
     const parsedCoordinatorId = Number(coordinatorId)
 
     if (!Number.isFinite(parsedInstitutionId)) {
-      return res.status(400).json({ ok: false, message: 'Institution ID is required' });
+      return res.status(400).json({ ok: false, message: 'Institution ID is required' })
     }
 
     if (!Number.isFinite(parsedCoordinatorId)) {
-      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
+      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' })
     }
 
     // Profit shares align to month boundaries
-    const now = new Date();
-    const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const prevMonthEnd = new Date(thisMonthStart.getTime() - 1);
+    const now = new Date()
+    const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const prevMonthEnd = new Date(thisMonthStart.getTime() - 1)
 
     const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
       where: {
@@ -58,11 +59,15 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
       },
     })
 
-    
-    const totalCurrentProfitShare = Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) + Number(adminProfitShare?.profitShare || 0)
+    const totalCurrentProfitShare =
+      Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) +
+      Number(adminProfitShare?.profitShare || 0)
 
     if (totalCurrentProfitShare + profitShare > 100) {
-      return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
+      return res.status(400).json({
+        ok: false,
+        message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%`,
+      })
     }
 
     await prisma.$transaction(async (tx) => {
@@ -74,9 +79,9 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
           institutionId: parsedInstitutionId,
           availableSince: { gte: thisMonthStart },
         },
-      });
+      })
       if (thisMonthShare) {
-        await tx.coordinatorProfitShare.delete({ where: { id: thisMonthShare.id } });
+        await tx.coordinatorProfitShare.delete({ where: { id: thisMonthShare.id } })
       }
 
       // Cap the previously active share at the last moment of the previous month
@@ -87,12 +92,12 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
           availableSince: { lt: thisMonthStart },
           availableUntil: { gte: thisMonthStart },
         },
-      });
+      })
       if (previousShare) {
         await tx.coordinatorProfitShare.update({
           where: { id: previousShare.id },
           data: { availableUntil: prevMonthEnd },
-        });
+        })
       }
 
       // Create the new share effective from the 1st of the current month
@@ -104,35 +109,37 @@ export async function editCoordinatorProfitShare(req: Request, res: Response, ne
           availableSince: thisMonthStart,
           availableUntil: new Date('2099-12-31T23:59:59.999Z'),
         },
-      });
-    });
+      })
+    })
 
-    res.status(200).json({ ok: true, message: 'Coordinator profit share updated successfully' });
+    res.status(200).json({ ok: true, message: 'Coordinator profit share updated successfully' })
   } catch (err) {
-    next(err);
+    next(err)
   }
 }
 
-// Make coordinator payment
 export async function makeCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
   try {
-    const { institutionId } = req.params;
-    const coordinatorId = req.body.coordinatorId;
-    const amounts = req.body.payments as { amount: number, period: Date }[];
-    const userRole = (req as any).auth?.role;
+    const { institutionId } = req.params
+    const coordinatorId = req.body.coordinatorId
+    const amounts = req.body.payments as { amount: number; period: Date }[]
+    const userRole = (req as any).auth?.role
 
     if (userRole !== 'admin') {
-      return res.status(403).json({ ok: false, message: 'Forbidden' });
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
 
-    const now = new Date();
+    const now = new Date()
     for (const { period } of amounts) {
-      const periodDate = new Date(period);
+      const periodDate = new Date(period)
       if (
         periodDate.getUTCFullYear() === now.getUTCFullYear() &&
         periodDate.getUTCMonth() === now.getUTCMonth()
       ) {
-        return res.status(400).json({ ok: false, message: 'Cannot register a payment for the current month as it has not ended yet' });
+        return res.status(400).json({
+          ok: false,
+          message: 'Cannot register a payment for the current month as it has not ended yet',
+        })
       }
     }
 
@@ -140,11 +147,11 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
     const parsedCoordinatorId = Number(coordinatorId)
 
     if (!Number.isFinite(parsedInstitutionId)) {
-      return res.status(400).json({ ok: false, message: 'Institution ID is required' });
+      return res.status(400).json({ ok: false, message: 'Institution ID is required' })
     }
 
     if (!Number.isFinite(parsedCoordinatorId)) {
-      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
+      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' })
     }
 
     // Check if the coordinator is active to make the payment, if not, return an error
@@ -154,15 +161,15 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
     })
 
     if (!coordinator || coordinator.role !== 'coordinator') {
-      return res.status(404).json({ ok: false, message: 'Coordinator not found' });
+      return res.status(404).json({ ok: false, message: 'Coordinator not found' })
     }
 
     if (!coordinator.isActive) {
-      return res.status(400).json({ ok: false, message: 'Coordinator is inactive' });
+      return res.status(400).json({ ok: false, message: 'Coordinator is inactive' })
     }
 
     const payments = await prisma.$transaction(async (tx) => {
-      const createdPayments = [];
+      const createdPayments = []
       for (const { amount, period } of amounts) {
         const payment = await tx.coordinatorPayment.create({
           data: {
@@ -170,41 +177,43 @@ export async function makeCoordinatorPayment(req: Request, res: Response, next: 
             institutionId: parsedInstitutionId,
             amount,
             period,
-            status: PaymentStatus.completed
-          }
-        });
-        createdPayments.push(payment);
+            status: PaymentStatus.completed,
+          },
+        })
+        createdPayments.push(payment)
       }
-      return createdPayments;
-    });
+      return createdPayments
+    })
 
-    res.status(201).json({ ok: true, message: 'Coordinator payment created successfully', payments  });
+    res
+      .status(201)
+      .json({ ok: true, message: 'Coordinator payment created successfully', payments })
   } catch (err) {
-    next(err);
+    next(err)
   }
 }
 
 export async function deleteCoordinatorPayment(req: Request, res: Response, next: NextFunction) {
   try {
-    const { period, coordinatorId } = req.params;
-    const userRole = (req as any).auth?.role;
+    const { period, coordinatorId } = req.params
+    const userRole = (req as any).auth?.role
 
     if (userRole !== 'admin') {
-      return res.status(403).json({ ok: false, message: 'Forbidden' });
+      return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
 
     const coordinatorIdParam = Array.isArray(coordinatorId) ? coordinatorId[0] : coordinatorId
     const periodParam = Array.isArray(period) ? period[0] : period
 
-    const parsedCoordinatorId = Number(coordinatorIdParam);
-    const parsedPeriod = new Date(periodParam ?? '');
+    const parsedCoordinatorId = Number(coordinatorIdParam)
+    const parsedPeriod = new Date(periodParam ?? '')
 
     if (!Number.isFinite(parsedCoordinatorId)) {
-      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' });
+      return res.status(400).json({ ok: false, message: 'Coordinator ID is required' })
     }
 
     if (Number.isNaN(parsedPeriod.getTime())) {
-      return res.status(400).json({ ok: false, message: 'Invalid period' });
+      return res.status(400).json({ ok: false, message: 'Invalid period' })
     }
 
     const result = await prisma.coordinatorPayment.deleteMany({
@@ -212,14 +221,14 @@ export async function deleteCoordinatorPayment(req: Request, res: Response, next
         coordinatorId: parsedCoordinatorId,
         period: parsedPeriod,
       },
-    });
+    })
 
     if (result.count === 0) {
-      return res.status(404).json({ ok: false, message: 'Coordinator payment not found' });
+      return res.status(404).json({ ok: false, message: 'Coordinator payment not found' })
     }
 
-    res.status(200).json({ ok: true, message: 'Coordinator payment deleted successfully' });
+    res.status(200).json({ ok: true, message: 'Coordinator payment deleted successfully' })
   } catch (err) {
-    next(err);
+    next(err)
   }
 }

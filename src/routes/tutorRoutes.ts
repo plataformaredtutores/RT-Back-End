@@ -1,7 +1,9 @@
 import { Router } from 'express'
-import { createGuardianTutorLink, 
-        editTutorPaymentsFromPeriod, 
-        removeGuardianTutorLink } from '../controllers/tutorController'
+import {
+  createGuardianTutorLink,
+  editTutorPaymentsFromPeriod,
+  removeGuardianTutorLink,
+} from '../controllers/tutorController'
 
 const router = Router()
 

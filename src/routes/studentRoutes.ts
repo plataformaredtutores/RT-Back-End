@@ -1,12 +1,12 @@
-import { Router } from 'express';
-import { 
+import { Router } from 'express'
+import {
   addStudentToGuardian,
   removeStudentFromGuardian,
   getStudentsByGuardianId,
-  reactivateStudent
-} from '../controllers/studentController';
+  reactivateStudent,
+} from '../controllers/studentController'
 
-const router = Router();
+const router = Router()
 
 /**
  * @openapi
@@ -51,7 +51,7 @@ const router = Router();
  *       404:
  *         description: No students found for the specified guardian
  */
-router.get('/:guardianId', getStudentsByGuardianId);
+router.get('/:guardianId', getStudentsByGuardianId)
 /**
  * @openapi
  * /students/{id}/reactivate:
@@ -85,7 +85,7 @@ router.get('/:guardianId', getStudentsByGuardianId);
  *       403:
  *         description: Forbidden - user is not an admin or coordinator
  */
-router.patch('/:id/reactivate', reactivateStudent);
+router.patch('/:id/reactivate', reactivateStudent)
 
 /**
  * @openapi
@@ -124,7 +124,7 @@ router.patch('/:id/reactivate', reactivateStudent);
  *       404:
  *         description: Guardian not found
  */
-router.post('/add', addStudentToGuardian);
+router.post('/add', addStudentToGuardian)
 
 /**
  * @openapi
@@ -156,6 +156,6 @@ router.post('/add', addStudentToGuardian);
  *       404:
  *         description: Student not found for the specified guardian
  */
-router.post('/delete', removeStudentFromGuardian);
+router.post('/delete', removeStudentFromGuardian)
 
-export default router;
+export default router

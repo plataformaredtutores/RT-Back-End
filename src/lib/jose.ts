@@ -5,7 +5,9 @@
 // WORKAROUND: Force 'jose' inclusion in Vercel/NFT builds
 try {
   require.resolve('jose')
-} catch {}
+} catch {
+  // Ignore
+}
 
 let _jose: typeof import('jose') | null = null
 
@@ -18,7 +20,7 @@ export async function getJose() {
   // See: https://github.com/nodejs/node/issues/37194#issuecomment-899418015
   // Create the importer dynamically so bundlers/tsc don't rewrite it.
   const dynamicImport = new Function('id', 'return import(id)') as (
-    id: string
+    id: string,
   ) => Promise<typeof import('jose')>
   _jose = await dynamicImport('jose')
   return _jose

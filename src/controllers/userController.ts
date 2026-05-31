@@ -1,8 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import prisma from '../lib/prisma';
-import argon2 from 'argon2';
-import { AccountType, PaymentStatus, UserRole } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Request, Response, NextFunction } from 'express'
+import prisma from '../lib/prisma'
+import argon2 from 'argon2'
+import { AccountType, PaymentStatus, UserRole } from '@prisma/client'
 
 type AuthPayload = {
   uid?: number | string
@@ -36,12 +35,8 @@ function canRequesterReadUser(
 
   if (auth.role === UserRole.coordinator) {
     if (target.role === UserRole.admin) return false
-    const requesterInstitutionId =
-      auth.institutionId != null ? Number(auth.institutionId) : null
-    return (
-      requesterInstitutionId != null &&
-      target.institutionId === requesterInstitutionId
-    )
+    const requesterInstitutionId = auth.institutionId != null ? Number(auth.institutionId) : null
+    return requesterInstitutionId != null && target.institutionId === requesterInstitutionId
   }
 
   if (auth.role === UserRole.tutor || auth.role === UserRole.guardian) {
@@ -53,17 +48,16 @@ function canRequesterReadUser(
 
 export async function getUsers(_req: Request, res: Response, next: NextFunction) {
   try {
-    const { 
+    const {
       role = undefined,
       institutionId = undefined,
       nameOrEmail = undefined,
-      page = 1, 
+      page = 1,
       pageSize = 10,
     } = _req.query
 
-    const sendInactive = _req.query.sendInactive === undefined
-      ? true
-      : _req.query.sendInactive === 'true'
+    const sendInactive =
+      _req.query.sendInactive === undefined ? true : _req.query.sendInactive === 'true'
 
     const includeBankAccount = _req.query.includeBankAccount === 'true'
 
@@ -74,10 +68,12 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
         isActive: sendInactive ? undefined : true,
         role: role as UserRole | undefined,
         institutionId: institutionId ? Number(institutionId) : undefined,
-        OR: nameOrEmail ? [
-          { name: { contains: String(nameOrEmail), mode: 'insensitive' } },
-          { email: { contains: String(nameOrEmail), mode: 'insensitive' } }
-        ] : undefined
+        OR: nameOrEmail
+          ? [
+              { name: { contains: String(nameOrEmail), mode: 'insensitive' } },
+              { email: { contains: String(nameOrEmail), mode: 'insensitive' } },
+            ]
+          : undefined,
       },
       skip: all ? undefined : (Number(page) - 1) * Number(pageSize),
       take: all ? undefined : Number(pageSize),
@@ -87,12 +83,12 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
         BankAccount: includeBankAccount,
       },
     })
-    
-    const safeUsers = users.map(u => {
-        const { hashedPassword, ...rest } = u
-        return rest
+
+    const safeUsers = users.map((u) => {
+      const { ...rest } = u
+      return rest
     })
-    
+
     res.json(safeUsers)
   } catch (err) {
     next(err)
@@ -101,7 +97,7 @@ export async function getUsers(_req: Request, res: Response, next: NextFunction)
 
 export async function createUser(req: Request, res: Response, next: NextFunction) {
   try {
-    const { 
+    const {
       role,
       name,
       email,
@@ -111,61 +107,84 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       chargeEmail,
       institutionId,
       BankAccount,
-      coordinatorProfitShare
+      coordinatorProfitShare,
     } = req.body
 
-    const userRole = (req as any).auth?.role;
+    const userRole = (req as any).auth?.role
 
     if (userRole !== 'admin' && userRole !== 'coordinator') {
       return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
     if (userRole === 'coordinator' && (role === 'admin' || role === 'coordinator')) {
-      return res.status(403).json({ ok: false, message: 'Coordinators cannot create admin or coordinator users.' })
+      return res
+        .status(403)
+        .json({ ok: false, message: 'Coordinators cannot create admin or coordinator users.' })
     }
 
     // Input Validation
 
     if (!name || typeof name !== 'string' || name.trim() === '') {
-      return res.status(400).json({ ok: false, message: 'Name is required and must be a non-empty string' });
+      return res
+        .status(400)
+        .json({ ok: false, message: 'Name is required and must be a non-empty string' })
     }
 
     if (!email || typeof email !== 'string' || email.trim() === '') {
-      return res.status(400).json({ ok: false, message: 'Email is required and must be a non-empty string' });
+      return res
+        .status(400)
+        .json({ ok: false, message: 'Email is required and must be a non-empty string' })
     }
 
     if (!rut || typeof rut !== 'string' || rut.trim() === '') {
-      return res.status(400).json({ ok: false, message: 'RUT is required and must be a non-empty string' });
+      return res
+        .status(400)
+        .json({ ok: false, message: 'RUT is required and must be a non-empty string' })
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email.trim())) {
-      return res.status(400).json({ ok: false, message: 'Invalid email format' });
+      return res.status(400).json({ ok: false, message: 'Invalid email format' })
     }
 
-    if (phone !== undefined && phone !== null && (typeof phone !== 'string' || phone.trim() === '')) {
-      return res.status(400).json({ ok: false, message: 'Phone must be a non-empty string if provided' });
+    if (
+      phone !== undefined &&
+      phone !== null &&
+      (typeof phone !== 'string' || phone.trim() === '')
+    ) {
+      return res
+        .status(400)
+        .json({ ok: false, message: 'Phone must be a non-empty string if provided' })
     }
 
-    if (address !== undefined && address !== null && (typeof address !== 'string' || address.trim() === '')) {
-      return res.status(400).json({ ok: false, message: 'Address must be a non-empty string if provided' });
+    if (
+      address !== undefined &&
+      address !== null &&
+      (typeof address !== 'string' || address.trim() === '')
+    ) {
+      return res
+        .status(400)
+        .json({ ok: false, message: 'Address must be a non-empty string if provided' })
     }
 
     if (chargeEmail !== undefined && chargeEmail !== null) {
       if (typeof chargeEmail !== 'string' || chargeEmail.trim() === '') {
-        return res.status(400).json({ ok: false, message: 'Charge email must be a non-empty string if provided' });
+        return res
+          .status(400)
+          .json({ ok: false, message: 'Charge email must be a non-empty string if provided' })
       }
       if (!emailRegex.test(chargeEmail.trim())) {
-        return res.status(400).json({ ok: false, message: 'Invalid charge email format' });
+        return res.status(400).json({ ok: false, message: 'Invalid charge email format' })
       }
     }
 
-    // Before creating the coordinator user, we must check if the profit share to asign would exceed the 100% limit for the institution. We consider the profit share of the admin (if exists) and the profit share of the other coordinators of the institution (if exists).
+    // Before creating the coordinator user, we must check if the profit share to asign would exceed the 100% limit for the institution. 
+    // We consider the profit share of the admin (if exists) and the profit share of the other coordinators of the institution (if exists).
 
     const totalCoordinatorsCurrentProfitShare = await prisma.coordinatorProfitShare.aggregate({
       where: {
         institutionId,
         coordinatorId: {
-          not: institutionId
+          not: institutionId,
         },
         availableUntil: {
           gt: new Date(), // Only consider active profit shares
@@ -175,7 +194,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         profitShare: true,
       },
     })
-    
+
     // The admin has variable profit share.
     const adminProfitShare = await prisma.adminProfitShare.findFirst({
       where: {
@@ -191,74 +210,77 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       },
     })
 
-    const totalCurrentProfitShare = Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) + Number(adminProfitShare?.profitShare || 0)
+    const totalCurrentProfitShare =
+      Number(totalCoordinatorsCurrentProfitShare._sum.profitShare || 0) +
+      Number(adminProfitShare?.profitShare || 0)
 
     if (totalCurrentProfitShare + coordinatorProfitShare > 100) {
-      return res.status(400).json({ ok: false, message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%` })
+      return res.status(400).json({
+        ok: false,
+        message: `Total profit share for the institution cannot exceed 100%. Current total excluding this coordinator: ${totalCurrentProfitShare}%`,
+      })
     }
 
-    // Condiciones para cada rol
+    // Role conditions
     if (role !== 'admin' && institutionId == null && userRole !== 'coordinator') {
       return res.status(400).json({
         ok: false,
-        message: 'Non-admin users must be associated with an institution.'
+        message: 'Non-admin users must be associated with an institution.',
       })
     }
 
     if (role !== 'coordinator' && coordinatorProfitShare != null) {
       return res.status(400).json({
         ok: false,
-        message: 'Only coordinator users can have coordinator profit share.'
+        message: 'Only coordinator users can have coordinator profit share.',
       })
     }
 
     if (role === 'coordinator' && coordinatorProfitShare == null) {
       return res.status(400).json({
         ok: false,
-        message: 'Coordinator users must have a coordinator profit share defined.'
+        message: 'Coordinator users must have a coordinator profit share defined.',
       })
     }
 
     if (role === 'guardian' && BankAccount) {
       return res.status(400).json({
         ok: false,
-        message: 'Guardian users cannot have bank account information.'
+        message: 'Guardian users cannot have bank account information.',
       })
     }
 
-    // Asignar un institutionId para el apoderado, el del coordinador que lo creo o el dado por el admin.
-    let finalInstitutionId: number = institutionId;
+    // Assign an institutionId for the guardian, the one of the coordinator that created it or the one given by the admin.
+    let finalInstitutionId: number = institutionId
 
     if (userRole === 'coordinator') {
-      const coordinatorInstitutionId = (req as any).auth?.institutionId;
-      finalInstitutionId = coordinatorInstitutionId;
+      const coordinatorInstitutionId = (req as any).auth?.institutionId
+      finalInstitutionId = coordinatorInstitutionId
     }
 
-    const password = rut != null
-      ? String(rut).split('-')[0].replace(/\D/g, '')
-      : undefined
+    const password = rut != null ? String(rut).split('-')[0].replace(/\D/g, '') : undefined
 
     if (!password) {
       return res.status(400).json({
         ok: false,
-        message: 'RUT not provided or invalid, cannot generate password.'
+        message: 'RUT not provided or invalid, cannot generate password.',
       })
     }
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, isActive: true }
+      select: { id: true, isActive: true },
     })
 
     if (existingUser) {
       if (existingUser.isActive) {
         return res.status(409).json({ ok: false, message: 'Email already exists' })
       }
-      return res.status(409).json({ok: false,  message: 'User exists but is deactivated'})
+      return res.status(409).json({ ok: false, message: 'User exists but is deactivated' })
     }
 
     const hashedPassword = await argon2.hash(password, {
-      secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64')
+      secret: Buffer.from(process.env.ARGON2_SECRET_PEPPER || '', 'base64'),
     })
 
     const newUser = await prisma.user.create({
@@ -271,8 +293,8 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         address,
         chargeEmail,
         hashedPassword,
-        institutionId: finalInstitutionId
-      }
+        institutionId: finalInstitutionId,
+      },
     })
 
     if (role === 'coordinator') {
@@ -282,8 +304,8 @@ export async function createUser(req: Request, res: Response, next: NextFunction
           institutionId: finalInstitutionId,
           profitShare: coordinatorProfitShare ? Number(coordinatorProfitShare) : 0,
           availableSince: new Date(),
-          availableUntil: new Date(new Date().getFullYear()+237, new Date().getMonth(), 0)
-        }
+          availableUntil: new Date(new Date().getFullYear() + 237, new Date().getMonth(), 0),
+        },
       })
     }
 
@@ -295,7 +317,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
         rutHolder,
         rut: bankRut,
         accountEmail,
-        accountName
+        accountName,
       } = BankAccount
 
       if (!bankName || typeof bankName !== 'string' || bankName.trim() === '') {
@@ -331,11 +353,10 @@ export async function createUser(req: Request, res: Response, next: NextFunction
           accountNumber,
           accountName,
           rut: bankRutValue,
-          accountEmail
-        }
-      });
+          accountEmail,
+        },
+      })
     }
-    // Then: Send email with credentials (omitted for now)
     res.status(201).json({ ok: true, user: newUser })
   } catch (err) {
     next(err)
@@ -346,18 +367,20 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
   try {
     const { id, role } = req.params
 
-    const userRole = (req as any).auth?.role;
+    const userRole = (req as any).auth?.role
 
-/*     if (userRole !== 'admin' || userRole !== 'coordinator') {
+    /*     if (userRole !== 'admin' || userRole !== 'coordinator') {
       return res.status(403).json({ ok: false, message: 'Forbidden' })
     } */
-    
+
     if (role === 'admin') {
       return res.status(403).json({ ok: false, message: 'Admins cannot be deactivated.' })
     }
 
     if (role === 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ ok: false, message: 'Only admins can deactivate coordinators.' })
+      return res
+        .status(403)
+        .json({ ok: false, message: 'Only admins can deactivate coordinators.' })
     }
 
     if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator') {
@@ -370,56 +393,56 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
     const twoYearsAgo = new Date(now)
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
 
-    // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (apoderado)
+    // Only deactivate if there are no pending payments in the last 2 years (guardian)
     if (role === 'guardian') {
       const pendingPayment = await prisma.classPayment.findFirst({
         where: {
           guardianPaymentStatus: PaymentStatus.pending,
           Class: {
             date: {
-              gte: twoYearsAgo
+              gte: twoYearsAgo,
             },
             Student: {
-              guardianId: userId
-            }
-          }
+              guardianId: userId,
+            },
+          },
         },
-        select: { id: true }
+        select: { id: true },
       })
 
       if (pendingPayment) {
         return res.status(400).json({
           ok: false,
-          message: 'No se puede desactivar un apoderado con pagos pendientes'
+          message: 'No se puede desactivar un apoderado con pagos pendientes',
         })
       }
     }
 
-    // Solo eliminar si no hay pagos pendientes en los ultimos 2 anos (tutor)
+    // Only delete if there are no pending payments in the last 2 years (tutor)
     if (role === 'tutor') {
       const pendingPayment = await prisma.classPayment.findFirst({
         where: {
           tutorPaymentStatus: PaymentStatus.pending,
           Class: {
             date: {
-              gte: twoYearsAgo
+              gte: twoYearsAgo,
             },
-            tutorId: userId
-          }
+            tutorId: userId,
+          },
         },
-        select: { id: true }
+        select: { id: true },
       })
 
       if (pendingPayment) {
         return res.status(400).json({
           ok: false,
-          message: 'No se puede desactivar un tutor con pagos pendientes'
+          message: 'No se puede desactivar un tutor con pagos pendientes',
         })
       }
     }
 
-    // Coordinador: pagos pendientes o faltantes solo en meses completos desde su alta
-    // (max. 24 meses hacia atras, excluyendo el mes actual).
+    // Coordinator: pending or missing payments only in complete months since its creation
+    // (max. 24 months back, excluding the current month).
     if (role === 'coordinator') {
       const coordinator = await prisma.user.findUnique({
         where: { id: userId },
@@ -493,24 +516,24 @@ export async function deactivateUser(req: Request, res: Response, next: NextFunc
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isActive: false, deactivatedAt: new Date() }
-    });
+      data: { isActive: false, deactivatedAt: new Date() },
+    })
 
     if (role === 'guardian') {
       await prisma.guardianTutor.updateMany({
         where: { guardianId: userId, active: true },
-        data: { active: false }
+        data: { active: false },
       })
     }
 
     if (role === 'tutor') {
       await prisma.guardianTutor.updateMany({
         where: { tutorId: userId, active: true },
-        data: { active: false }
+        data: { active: false },
       })
     }
-    
-    res.status(204).send();
+
+    res.status(204).send()
   } catch (err) {
     next(err)
   }
@@ -520,14 +543,18 @@ export async function reactivateUser(req: Request, res: Response, next: NextFunc
   try {
     const { id, role } = req.params
 
-    const userRole = (req as any).auth?.role;
+    const userRole = (req as any).auth?.role
 
     if (role === 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ ok: false, message: 'Only admins can reactivate coordinators.' })
+      return res
+        .status(403)
+        .json({ ok: false, message: 'Only admins can reactivate coordinators.' })
     }
 
     if (userRole === 'coordinator' && (role === 'admin' || role === 'coordinator')) {
-      return res.status(403).json({ ok: false, message: 'Coordinators cannot reactivate admin or coordinator users.' })
+      return res
+        .status(403)
+        .json({ ok: false, message: 'Coordinators cannot reactivate admin or coordinator users.' })
     }
 
     if (role !== 'guardian' && role !== 'tutor' && role !== 'coordinator' && role !== 'admin') {
@@ -538,20 +565,20 @@ export async function reactivateUser(req: Request, res: Response, next: NextFunc
 
     await prisma.user.update({
       where: { id: userId },
-      data: { isActive: true, deactivatedAt: null }
+      data: { isActive: true, deactivatedAt: null },
     })
 
     if (role === 'guardian') {
       await prisma.guardianTutor.updateMany({
         where: { guardianId: userId, active: false },
-        data: { active: true }
+        data: { active: true },
       })
     }
 
     if (role === 'tutor') {
       await prisma.guardianTutor.updateMany({
         where: { tutorId: userId, active: false },
-        data: { active: true }
+        data: { active: true },
       })
     }
 
@@ -587,22 +614,22 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
         Students: true,
         TutorLinks: {
           include: {
-            Guardian: true
-          }
+            Guardian: true,
+          },
         },
         GuardianLinks: {
           include: {
-            Tutor: true
-          }
+            Tutor: true,
+          },
         },
         // note: hashedPassword is omitted intentionally to exclude it
-      }
+      },
     })
     if (!user) {
       return res.status(404).json({
         ok: false,
-        message: 'User not found.'
-      });
+        message: 'User not found.',
+      })
     }
 
     const auth = getAuth(req)
@@ -610,7 +637,10 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
       return res.status(403).json({ ok: false, message: 'Forbidden' })
     }
 
-    const response = { ...user } as typeof user & { coordinatorProfitShare?: number; adminProfitShare?: number }
+    const response = { ...user } as typeof user & {
+      coordinatorProfitShare?: number
+      adminProfitShare?: number
+    }
     // Only return active students for guardians and tutors
     if (user.role === 'guardian' || user.role === 'tutor') {
       response.Students = (response.Students ?? []).filter((s: any) => s?.isActive !== false)
@@ -623,15 +653,15 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
           coordinatorId: user.id,
           institutionId: user.institutionId,
           availableSince: {
-            lte: now
+            lte: now,
           },
           availableUntil: {
-            gt: now
-          }
+            gt: now,
+          },
         },
         select: {
-          profitShare: true
-        }
+          profitShare: true,
+        },
       })
       if (profit) {
         response.coordinatorProfitShare = Number(profit.profitShare)
@@ -643,15 +673,15 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
       const profit = await prisma.adminProfitShare.findFirst({
         where: {
           availableSince: {
-            lte: now
+            lte: now,
           },
           availableUntil: {
-            gte: now
-          }
+            gte: now,
+          },
         },
         select: {
-          profitShare: true
-        }
+          profitShare: true,
+        },
       })
       if (profit) {
         response.adminProfitShare = Number(profit.profitShare)
@@ -666,22 +696,15 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
 
 export async function editUserBankAccount(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
-    const {
-      bankName,
-      accountType,
-      accountNumber,
-      rut,
-      accountEmail,
-      accountName
-    } = req.body
+    const { id } = req.params
+    const { bankName, accountType, accountNumber, rut, accountEmail, accountName } = req.body
 
     const userId = Number(id)
-    
+
     if (!accountType || !Object.values(AccountType).includes(accountType as AccountType)) {
       return res.status(400).json({
         ok: false,
-        message: 'Invalid account type.'
+        message: 'Invalid account type.',
       })
     }
     const account = await prisma.userBankAccount.upsert({
@@ -693,7 +716,7 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         accountNumber,
         accountName,
         rut,
-        accountEmail
+        accountEmail,
       },
       update: {
         bankName,
@@ -701,8 +724,8 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
         accountNumber,
         rut,
         accountEmail,
-        accountName
-      }
+        accountName,
+      },
     })
 
     res.json(account)
@@ -712,14 +735,8 @@ export async function editUserBankAccount(req: Request, res: Response, next: Nex
 }
 export async function editUserPersonalInformation(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
-    const {
-      name,
-      rut,
-      phone,
-      chargeEmail,
-      address
-    } = req.body
+    const { id } = req.params
+    const { name, rut, phone, chargeEmail, address } = req.body
 
     const userResponse = await prisma.user.update({
       where: { id: Number(id) },
@@ -728,10 +745,10 @@ export async function editUserPersonalInformation(req: Request, res: Response, n
         rut,
         phone,
         chargeEmail,
-        address
+        address,
       },
     })
-    
+
     res.json(userResponse)
   } catch (err) {
     next(err)
@@ -745,23 +762,29 @@ export async function changeUserPassword(req: Request, res: Response, next: Next
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: Number(id) },
-      select: { hashedPassword: true }
+      select: { hashedPassword: true },
     })
 
     const isPasswordValid = await argon2.verify(user.hashedPassword, currentPassword, {
-      secret: Buffer.from((process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''), 'base64')
+      secret: Buffer.from(
+        (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''),
+        'base64',
+      ),
     })
     if (!isPasswordValid) {
       return res.status(401).json({ ok: false, message: 'Current password is incorrect' })
     }
 
     const newHashedPassword = await argon2.hash(newPassword, {
-      secret: Buffer.from((process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''), 'base64')
+      secret: Buffer.from(
+        (process.env.ARGON2_SECRET_PEPPER || '').replace(/^base64:/, ''),
+        'base64',
+      ),
     })
 
     await prisma.user.update({
       where: { id: Number(id) },
-      data: { hashedPassword: newHashedPassword }
+      data: { hashedPassword: newHashedPassword },
     })
 
     res.status(200).json({ ok: true, message: 'Password updated successfully' })
@@ -784,8 +807,8 @@ export async function getTutorLinks(req: Request, res: Response, next: NextFunct
     const where: any = {
       tutorId: Number(id),
       Guardian: {
-        isActive: true
-      }
+        isActive: true,
+      },
     }
     if (parsedInstitutionId !== undefined) {
       where.institutionId = parsedInstitutionId
@@ -805,20 +828,20 @@ export async function getTutorLinks(req: Request, res: Response, next: NextFunct
           select: {
             id: true,
             name: true,
-          }
-        }
+          },
+        },
       },
     })
 
     if (!tutorLinks) {
       return res.status(404).json({
         ok: false,
-        message: 'No tutor links found for this tutor.'
+        message: 'No tutor links found for this tutor.',
       })
     }
 
     res.json(tutorLinks)
-  } catch (err: PrismaClientKnownRequestError | any) {
+  } catch (err) {
     next(err)
   }
 }
@@ -855,20 +878,20 @@ export async function getGuardianLinks(req: Request, res: Response, next: NextFu
           select: {
             id: true,
             name: true,
-          }
-        }
+          },
+        },
       },
     })
 
     if (!guardianLinks) {
       return res.status(404).json({
         ok: false,
-        message: 'No guardian links found for this guardian.'
+        message: 'No guardian links found for this guardian.',
       })
     }
 
     res.json(guardianLinks)
-  } catch (err: PrismaClientKnownRequestError | any) {
+  } catch (err) {
     next(err)
   }
 }
@@ -878,12 +901,12 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     const { id, role } = req.params
     const userId = Number(id)
 
-    const userRole = (req as any).auth?.role;
-    const userInstitutionId = (req as any).auth?.iid;
+    const userRole = (req as any).auth?.role
+    const userInstitutionId = (req as any).auth?.iid
 
     if (userRole !== 'admin' && userRole !== 'coordinator') {
       return res.status(403).json({ ok: false, message: 'Forbidden' })
-    }    
+    }
 
     if (role === 'admin') {
       return res.status(403).json({ ok: false, message: 'Admins cannot be deleted.' })
@@ -892,7 +915,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     if (role === 'coordinator' && userRole === 'coordinator') {
       return res.status(403).json({
         ok: false,
-        message: 'Only admins can delete coordinators.'
+        message: 'Only admins can delete coordinators.',
       })
     }
 
@@ -903,7 +926,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     if (role === 'coordinator') {
       const coordinator = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, role: true, createdAt: true }
+        select: { id: true, role: true, createdAt: true },
       })
 
       if (!coordinator || coordinator.role !== 'coordinator') {
@@ -914,10 +937,15 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       const coordinatorStartMonth = new Date(
         coordinator.createdAt.getFullYear(),
         coordinator.createdAt.getMonth(),
-        1
+        1,
       )
 
-      const periodsToCheck: Array<{ periodYear: number; periodMonth: number; start: Date; end: Date }> = []
+      const periodsToCheck: Array<{
+        periodYear: number
+        periodMonth: number
+        start: Date
+        end: Date
+      }> = []
       for (let i = 1; i <= 24; i += 1) {
         const d = new Date(now)
         d.setMonth(d.getMonth() - i)
@@ -937,13 +965,13 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
           where: {
             coordinatorId: userId,
             OR: periodsToCheck.map((period) => ({
-              period: { gte: period.start, lt: period.end }
-            }))
+              period: { gte: period.start, lt: period.end },
+            })),
           },
           select: {
             period: true,
-            status: true
-          }
+            status: true,
+          },
         })
 
         const paymentMap = new Map<string, PaymentStatus>()
@@ -961,7 +989,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
         if (hasMissingOrPending) {
           return res.status(400).json({
             ok: false,
-            message: 'No se puede eliminar un coordinador con pagos pendientes'
+            message: 'No se puede eliminar un coordinador con pagos pendientes',
           })
         }
       }
@@ -971,16 +999,16 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       const hasClasses = await prisma.class.findFirst({
         where: {
           Student: {
-            guardianId: userId
-          }
+            guardianId: userId,
+          },
         },
-        select: { id: true }
+        select: { id: true },
       })
 
       if (hasClasses) {
         return res.status(400).json({
           ok: false,
-          message: 'No se puede eliminar un apoderado con clases asociadas'
+          message: 'No se puede eliminar un apoderado con clases asociadas',
         })
       }
     }
@@ -988,19 +1016,19 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     if (role === 'tutor') {
       const hasClasses = await prisma.class.findFirst({
         where: {
-          tutorId: userId
+          tutorId: userId,
         },
-        select: { id: true }
+        select: { id: true },
       })
 
       if (hasClasses) {
         return res.status(400).json({
           ok: false,
-          message: 'No se puede eliminar un tutor con clases asociadas'
+          message: 'No se puede eliminar un tutor con clases asociadas',
         })
       }
     }
-    // TO DO: Revisar criterio de eliminacion
+    
     await prisma.$transaction(async (tx) => {
       if (userRole === 'coordinator') {
         const scopedUser = await tx.user.findFirst({
@@ -1008,11 +1036,11 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
             id: userId,
             Institution: {
               is: {
-                id: Number(userInstitutionId)
-              }
-            }
+                id: Number(userInstitutionId),
+              },
+            },
           },
-          select: { id: true }
+          select: { id: true },
         })
 
         if (!scopedUser) {
@@ -1031,7 +1059,7 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
       }
 
       await tx.user.delete({
-        where: { id: userId }
+        where: { id: userId },
       })
     })
 

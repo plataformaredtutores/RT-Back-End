@@ -7,9 +7,7 @@ const options: swaggerJSDoc.Options = {
       title: 'RT Backend API',
       version: '1.0.0',
     },
-    servers: [
-      { url: `http://localhost:${process.env.PORT || 3000}` }
-    ],
+    servers: [{ url: `http://localhost:${process.env.PORT || 3000}` }],
     paths: {
       '/users': {
         get: {
@@ -21,27 +19,28 @@ const options: swaggerJSDoc.Options = {
               name: 'role',
               schema: {
                 type: 'string',
-                enum: ['admin', 'coordinator', 'tutor', 'guardian']
+                enum: ['admin', 'coordinator', 'tutor', 'guardian'],
               },
-              description: 'Filter by user role'
+              description: 'Filter by user role',
             },
             {
               in: 'query',
               name: 'institutionId',
               schema: { type: 'integer' },
-              description: 'Filter by institution id'
+              description: 'Filter by institution id',
             },
             {
               in: 'query',
               name: 'nameOrEmail',
               schema: { type: 'string' },
-              description: 'Case-insensitive search in name or email'
+              description: 'Case-insensitive search in name or email',
             },
             {
               in: 'query',
               name: 'sendInactive',
               schema: { type: 'boolean' },
-              description: 'If false, only active users are returned. If true or omitted, returns all.'
+              description:
+                'If false, only active users are returned. If true or omitted, returns all.',
             },
             {
               in: 'query',
@@ -49,9 +48,9 @@ const options: swaggerJSDoc.Options = {
               schema: {
                 type: 'integer',
                 minimum: 1,
-                default: 1
+                default: 1,
               },
-              description: 'Page number (1-based)'
+              description: 'Page number (1-based)',
             },
             {
               in: 'query',
@@ -60,28 +59,29 @@ const options: swaggerJSDoc.Options = {
                 type: 'integer',
                 minimum: 1,
                 maximum: 100,
-                default: 10
+                default: 10,
               },
-              description: 'Items per page'
+              description: 'Items per page',
             },
             {
               in: 'query',
               name: 'all',
               schema: {
                 type: 'boolean',
-                default: false
+                default: false,
               },
-              description: 'If true, returns all users that match filters and ignores page/pageSize.'
+              description:
+                'If true, returns all users that match filters and ignores page/pageSize.',
             },
             {
               in: 'query',
               name: 'includeBankAccount',
               schema: {
                 type: 'boolean',
-                default: false
+                default: false,
               },
-              description: 'Include user bank account details'
-            }
+              description: 'Include user bank account details',
+            },
           ],
           responses: {
             200: {
@@ -90,13 +90,13 @@ const options: swaggerJSDoc.Options = {
                 'application/json': {
                   schema: {
                     type: 'array',
-                    items: { $ref: '#/components/schemas/UserWithInstitution' }
-                  }
-                }
-              }
-            }
-          }
-        }
+                    items: { $ref: '#/components/schemas/UserWithInstitution' },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/users/deactivate/{id}/{role}': {
         patch: {
@@ -109,7 +109,7 @@ const options: swaggerJSDoc.Options = {
               name: 'id',
               required: true,
               schema: { type: 'string' },
-              description: 'User ID'
+              description: 'User ID',
             },
             {
               in: 'path',
@@ -117,32 +117,32 @@ const options: swaggerJSDoc.Options = {
               required: true,
               schema: {
                 type: 'string',
-                enum: ['admin', 'coordinator', 'tutor', 'guardian']
+                enum: ['admin', 'coordinator', 'tutor', 'guardian'],
               },
-              description: 'User role'
-            }
+              description: 'User role',
+            },
           ],
           responses: {
             200: {
               description: 'User deactivated successfully',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/DeactivateUserResponse' }
-                }
-              }
+                  schema: { $ref: '#/components/schemas/DeactivateUserResponse' },
+                },
+              },
             },
             400: {
               description: 'Cannot deactivate due to pending or missing payments',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/DeleteUserBlockedResponse' }
-                }
-              }
+                  schema: { $ref: '#/components/schemas/DeleteUserBlockedResponse' },
+                },
+              },
             },
             403: { description: 'Forbidden - user lacks permission to deactivate this user' },
-            404: { description: 'User not found' }
-          }
-        }
+            404: { description: 'User not found' },
+          },
+        },
       },
       '/users/{id}/reactivate/{role}': {
         patch: {
@@ -155,7 +155,7 @@ const options: swaggerJSDoc.Options = {
               name: 'id',
               required: true,
               schema: { type: 'string' },
-              description: 'User ID'
+              description: 'User ID',
             },
             {
               in: 'path',
@@ -163,25 +163,25 @@ const options: swaggerJSDoc.Options = {
               required: true,
               schema: {
                 type: 'string',
-                enum: ['admin', 'coordinator', 'tutor', 'guardian']
+                enum: ['admin', 'coordinator', 'tutor', 'guardian'],
               },
-              description: 'User role'
-            }
+              description: 'User role',
+            },
           ],
           responses: {
             200: {
               description: 'User reactivated successfully',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/ReactivateUserResponse' }
-                }
-              }
+                  schema: { $ref: '#/components/schemas/ReactivateUserResponse' },
+                },
+              },
             },
             403: { description: 'Forbidden - user lacks permission to reactivate this user' },
-            404: { description: 'User not found' }
-          }
-        }
-      }
+            404: { description: 'User not found' },
+          },
+        },
+      },
     },
     components: {
       schemas: {
@@ -189,15 +189,15 @@ const options: swaggerJSDoc.Options = {
           type: 'string',
           pattern: '^(0[1-9]|1[0-2])-(\\d{4})$',
           example: '02-2026',
-          description: 'Month and year in MM-YYYY format'
+          description: 'Month and year in MM-YYYY format',
         },
         UserLoginRequest: {
           type: 'object',
           properties: {
             email: { type: 'string', format: 'email' },
-            password: { type: 'string' }
+            password: { type: 'string' },
           },
-          required: ['email', 'password']
+          required: ['email', 'password'],
         },
         UserLoginResponse: {
           type: 'object',
@@ -210,11 +210,11 @@ const options: swaggerJSDoc.Options = {
                 email: { type: 'string' },
                 role: { type: 'string' },
                 name: { type: 'string' },
-                institutionId: { type: 'integer', nullable: true }
-              }
-            }
+                institutionId: { type: 'integer', nullable: true },
+              },
+            },
           },
-          required: ['ok', 'user']
+          required: ['ok', 'user'],
         },
         MailRequest: {
           type: 'object',
@@ -222,27 +222,27 @@ const options: swaggerJSDoc.Options = {
             to: {
               oneOf: [
                 { type: 'string', format: 'email' },
-                { type: 'array', items: { type: 'string', format: 'email' }, minItems: 1 }
-              ]
+                { type: 'array', items: { type: 'string', format: 'email' }, minItems: 1 },
+              ],
             },
             cc: {
               oneOf: [
                 { type: 'string', format: 'email' },
-                { type: 'array', items: { type: 'string', format: 'email' } }
-              ]
+                { type: 'array', items: { type: 'string', format: 'email' } },
+              ],
             },
             bcc: {
               oneOf: [
                 { type: 'string', format: 'email' },
-                { type: 'array', items: { type: 'string', format: 'email' } }
-              ]
+                { type: 'array', items: { type: 'string', format: 'email' } },
+              ],
             },
             subject: { type: 'string' },
             text: { type: 'string' },
             html: { type: 'string' },
-            replyTo: { type: 'string', format: 'email' }
+            replyTo: { type: 'string', format: 'email' },
           },
-          required: ['to', 'subject']
+          required: ['to', 'subject'],
         },
         User: {
           type: 'object',
@@ -259,21 +259,43 @@ const options: swaggerJSDoc.Options = {
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
+          required: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt'],
         },
         UserInput: {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'User full name (required)' },
-            email: { type: 'string', format: 'email', description: 'User email (must be unique, required)' },
-            role: { type: 'string', enum: ['admin', 'coordinator', 'tutor', 'guardian'], description: 'User role (required)' },
-            rut: { type: 'string', description: 'RUT in format XX.XXX.XXX-K (required, used to generate initial password)' },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email (must be unique, required)',
+            },
+            role: {
+              type: 'string',
+              enum: ['admin', 'coordinator', 'tutor', 'guardian'],
+              description: 'User role (required)',
+            },
+            rut: {
+              type: 'string',
+              description:
+                'RUT in format XX.XXX.XXX-K (required, used to generate initial password)',
+            },
             phone: { type: 'string', nullable: true, description: 'Phone number (optional)' },
             address: { type: 'string', nullable: true, description: 'Address (optional)' },
-            chargeEmail: { type: 'string', format: 'email', nullable: true, description: 'Charge email (optional)' },
-            institutionId: { type: 'integer', nullable: true, description: 'Institution ID (required for non-admin users, inferred for coordinators)' },
+            chargeEmail: {
+              type: 'string',
+              format: 'email',
+              nullable: true,
+              description: 'Charge email (optional)',
+            },
+            institutionId: {
+              type: 'integer',
+              nullable: true,
+              description:
+                'Institution ID (required for non-admin users, inferred for coordinators)',
+            },
           },
-          required: ['name', 'email', 'role', 'rut']
+          required: ['name', 'email', 'role', 'rut'],
         },
         Institution: {
           type: 'object',
@@ -284,14 +306,14 @@ const options: swaggerJSDoc.Options = {
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'name', 'isActive', 'createdAt', 'updatedAt']
+          required: ['id', 'name', 'isActive', 'createdAt', 'updatedAt'],
         },
         CreateInstitutionInput: {
           type: 'object',
           properties: {
             name: { type: 'string' },
           },
-          required: ['name']
+          required: ['name'],
         },
         CreateInstitutionResponse: {
           type: 'object',
@@ -299,10 +321,10 @@ const options: swaggerJSDoc.Options = {
             institution: { $ref: '#/components/schemas/Institution' },
             fees: {
               type: 'array',
-              items: { $ref: '#/components/schemas/Fee' }
-            }
+              items: { $ref: '#/components/schemas/Fee' },
+            },
           },
-          required: ['institution', 'fees']
+          required: ['institution', 'fees'],
         },
         DeactivateInstitutionResponse: {
           type: 'object',
@@ -362,7 +384,8 @@ const options: swaggerJSDoc.Options = {
         },
         EditAdminProfitShareInput: {
           type: 'object',
-          description: 'Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC).',
+          description:
+            'Updates admin profit share using day-boundary activation (new share starts next day at 00:00:00.000 UTC).',
           properties: {
             profitShare: {
               type: 'number',
@@ -386,12 +409,12 @@ const options: swaggerJSDoc.Options = {
                 availableSince: {
                   type: 'string',
                   format: 'date-time',
-                  description: 'Effective start timestamp (next day at 00:00:00.000 UTC).'
+                  description: 'Effective start timestamp (next day at 00:00:00.000 UTC).',
                 },
                 availableUntil: {
                   type: 'string',
                   format: 'date-time',
-                  description: 'Effective end timestamp (far-future while active).'
+                  description: 'Effective end timestamp (far-future while active).',
                 },
               },
             },
@@ -461,17 +484,17 @@ const options: swaggerJSDoc.Options = {
           properties: {
             guardianId: { type: 'integer' },
             tutorId: { type: 'integer' },
-            institutionId: { type: 'integer' }
+            institutionId: { type: 'integer' },
           },
-          required: ['guardianId', 'tutorId', 'institutionId']
+          required: ['guardianId', 'tutorId', 'institutionId'],
         },
         DeleteGuardianTutorLinkResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            link: { $ref: '#/components/schemas/GuardianTutor' }
+            link: { $ref: '#/components/schemas/GuardianTutor' },
           },
-          required: ['ok', 'link']
+          required: ['ok', 'link'],
         },
         DeleteUserBlockedResponse: {
           type: 'object',
@@ -492,11 +515,11 @@ const options: swaggerJSDoc.Options = {
                 coordinatorProfitShares: {
                   type: 'array',
                   items: { $ref: '#/components/schemas/CoordinatorProfitShare' },
-                  nullable: true
-                }
-              }
-            }
-          ]
+                  nullable: true,
+                },
+              },
+            },
+          ],
         },
         CoordinatorProfitShare: {
           type: 'object',
@@ -506,9 +529,9 @@ const options: swaggerJSDoc.Options = {
             institutionId: { type: 'integer' },
             profitShare: { type: 'number' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
+            updatedAt: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'coordinatorId', 'institutionId', 'profitShare']
+          required: ['id', 'coordinatorId', 'institutionId', 'profitShare'],
         },
         UserBankAccount: {
           type: 'object',
@@ -522,8 +545,8 @@ const options: swaggerJSDoc.Options = {
             accountName: { type: 'string' },
             rut: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
-          }
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
         },
         CoordinatorPayment: {
           type: 'object',
@@ -557,31 +580,31 @@ const options: swaggerJSDoc.Options = {
             name: { type: 'string' },
             guardianId: { type: 'integer' },
             institutionId: { type: 'integer' },
-            isActive: { type: 'boolean' }
-          }
+            isActive: { type: 'boolean' },
+          },
         },
         StudentSummary: {
           type: 'object',
           properties: {
             id: { type: 'integer' },
-            name: { type: 'string' }
+            name: { type: 'string' },
           },
-          required: ['id', 'name']
+          required: ['id', 'name'],
         },
         TutorSummary: {
           type: 'object',
           properties: {
-            name: { type: 'string' }
+            name: { type: 'string' },
           },
-          required: ['name']
+          required: ['name'],
         },
         GuardianLinkWithTutor: {
           type: 'object',
           properties: {
             tutorId: { type: 'integer' },
-            Tutor: { $ref: '#/components/schemas/TutorSummary' }
+            Tutor: { $ref: '#/components/schemas/TutorSummary' },
           },
-          required: ['tutorId', 'Tutor']
+          required: ['tutorId', 'Tutor'],
         },
         UserWithGuardianLinks: {
           type: 'object',
@@ -590,14 +613,14 @@ const options: swaggerJSDoc.Options = {
             name: { type: 'string' },
             Students: {
               type: 'array',
-              items: { $ref: '#/components/schemas/StudentSummary' }
+              items: { $ref: '#/components/schemas/StudentSummary' },
             },
             GuardianLinks: {
               type: 'array',
-              items: { $ref: '#/components/schemas/GuardianLinkWithTutor' }
-            }
+              items: { $ref: '#/components/schemas/GuardianLinkWithTutor' },
+            },
           },
-          required: ['id', 'name', 'Students', 'GuardianLinks']
+          required: ['id', 'name', 'Students', 'GuardianLinks'],
         },
         GuardianTutor: {
           type: 'object',
@@ -607,8 +630,8 @@ const options: swaggerJSDoc.Options = {
             institutionId: { type: 'integer' },
             active: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
-          }
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
         },
         TutorLink: {
           type: 'object',
@@ -618,10 +641,10 @@ const options: swaggerJSDoc.Options = {
             {
               type: 'object',
               properties: {
-                Guardian: { $ref: '#/components/schemas/User' }
-              }
-            }
-          ]
+                Guardian: { $ref: '#/components/schemas/User' },
+              },
+            },
+          ],
         },
         GuardianLink: {
           type: 'object',
@@ -630,10 +653,10 @@ const options: swaggerJSDoc.Options = {
             {
               type: 'object',
               properties: {
-                Tutor: { $ref: '#/components/schemas/User' }
-              }
-            }
-          ]
+                Tutor: { $ref: '#/components/schemas/User' },
+              },
+            },
+          ],
         },
         UserDetail: {
           allOf: [
@@ -643,41 +666,41 @@ const options: swaggerJSDoc.Options = {
               properties: {
                 Institution: { $ref: '#/components/schemas/Institution', nullable: true },
                 BankAccount: { $ref: '#/components/schemas/UserBankAccount', nullable: true },
-                Students: { 
-                  type: 'array', 
-                  items: { $ref: '#/components/schemas/Student' } 
+                Students: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Student' },
                 },
-                TutorLinks: { 
-                  type: 'array', 
-                  items: { 
+                TutorLinks: {
+                  type: 'array',
+                  items: {
                     allOf: [
                       { $ref: '#/components/schemas/GuardianTutor' },
                       {
                         type: 'object',
                         properties: {
-                          Guardian: { $ref: '#/components/schemas/User' }
-                        }
-                      }
-                    ]
-                  } 
+                          Guardian: { $ref: '#/components/schemas/User' },
+                        },
+                      },
+                    ],
+                  },
                 },
-                GuardianLinks: { 
-                  type: 'array', 
-                  items: { 
+                GuardianLinks: {
+                  type: 'array',
+                  items: {
                     allOf: [
                       { $ref: '#/components/schemas/GuardianTutor' },
                       {
                         type: 'object',
                         properties: {
-                          Tutor: { $ref: '#/components/schemas/User' }
-                        }
-                      }
-                    ]
-                  } 
-                }
-              }
-            }
-          ]
+                          Tutor: { $ref: '#/components/schemas/User' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
         },
         UserBankAccountInput: {
           type: 'object',
@@ -688,9 +711,16 @@ const options: swaggerJSDoc.Options = {
             accountNumber: { type: 'string' },
             rut: { type: 'string' },
             accountEmail: { type: 'string', format: 'email' },
-            accountName: { type: 'string' }
+            accountName: { type: 'string' },
           },
-          required: ['bankName', 'accountType', 'accountNumber', 'rut', 'accountEmail', 'accountName']
+          required: [
+            'bankName',
+            'accountType',
+            'accountNumber',
+            'rut',
+            'accountEmail',
+            'accountName',
+          ],
         },
 
         ClassSubject: {
@@ -706,32 +736,32 @@ const options: swaggerJSDoc.Options = {
             'pet',
             'socialStudies',
             'studySkills',
-            'other'
-          ]
+            'other',
+          ],
         },
         ClassModality: {
           type: 'string',
-          enum: ['inPerson', 'online']
+          enum: ['inPerson', 'online'],
         },
         ClassType: {
           type: 'string',
-          enum: ['school', 'university', 'cancelled']
+          enum: ['school', 'university', 'cancelled'],
         },
         PaymentStatus: {
           type: 'string',
-          enum: ['completed', 'pending']
+          enum: ['completed', 'pending'],
         },
         GuardianCashFlowPaymentStatus: {
           type: 'string',
-          enum: ['completed', 'pending', 'No payments']
+          enum: ['completed', 'pending', 'No payments'],
         },
         GuardianFilteredPaymentStatus: {
           type: 'string',
-          enum: ['pending', 'bankTransfer', 'card', 'card-transfer', 'completed', 'No payments']
+          enum: ['pending', 'bankTransfer', 'card', 'card-transfer', 'completed', 'No payments'],
         },
         PaymentType: {
           type: 'string',
-          enum: ['card', 'bankTransfer']
+          enum: ['card', 'bankTransfer'],
         },
         Class: {
           type: 'object',
@@ -747,7 +777,7 @@ const options: swaggerJSDoc.Options = {
             studentId: { type: 'integer' },
             tutorId: { type: 'integer' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
+            updatedAt: { type: 'string', format: 'date-time' },
           },
           required: [
             'id',
@@ -761,8 +791,8 @@ const options: swaggerJSDoc.Options = {
             'studentId',
             'tutorId',
             'createdAt',
-            'updatedAt'
-          ]
+            'updatedAt',
+          ],
         },
         ClassPayment: {
           type: 'object',
@@ -775,7 +805,7 @@ const options: swaggerJSDoc.Options = {
             tutorAmount: { type: 'integer' },
             tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
+            updatedAt: { type: 'string', format: 'date-time' },
           },
           required: [
             'id',
@@ -786,8 +816,8 @@ const options: swaggerJSDoc.Options = {
             'tutorAmount',
             'tutorPaymentStatus',
             'createdAt',
-            'updatedAt'
-          ]
+            'updatedAt',
+          ],
         },
         CreateClassBaseInput: {
           type: 'object',
@@ -796,21 +826,28 @@ const options: swaggerJSDoc.Options = {
             date: {
               type: 'string',
               description: 'ISO 8601 date-time string',
-              example: '2025-12-31T10:00:00.000Z'
+              example: '2025-12-31T10:00:00.000Z',
             },
             numberOfStudents: { type: 'integer', minimum: 1 },
             duration: { type: 'integer', minimum: 1, description: 'Duration in minutes' },
             subject: { $ref: '#/components/schemas/ClassSubject' },
             type: { $ref: '#/components/schemas/ClassType' },
-            modality: { $ref: '#/components/schemas/ClassModality' }
+            modality: { $ref: '#/components/schemas/ClassModality' },
           },
-          required: ['studentId', 'date', 'numberOfStudents', 'duration', 'subject', 'type', 'modality']
+          required: [
+            'studentId',
+            'date',
+            'numberOfStudents',
+            'duration',
+            'subject',
+            'type',
+            'modality',
+          ],
         },
         CreateClassAsTutorInput: {
-          allOf: [
-            { $ref: '#/components/schemas/CreateClassBaseInput' }
-          ],
-          description: 'Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor.'
+          allOf: [{ $ref: '#/components/schemas/CreateClassBaseInput' }],
+          description:
+            'Tutor creates a class. institutionId and tutorId are inferred from the authenticated tutor.',
         },
         CreateClassAsCoordinatorInput: {
           allOf: [
@@ -818,12 +855,13 @@ const options: swaggerJSDoc.Options = {
             {
               type: 'object',
               properties: {
-                tutorId: { type: 'integer', description: 'Tutor who will teach the class' }
+                tutorId: { type: 'integer', description: 'Tutor who will teach the class' },
               },
-              required: ['tutorId']
-            }
+              required: ['tutorId'],
+            },
           ],
-          description: 'Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided.'
+          description:
+            'Coordinator creates a class. institutionId is inferred from the authenticated coordinator; tutorId must be provided.',
         },
         CreateClassAsAdminInput: {
           allOf: [
@@ -832,104 +870,121 @@ const options: swaggerJSDoc.Options = {
               type: 'object',
               properties: {
                 tutorId: { type: 'integer', description: 'Tutor who will teach the class' },
-                institutionId: { type: 'integer', description: 'Institution that owns the class' }
+                institutionId: { type: 'integer', description: 'Institution that owns the class' },
               },
-              required: ['tutorId', 'institutionId']
-            }
+              required: ['tutorId', 'institutionId'],
+            },
           ],
-          description: 'Admin creates a class. tutorId and institutionId must be provided.'
+          description: 'Admin creates a class. tutorId and institutionId must be provided.',
         },
         CreateClassInput: {
           oneOf: [
             { $ref: '#/components/schemas/CreateClassAsTutorInput' },
             { $ref: '#/components/schemas/CreateClassAsCoordinatorInput' },
-            { $ref: '#/components/schemas/CreateClassAsAdminInput' }
+            { $ref: '#/components/schemas/CreateClassAsAdminInput' },
           ],
-          description: 'Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin).'
+          description:
+            'Role-based input. Required fields depend on authenticated user role (tutor/coordinator/admin).',
         },
         CreateClassResponse: {
           type: 'object',
           properties: {
             class: { $ref: '#/components/schemas/Class' },
-            classPayment: { $ref: '#/components/schemas/ClassPayment' }
+            classPayment: { $ref: '#/components/schemas/ClassPayment' },
           },
-          required: ['class', 'classPayment']
+          required: ['class', 'classPayment'],
         },
         CreateClassBlockedResponse: {
           type: 'object',
-          description: 'Returned when the month of the class is already settled for admin, coordinator, or tutor payments.',
+          description:
+            'Returned when the month of the class is already settled for admin, coordinator, or tutor payments.',
           properties: {
             message: {
               type: 'string',
               enum: [
                 'No se puede crear una clase cuando ya se ha pagado al admin',
                 'No se puede crear una clase cuando ya se ha pagado al coordinador',
-                'No se puede crear una clase si ya se ha pagado al tutor'
-              ]
-            }
+                'No se puede crear una clase si ya se ha pagado al tutor',
+              ],
+            },
           },
-          required: ['message']
+          required: ['message'],
         },
 
         ClassesCashFlowSummaryAmounts: {
           type: 'object',
           properties: {
-            pendingAmount: { type: 'integer', description: 'Pending amount for the authenticated role' },
-            paidAmount: { type: 'integer', description: 'Paid amount for the authenticated role' }
+            pendingAmount: {
+              type: 'integer',
+              description: 'Pending amount for the authenticated role',
+            },
+            paidAmount: { type: 'integer', description: 'Paid amount for the authenticated role' },
           },
-          required: ['pendingAmount', 'paidAmount']
+          required: ['pendingAmount', 'paidAmount'],
         },
         ClassesCashFlowSummaryInstitution: {
           type: 'object',
           properties: {
-            pendingIncomes: { type: 'integer', description: 'Pending guardian incomes (institution scope)' },
-            receivedIncomes: { type: 'integer', description: 'Received guardian incomes (institution scope)' },
-            pendingExpenses: { type: 'integer', description: 'Pending tutor expenses (institution scope)' },
-            paidExpenses: { type: 'integer', description: 'Paid tutor expenses (institution scope)' }
+            pendingIncomes: {
+              type: 'integer',
+              description: 'Pending guardian incomes (institution scope)',
+            },
+            receivedIncomes: {
+              type: 'integer',
+              description: 'Received guardian incomes (institution scope)',
+            },
+            pendingExpenses: {
+              type: 'integer',
+              description: 'Pending tutor expenses (institution scope)',
+            },
+            paidExpenses: {
+              type: 'integer',
+              description: 'Paid tutor expenses (institution scope)',
+            },
           },
-          required: ['pendingIncomes', 'receivedIncomes', 'pendingExpenses', 'paidExpenses']
+          required: ['pendingIncomes', 'receivedIncomes', 'pendingExpenses', 'paidExpenses'],
         },
         ClassesCashFlowSummaryResponse: {
-          description: 'Cash-flow summary. Shape depends on authenticated role (guardian/tutor vs coordinator/admin).',
+          description:
+            'Cash-flow summary. Shape depends on authenticated role (guardian/tutor vs coordinator/admin).',
           oneOf: [
             { $ref: '#/components/schemas/ClassesCashFlowSummaryAmounts' },
-            { $ref: '#/components/schemas/ClassesCashFlowSummaryInstitution' }
-          ]
+            { $ref: '#/components/schemas/ClassesCashFlowSummaryInstitution' },
+          ],
         },
 
         UserIdName: {
           type: 'object',
           properties: {
             id: { type: 'integer' },
-            name: { type: 'string' }
+            name: { type: 'string' },
           },
-          required: ['id', 'name']
+          required: ['id', 'name'],
         },
         StudentWithGuardianSummary: {
           type: 'object',
           properties: {
             id: { type: 'integer' },
             name: { type: 'string' },
-            Guardian: { $ref: '#/components/schemas/UserIdName' }
+            Guardian: { $ref: '#/components/schemas/UserIdName' },
           },
-          required: ['id', 'name', 'Guardian']
+          required: ['id', 'name', 'Guardian'],
         },
         InstitutionSummary: {
           type: 'object',
           properties: {
             id: { type: 'integer' },
-            name: { type: 'string' }
+            name: { type: 'string' },
           },
-          required: ['id', 'name']
+          required: ['id', 'name'],
         },
         TutorBrief: {
-          allOf: [
-            { $ref: '#/components/schemas/UserIdName' }
-          ],
-          description: 'Tutor basic info (id and name)'
+          allOf: [{ $ref: '#/components/schemas/UserIdName' }],
+          description: 'Tutor basic info (id and name)',
         },
         ClassDetails: {
-          description: 'Class with included relations: ClassPayment, Tutor, Student (with Guardian), Institution.',
+          description:
+            'Class with included relations: ClassPayment, Tutor, Student (with Guardian), Institution.',
           allOf: [
             { $ref: '#/components/schemas/Class' },
             {
@@ -938,11 +993,11 @@ const options: swaggerJSDoc.Options = {
                 ClassPayment: { $ref: '#/components/schemas/ClassPayment', nullable: true },
                 Tutor: { $ref: '#/components/schemas/TutorBrief' },
                 Student: { $ref: '#/components/schemas/StudentWithGuardianSummary' },
-                Institution: { $ref: '#/components/schemas/InstitutionSummary' }
+                Institution: { $ref: '#/components/schemas/InstitutionSummary' },
               },
-              required: ['Tutor', 'Student', 'Institution']
-            }
-          ]
+              required: ['Tutor', 'Student', 'Institution'],
+            },
+          ],
         },
 
         UpdateClassPaymentStatusInput: {
@@ -951,47 +1006,49 @@ const options: swaggerJSDoc.Options = {
           properties: {
             guardianPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
             tutorPaymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
-            guardianPaymentType: { $ref: '#/components/schemas/PaymentType' }
+            guardianPaymentType: { $ref: '#/components/schemas/PaymentType' },
           },
           additionalProperties: false,
-          minProperties: 1
+          minProperties: 1,
         },
         BulkUpdateGuardianClassPaymentStatusInput: {
           type: 'object',
-          description: 'Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed.',
+          description:
+            'Bulk-updates guardian payments for classes that belong to a guardian within an optional date range. Sending `pending` resets the payment status to pending. Sending `card` or `bankTransfer` stores that payment type and marks the payment as completed.',
           properties: {
             guardianPaymentStatus: {
               type: 'string',
               enum: ['pending', 'card', 'bankTransfer'],
-              description: 'Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.'
+              description:
+                'Use `pending` to set guardianPaymentStatus to pending, or `card` / `bankTransfer` to set guardianPaymentType and complete the payment.',
             },
             periodStart: {
               type: 'string',
               format: 'date-time',
-              description: 'Optional lower bound for the class date filter.'
+              description: 'Optional lower bound for the class date filter.',
             },
             periodEnd: {
               type: 'string',
               format: 'date-time',
-              description: 'Optional upper bound for the class date filter.'
+              description: 'Optional upper bound for the class date filter.',
             },
             guardianId: {
               type: 'integer',
-              description: 'Guardian whose class payments will be updated.'
-            }
+              description: 'Guardian whose class payments will be updated.',
+            },
           },
           required: ['guardianPaymentStatus', 'guardianId'],
-          additionalProperties: false
+          additionalProperties: false,
         },
         BulkUpdateClassPaymentsResponse: {
           type: 'object',
           properties: {
             count: {
               type: 'integer',
-              description: 'Number of ClassPayment records affected.'
-            }
+              description: 'Number of ClassPayment records affected.',
+            },
           },
-          required: ['count']
+          required: ['count'],
         },
         CreateUserWithBankAccountInput: {
           allOf: [
@@ -1001,45 +1058,49 @@ const options: swaggerJSDoc.Options = {
               properties: {
                 BankAccount: {
                   allOf: [{ $ref: '#/components/schemas/UserBankAccountInput' }],
-                  nullable: true
+                  nullable: true,
                 },
                 coordinatorProfitShare: {
                   type: 'number',
                   nullable: true,
-                  description: 'Profit share percentage for coordinator users. Defaults to 30 when omitted.'
-                }
-              }
-            }
-          ]
+                  description:
+                    'Profit share percentage for coordinator users. Defaults to 30 when omitted.',
+                },
+              },
+            },
+          ],
         },
         CreateUserResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            user: { $ref: '#/components/schemas/User' }
+            user: { $ref: '#/components/schemas/User' },
           },
-          required: ['ok', 'user']
+          required: ['ok', 'user'],
         },
         UserByIdResponse: {
-          description: 'UserDetail with optional profit share fields. coordinatorProfitShare is only present when user role is coordinator. adminProfitShare is only present when user role is admin.',
+          description:
+            'UserDetail with optional profit share fields. coordinatorProfitShare is only present when user role is coordinator. adminProfitShare is only present when user role is admin.',
           allOf: [
             { $ref: '#/components/schemas/UserDetail' },
             {
               type: 'object',
               properties: {
-                coordinatorProfitShare: { 
-                  type: 'number', 
+                coordinatorProfitShare: {
+                  type: 'number',
                   nullable: true,
-                  description: 'Profit share percentage for coordinator users. Only present when user role is coordinator.'
+                  description:
+                    'Profit share percentage for coordinator users. Only present when user role is coordinator.',
                 },
                 adminProfitShare: {
                   type: 'number',
                   nullable: true,
-                  description: 'Current active profit share percentage for admin users. Only present when user role is admin.'
-                }
-              }
-            }
-          ]
+                  description:
+                    'Current active profit share percentage for admin users. Only present when user role is admin.',
+                },
+              },
+            },
+          ],
         },
         EditUserPersonalInformationInput: {
           type: 'object',
@@ -1048,9 +1109,9 @@ const options: swaggerJSDoc.Options = {
             rut: { type: 'string', nullable: true },
             phone: { type: 'string', nullable: true },
             chargeEmail: { type: 'string', nullable: true },
-            address: { type: 'string', nullable: true }
+            address: { type: 'string', nullable: true },
           },
-          required: ['name', 'phone', 'rut']
+          required: ['name', 'phone', 'rut'],
         },
         ChangePasswordRequest: {
           type: 'object',
@@ -1065,16 +1126,16 @@ const options: swaggerJSDoc.Options = {
           properties: {
             id: { type: 'integer' },
             type: { type: 'string' },
-            modality: { 
-              type: 'string', 
-              enum: ['inPerson', 'online', 'cancelled'] 
+            modality: {
+              type: 'string',
+              enum: ['inPerson', 'online', 'cancelled'],
             },
             numberOfStudents: { type: 'integer' },
             guardianAmount: { type: 'integer' },
             tutorAmount: { type: 'integer' },
             institutionId: { type: 'integer' },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' }
+            updatedAt: { type: 'string', format: 'date-time' },
           },
           required: [
             'id',
@@ -1085,28 +1146,28 @@ const options: swaggerJSDoc.Options = {
             'tutorAmount',
             'institutionId',
             'createdAt',
-            'updatedAt'
-          ]
+            'updatedAt',
+          ],
         },
         SimulateFeePaymentRequest: {
           type: 'object',
           properties: {
             fees: {
               type: 'array',
-              items: { $ref: '#/components/schemas/Fee' }
+              items: { $ref: '#/components/schemas/Fee' },
             },
             type: { type: 'string' },
-            classModality: { 
-              type: 'string', 
-              enum: ['inPerson', 'online', 'cancelled'] 
+            classModality: {
+              type: 'string',
+              enum: ['inPerson', 'online', 'cancelled'],
             },
             numberOfStudents: { type: 'integer' },
-            duration: { 
+            duration: {
               type: 'integer',
-              description: 'Duration in minutes'
-            }
+              description: 'Duration in minutes',
+            },
           },
-          required: ['fees', 'type', 'classModality', 'numberOfStudents', 'duration']
+          required: ['fees', 'type', 'classModality', 'numberOfStudents', 'duration'],
         },
         SimulateFeePaymentResponse: {
           type: 'object',
@@ -1119,14 +1180,14 @@ const options: swaggerJSDoc.Options = {
                   type: 'object',
                   properties: {
                     guardianAmount: { type: 'number' },
-                    tutorAmount: { type: 'number' }
+                    tutorAmount: { type: 'number' },
                   },
-                  required: ['guardianAmount', 'tutorAmount']
-                }
-              ]
-            }
+                  required: ['guardianAmount', 'tutorAmount'],
+                },
+              ],
+            },
           },
-          required: ['ok', 'result']
+          required: ['ok', 'result'],
         },
         EditFeesRequest: {
           type: 'object',
@@ -1136,34 +1197,35 @@ const options: swaggerJSDoc.Options = {
               items: {
                 type: 'object',
                 properties: {
-                  feeId: { 
+                  feeId: {
                     type: 'integer',
-                    description: 'Fee ID to update'
+                    description: 'Fee ID to update',
                   },
-                  tutorAmount: { 
+                  tutorAmount: {
                     type: 'integer',
-                    description: 'New tutor amount'
+                    description: 'New tutor amount',
                   },
-                  guardianAmount: { 
+                  guardianAmount: {
                     type: 'integer',
-                    description: 'New guardian amount'
-                  }
+                    description: 'New guardian amount',
+                  },
                 },
-                required: ['feeId', 'tutorAmount', 'guardianAmount']
+                required: ['feeId', 'tutorAmount', 'guardianAmount'],
               },
               minItems: 1,
-              description: 'Array of fees to update. Can also be a single fee object for backward compatibility.'
-            }
+              description:
+                'Array of fees to update. Can also be a single fee object for backward compatibility.',
+            },
           },
-          required: ['fees']
+          required: ['fees'],
         },
         EditFeesResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            message: { type: 'string' }
+            message: { type: 'string' },
           },
-          required: ['ok', 'message']
+          required: ['ok', 'message'],
         },
         CreateGuardianInput: {
           type: 'object',
@@ -1171,57 +1233,73 @@ const options: swaggerJSDoc.Options = {
             name: { type: 'string', description: 'Guardian name' },
             email: { type: 'string', format: 'email', description: 'Guardian email' },
             rut: { type: 'string', description: 'Guardian RUT (e.g., 12345678-9)' },
-            phone: { type: 'string', nullable: true, description: 'Guardian phone number (optional)' },
+            phone: {
+              type: 'string',
+              nullable: true,
+              description: 'Guardian phone number (optional)',
+            },
             address: { type: 'string', nullable: true, description: 'Guardian address (optional)' },
-            chargeEmail: { type: 'string', format: 'email', nullable: true, description: 'Charge email (optional)' },
-            institution: { type: 'integer', description: 'Institution ID (required for admin, inferred for coordinator)' }
+            chargeEmail: {
+              type: 'string',
+              format: 'email',
+              nullable: true,
+              description: 'Charge email (optional)',
+            },
+            institution: {
+              type: 'integer',
+              description: 'Institution ID (required for admin, inferred for coordinator)',
+            },
           },
-          required: ['name', 'email', 'rut']
+          required: ['name', 'email', 'rut'],
         },
         CreateGuardianResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            guardian: { $ref: '#/components/schemas/User' }
+            guardian: { $ref: '#/components/schemas/User' },
           },
-          required: ['ok', 'guardian']
+          required: ['ok', 'guardian'],
         },
         AddStudentToGuardianRequest: {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Student name (required)' },
             institutionId: { type: 'integer', description: 'Institution ID (required)' },
-            guardianId: { type: 'integer', description: 'Guardian ID (required)' }
+            guardianId: { type: 'integer', description: 'Guardian ID (required)' },
           },
-          required: ['name', 'institutionId', 'guardianId']
+          required: ['name', 'institutionId', 'guardianId'],
         },
         AddStudentToGuardianResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
             student: { $ref: '#/components/schemas/Student' },
-            reactivated: { type: 'boolean', description: 'True when an existing inactive student was reactivated instead of creating a new record' }
+            reactivated: {
+              type: 'boolean',
+              description:
+                'True when an existing inactive student was reactivated instead of creating a new record',
+            },
           },
-          required: ['ok', 'student']
+          required: ['ok', 'student'],
         },
         RemoveStudentFromGuardianRequest: {
           type: 'object',
           properties: {
             guardianId: { type: 'integer', description: 'Guardian ID (required)' },
-            studentId: { type: 'integer', description: 'Student ID (required)' }
+            studentId: { type: 'integer', description: 'Student ID (required)' },
           },
-          required: ['guardianId', 'studentId']
+          required: ['guardianId', 'studentId'],
         },
         RemoveStudentFromGuardianResponse: {
           type: 'object',
           properties: {
             ok: { type: 'boolean' },
-            message: { type: 'string' }
+            message: { type: 'string' },
           },
-          required: ['ok', 'message']
-        }
-      }
-    }
+          required: ['ok', 'message'],
+        },
+      },
+    },
   },
   apis: ['src/routes/**/*.ts', 'src/controllers/**/*.ts'],
 }

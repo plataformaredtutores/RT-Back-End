@@ -1,11 +1,10 @@
-import { PrismaClient } from '@prisma/client';
-import { execSync } from 'child_process';
-import * as dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client'
+import { execSync } from 'child_process'
+import * as dotenv from 'dotenv'
 
-// Load test environment variables
-dotenv.config({ path: '.env.test' });
+dotenv.config({ path: '.env.test' })
 
-let testPrisma: PrismaClient;
+let testPrisma: PrismaClient
 
 /**
  * Get or create a test Prisma client instance
@@ -13,13 +12,13 @@ let testPrisma: PrismaClient;
  */
 export function getTestPrisma(): PrismaClient {
   if (!testPrisma) {
-    const databaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
-    
+    const databaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL
+
     if (!databaseUrl) {
       throw new Error(
         'TEST_DATABASE_URL or DATABASE_URL must be set for tests. ' +
-        'Create a .env.test file with TEST_DATABASE_URL pointing to your test database.'
-      );
+          'Create a .env.test file with TEST_DATABASE_URL pointing to your test database.',
+      )
     }
 
     testPrisma = new PrismaClient({
@@ -29,9 +28,9 @@ export function getTestPrisma(): PrismaClient {
         },
       },
       log: process.env.DEBUG_TESTS === 'true' ? ['query', 'error', 'warn'] : ['error'],
-    });
+    })
   }
-  return testPrisma;
+  return testPrisma
 }
 
 /**
@@ -39,22 +38,21 @@ export function getTestPrisma(): PrismaClient {
  * WARNING: This will delete all data in the test database
  */
 export async function resetTestDatabase(): Promise<void> {
-  const databaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
-  
+  const databaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL
+
   if (!databaseUrl) {
-    throw new Error('TEST_DATABASE_URL or DATABASE_URL must be set');
+    throw new Error('TEST_DATABASE_URL or DATABASE_URL must be set')
   }
 
-  // Reset database using Prisma migrate reset (only in test environment)
   if (process.env.NODE_ENV === 'test') {
     try {
       execSync('npx prisma migrate reset --force --skip-seed', {
         env: { ...process.env, DATABASE_URL: databaseUrl },
         stdio: 'inherit',
-      });
+      })
     } catch (error) {
-      console.error('Failed to reset test database:', error);
-      throw error;
+      console.error('Failed to reset test database:', error)
+      throw error
     }
   }
 }
@@ -64,8 +62,8 @@ export async function resetTestDatabase(): Promise<void> {
  */
 export async function cleanupTestDatabase(): Promise<void> {
   if (testPrisma) {
-    await testPrisma.$disconnect();
-    testPrisma = null as any;
+    await testPrisma.$disconnect()
+    testPrisma = null as any
   }
 }
 
@@ -75,9 +73,8 @@ export async function cleanupTestDatabase(): Promise<void> {
  * PostgreSQL version - uses TRUNCATE CASCADE
  */
 export async function truncateAllTables(): Promise<void> {
-  const prisma = getTestPrisma();
-  
-  // Get all table names from Prisma schema (PostgreSQL uses lowercase with quotes)
+  const prisma = getTestPrisma()
+
   const tables = [
     'RefreshToken',
     'UserBankAccount',
@@ -90,16 +87,13 @@ export async function truncateAllTables(): Promise<void> {
     'Fee',
     'CoordinatorPayment',
     'AdminPayment',
-  ];
+  ]
 
-  // Truncate all tables with CASCADE to handle foreign keys
-  // PostgreSQL automatically handles foreign key constraints with CASCADE
-  const tableList = tables.map(t => `"${t}"`).join(', ');
+  const tableList = tables.map((t) => `"${t}"`).join(', ')
   try {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`);
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`)
   } catch (error) {
-    console.warn('Could not truncate tables:', error);
-    throw error;
+    console.warn('Could not truncate tables:', error)
+    throw error
   }
 }
-

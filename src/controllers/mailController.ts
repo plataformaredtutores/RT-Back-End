@@ -5,15 +5,16 @@ import { sendEmail } from '../services/mailService'
 const emailRegex = /.+@.+\..+/
 const EmailAddress = z.string().regex(emailRegex, 'Invalid email')
 
-const MailRequestSchema = z.object({
-  to: z.union([EmailAddress, z.array(EmailAddress).nonempty()]),
-  cc: z.union([EmailAddress, z.array(EmailAddress)]).optional(),
-  bcc: z.union([EmailAddress, z.array(EmailAddress)]).optional(),
-  subject: z.string().min(1),
-  text: z.string().optional(),
-  html: z.string().optional(),
-  replyTo: EmailAddress.optional(),
-})
+const MailRequestSchema = z
+  .object({
+    to: z.union([EmailAddress, z.array(EmailAddress).nonempty()]),
+    cc: z.union([EmailAddress, z.array(EmailAddress)]).optional(),
+    bcc: z.union([EmailAddress, z.array(EmailAddress)]).optional(),
+    subject: z.string().min(1),
+    text: z.string().optional(),
+    html: z.string().optional(),
+    replyTo: EmailAddress.optional(),
+  })
   .refine((d) => d.text || d.html, {
     message: 'Either text or html must be provided',
     path: ['text'],
@@ -22,7 +23,6 @@ const MailRequestSchema = z.object({
 export async function postMail(req: Request, res: Response, next: NextFunction) {
   try {
     const data = MailRequestSchema.parse(req.body)
-    console.log('data', data)
 
     const result = await sendEmail({
       to: data.to,
